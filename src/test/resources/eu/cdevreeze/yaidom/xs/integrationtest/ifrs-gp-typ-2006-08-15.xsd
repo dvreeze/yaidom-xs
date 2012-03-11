@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<schema 
+   xmlns="http://www.w3.org/2001/XMLSchema" 
+   xmlns:xbrli="http://www.xbrl.org/2003/instance" 
+   xmlns:link="http://www.xbrl.org/2003/linkbase" 
+   xmlns:xlink="http://www.w3.org/1999/xlink" 
+   xmlns:ifrs-gp-typ="http://xbrl.iasb.org/int/fr/ifrs/gp/types/2006-08-15" 
+   targetNamespace="http://xbrl.iasb.org/int/fr/ifrs/gp/types/2006-08-15" 
+   elementFormDefault="qualified" 
+   attributeFormDefault="unqualified">
+
+  <import namespace="http://www.xbrl.org/2003/instance" schemaLocation="http://www.xbrl.org/2003/xbrl-instance-2003-12-31.xsd" />
+
+  <complexType name="ModelItemType">
+    <simpleContent>
+      <restriction base="xbrli:stringItemType">
+        <enumeration value="CostModel" />
+        <enumeration value="RevaluationModel" />
+      </restriction>
+    </simpleContent>
+  </complexType>
+  <complexType name="LifeRateItemType">
+    <simpleContent>
+      <restriction base="xbrli:stringItemType">
+        <enumeration value="Life" />
+        <enumeration value="Rate" />
+      </restriction>
+    </simpleContent>
+  </complexType>
+  <complexType name="CostFairValueItemType">
+    <simpleContent>
+      <restriction base="xbrli:stringItemType">
+        <enumeration value="Cost" />
+        <enumeration value="FairValue" />
+      </restriction>
+    </simpleContent>
+  </complexType>
+  <complexType name="RelatedPartyRelationshipTypesItemType">
+    <simpleContent>
+      <restriction base="xbrli:stringItemType">
+        <enumeration value="Parent" />
+        <enumeration value="JointControlOrSignificantInfluence" />
+        <enumeration value="Subsidiary" />
+        <enumeration value="Associate" />
+        <enumeration value="JointVenture" />
+        <enumeration value="KeyManagementPersonnel" />
+        <enumeration value="OtherRelatedParty" />
+      </restriction>
+    </simpleContent>
+  </complexType>
+  <complexType name="PercentItemType">
+    <simpleContent>
+      <restriction base="xbrli:decimalItemType">
+        <minInclusive value="0" />
+        <maxInclusive value="1" />
+      </restriction>
+    </simpleContent>
+  </complexType>
+  <complexType name="SegmentTypeItemType">
+    <simpleContent>
+      <restriction base="xbrli:stringItemType">
+        <enumeration value="Business" />
+        <enumeration value="Geographic" />
+      </restriction>
+    </simpleContent>
+  </complexType>
+</schema>
