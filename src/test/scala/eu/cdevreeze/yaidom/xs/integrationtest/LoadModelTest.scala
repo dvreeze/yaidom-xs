@@ -18,7 +18,7 @@ import org.junit.{ Test, Before, Ignore }
 import org.junit.runner.RunWith
 import org.scalatest.{ Suite, BeforeAndAfterAll }
 import org.scalatest.junit.JUnitRunner
-import xercesinterop.XercesConversions._
+import xercesinterop.XercesObjectConverter
 
 @RunWith(classOf[JUnitRunner])
 class LoadModelTest extends Suite {
@@ -84,8 +84,10 @@ class LoadModelTest extends Suite {
         xercesElmDecls.size
       }
 
-      val convertedElmDecls: immutable.IndexedSeq[XSElementDeclaration] =
-        xercesElmDecls map { xercesElmDecl => convertXercesElementDeclaration(xercesElmDecl) }
+      val converter = new XercesObjectConverter
+      val convertedElmDecls: immutable.IndexedSeq[XSElementDeclaration] = {
+        xercesElmDecls map { elmDecl => converter.convertXercesElementDeclaration(elmDecl) }
+      }
 
       expect(xercesElmDecls.size) {
         convertedElmDecls.size
@@ -119,8 +121,10 @@ class LoadModelTest extends Suite {
       xercesElmDecls.size
     }
 
-    val convertedElmDecls: immutable.IndexedSeq[XSElementDeclaration] =
-      xercesElmDecls map { xercesElmDecl => convertXercesElementDeclaration(xercesElmDecl) }
+    val converter = new XercesObjectConverter
+    val convertedElmDecls: immutable.IndexedSeq[XSElementDeclaration] = {
+      xercesElmDecls map { elmDecl => converter.convertXercesElementDeclaration(elmDecl) }
+    }
 
     expect(xercesElmDecls.size) {
       convertedElmDecls.size
@@ -153,8 +157,10 @@ class LoadModelTest extends Suite {
       xercesElmDecls.size
     }
 
-    val convertedElmDecls: immutable.IndexedSeq[XSElementDeclaration] =
-      xercesElmDecls map { xercesElmDecl => convertXercesElementDeclaration(xercesElmDecl) }
+    val converter = new XercesObjectConverter
+    val convertedElmDecls: immutable.IndexedSeq[XSElementDeclaration] = {
+      xercesElmDecls map { elmDecl => converter.convertXercesElementDeclaration(elmDecl) }
+    }
 
     expect(xercesElmDecls.size) {
       convertedElmDecls.size
