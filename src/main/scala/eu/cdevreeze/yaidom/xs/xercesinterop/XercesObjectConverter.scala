@@ -28,7 +28,7 @@ final class XercesObjectConverter {
 
     cache.get(xercesObject) collect { case obj: XSElementDeclaration => logCacheHit(xercesObject); obj } getOrElse {
       val obj = new XSElementDeclaration(
-        nameOption = Option(xercesObject.getName),
+        name = xercesObject.getName,
         targetNamespaceOption = Option(xercesObject.getNamespace),
         typeDefinition = convertXercesTypeDefinition(xercesObject.getTypeDefinition),
         scope = convertXercesScope(xercesObject.getScope),
@@ -288,7 +288,7 @@ final class XercesObjectConverter {
       import XSAttributeDeclaration._
 
       val obj = new XSAttributeDeclaration(
-        nameOption = Option(xercesObject.getName),
+        name = xercesObject.getName,
         targetNamespaceOption = Option(xercesObject.getNamespace),
         typeDefinition = {
           convertXercesSimpleTypeDefinition(xercesObject.getTypeDefinition)
@@ -402,7 +402,24 @@ final class XercesObjectConverter {
     (0 until xercesStringList.getLength).toIndexedSeq map { (i: Int) => xercesStringList.item(i) }
   }
 
-  private def logCacheHit(xercesObject: xxs.XSObject): Unit = {
-    println("Cache hit on %s (cache size: %d)".format(xercesObject, cache.size))
+  private def logCacheHit(xercesObject: xxs.XSObject): Unit = xercesObject match {
+    case xercesElmDecl: xxs.XSElementDeclaration =>
+      require(xercesElmDecl.getScope == xxs.XSConstants.SCOPE_GLOBAL, "Expected global scope")
+      println("Cache hit on element declaration %s (cache size: %d)".format(xercesElmDecl, cache.size))
+    case xercesAttrDecl: xxs.XSAttributeDeclaration =>
+      require(xercesAttrDecl.getScope == xxs.XSConstants.SCOPE_GLOBAL, "Expected global scope")
+      println("Cache hit on attribute declaration %s (cache size: %d)".format(xercesAttrDecl, cache.size))
+    case xercesSimpleTypeDef: xxs.XSSimpleTypeDefinition =>
+      println("Cache hit on simple type definition %s (cache size: %d)".format(xercesSimpleTypeDef, cache.size))
+    case xercesComplexTypeDef: xxs.XSComplexTypeDefinition =>
+      println("Cache hit on complex type definition %s (cache size: %d)".format(xercesComplexTypeDef, cache.size))
+    case xercesAttrUse: xxs.XSAttributeUse =>
+      println("Cache hit on attribute use %s (cache size: %d)".format(xercesAttrUse, cache.size))
+    case xercesParticle: xxs.XSParticle =>
+      println("Cache hit on particle %s (cache size: %d)".format(xercesParticle, cache.size))
+    case xercesWildcard: xxs.XSWildcard =>
+      println("Cache hit on wildcard %s (cache size: %d)".format(xercesWildcard, cache.size))
+    case _ =>
+      println("Cache hit on %s (simple class name: %s) (cache size: %d)".format(xercesObject, xercesObject.getClass.getSimpleName, cache.size))
   }
 }

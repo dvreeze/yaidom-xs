@@ -4,6 +4,9 @@ package xs
 import scala.collection.immutable
 import Variety._
 
+/**
+ * Simple type definition. Simple types are types of attribute values and of text-only content of elements.
+ */
 final class XSSimpleTypeDefinition(
   override val nameOption: Option[String],
   override val targetNamespaceOption: Option[String],

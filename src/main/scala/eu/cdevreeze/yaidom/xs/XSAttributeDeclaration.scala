@@ -3,23 +3,28 @@ package xs
 
 import scala.collection.immutable
 
+/**
+ * Attribute declaration. Its scope is either global, or it is scoped to a containing complex type definition (which is implicit here).
+ */
 final class XSAttributeDeclaration(
-  override val nameOption: Option[String],
+  val name: String,
   override val targetNamespaceOption: Option[String],
   val typeDefinition: XSSimpleTypeDefinition,
   val scope: DeclarationScope,
   val constraintInfo: XSAttributeDeclaration.ConstraintInfo,
   val annotations: immutable.IndexedSeq[XSAnnotation]) extends XSObject {
 
-  require(nameOption ne null)
+  require(name ne null)
   require(targetNamespaceOption ne null)
   require(typeDefinition ne null)
   require(scope ne null)
   require(constraintInfo ne null)
   require(annotations ne null)
 
+  override def nameOption: Option[String] = Some(name)
+
   def toInstanceExpandedNameOption: Option[ExpandedName] =
-    nameOption map { name => targetNamespaceOption map { tns => tns.ns.ename(name) } getOrElse (name.ename) }
+    targetNamespaceOption map { tns => tns.ns.ename(name) } orElse (Some(name.ename))
 }
 
 object XSAttributeDeclaration {

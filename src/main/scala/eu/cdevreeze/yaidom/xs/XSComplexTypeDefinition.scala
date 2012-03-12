@@ -3,6 +3,10 @@ package xs
 
 import scala.collection.immutable
 
+/**
+ * Complex type definition. Complex types are sets of attribute declarations and a content type, applicable to the attributes and
+ * children of an element, respectively.
+ */
 final class XSComplexTypeDefinition(
   override val nameOption: Option[String],
   override val targetNamespaceOption: Option[String],

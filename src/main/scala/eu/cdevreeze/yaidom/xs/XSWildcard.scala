@@ -3,6 +3,12 @@ package xs
 
 import scala.collection.immutable
 
+/**
+ * Wildcard "model group component". A special kind of particle which matches elements and attributes on namespace only, independent
+ * of their local names.
+ *
+ * As a "model group component", it contributes to the portion of a complex type definition that controls the content of an element.
+ */
 final class XSWildcard(
   override val nameOption: Option[String],
   override val targetNamespaceOption: Option[String],

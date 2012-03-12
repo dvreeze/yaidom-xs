@@ -3,6 +3,11 @@ package xs
 
 import scala.collection.immutable
 
+/**
+ * "Model group component" applying to a list of elements. Either a sequence, choice (disjunction) or conjunction of particles.
+ *
+ * As a "model group component", it contributes to the portion of a complex type definition that controls the content of an element.
+ */
 final class XSModelGroup(
   override val nameOption: Option[String],
   override val targetNamespaceOption: Option[String],

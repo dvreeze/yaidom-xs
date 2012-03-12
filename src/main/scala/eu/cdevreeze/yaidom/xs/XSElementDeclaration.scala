@@ -3,8 +3,11 @@ package xs
 
 import scala.collection.immutable
 
+/**
+ * Element declaration. Its scope is either global, or it is scoped to a containing complex type definition (which is implicit here).
+ */
 final class XSElementDeclaration(
-  override val nameOption: Option[String],
+  val name: String,
   override val targetNamespaceOption: Option[String],
   val typeDefinition: XSTypeDefinition,
   val scope: DeclarationScope,
@@ -15,7 +18,7 @@ final class XSElementDeclaration(
   val isAbstract: Boolean,
   val annotations: immutable.IndexedSeq[XSAnnotation]) extends XSTerm {
 
-  require(nameOption ne null)
+  require(name ne null)
   require(targetNamespaceOption ne null)
   require(typeDefinition ne null)
   require(scope ne null)
@@ -23,8 +26,10 @@ final class XSElementDeclaration(
   require(substitutionInfo ne null)
   require(annotations ne null)
 
+  override def nameOption: Option[String] = Some(name)
+
   def toInstanceExpandedNameOption: Option[ExpandedName] =
-    nameOption map { name => targetNamespaceOption map { tns => tns.ns.ename(name) } getOrElse (name.ename) }
+    targetNamespaceOption map { tns => tns.ns.ename(name) } orElse (Some(name.ename))
 }
 
 object XSElementDeclaration {

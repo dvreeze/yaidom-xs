@@ -3,6 +3,12 @@ package xs
 
 import scala.collection.immutable
 
+/**
+ * "Model group component" applying to an attribute declaration. It is similar to a particle in role, but for an attribute declaration.
+ * It specifies whether the contained attribute declaration requires or merely allows its attribute, and whether it has a default or fixed value.
+ *
+ * As a "model group component", it contributes to the portion of a complex type definition that controls the content of an element.
+ */
 final class XSAttributeUse(
   override val nameOption: Option[String],
   override val targetNamespaceOption: Option[String],
