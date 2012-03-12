@@ -5,6 +5,8 @@ import scala.collection.immutable
 
 /**
  * Attribute declaration. Its scope is either global, or it is scoped to a containing complex type definition (which is implicit here).
+ *
+ * Attribute declarations are "primary" XML Schema components, along with element declarations and (simple and complex) type definitions.
  */
 final class XSAttributeDeclaration(
   val name: String,
