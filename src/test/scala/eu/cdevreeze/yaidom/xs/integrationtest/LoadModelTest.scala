@@ -114,6 +114,15 @@ class LoadModelTest extends Suite {
     val psviModel = schemaLoader.loadURI(schemaUri.toString)
     require(psviModel ne null)
 
+    val nsItemList = psviModel.getNamespaceItems
+    val nsItems = (0 until nsItemList.getLength).toIndexedSeq map { (i: Int) => nsItemList.item(i) }
+    val docLocations: immutable.IndexedSeq[String] = nsItems flatMap { nsItem =>
+      val docLocationList = nsItem.getDocumentLocations
+      val docLocations = (0 until docLocationList.getLength).toIndexedSeq map { (i: Int) => docLocationList.item(i) }
+      docLocations
+    }
+    logger.info("Document locations (%d): %s".format(docLocations.size, docLocations))
+
     val xercesElmDeclNamedMap = psviModel.getComponents(xerces.xs.XSConstants.ELEMENT_DECLARATION)
     val xercesElmDecls = xercesElementDeclarationNamedMapToSeq(xercesElmDeclNamedMap)
 
@@ -148,6 +157,15 @@ class LoadModelTest extends Suite {
     val schemaUri = classOf[LoadModelTest].getResource("ifrs-gp-2006-08-15.xsd").toURI
     val psviModel = schemaLoader.loadURI(schemaUri.toString)
     require(psviModel ne null)
+
+    val nsItemList = psviModel.getNamespaceItems
+    val nsItems = (0 until nsItemList.getLength).toIndexedSeq map { (i: Int) => nsItemList.item(i) }
+    val docLocations: immutable.IndexedSeq[String] = nsItems flatMap { nsItem =>
+      val docLocationList = nsItem.getDocumentLocations
+      val docLocations = (0 until docLocationList.getLength).toIndexedSeq map { (i: Int) => docLocationList.item(i) }
+      docLocations
+    }
+    logger.info("Document locations (%d): %s".format(docLocations.size, docLocations))
 
     val xercesElmDeclNamedMap = psviModel.getComponents(xerces.xs.XSConstants.ELEMENT_DECLARATION)
     val xercesElmDecls = xercesElementDeclarationNamedMapToSeq(xercesElmDeclNamedMap)
