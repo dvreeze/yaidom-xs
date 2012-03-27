@@ -94,6 +94,11 @@ final class AttributeDeclarationElem(
   require(wrappedElemWithoutChildren.resolvedName == NsXmlSchema.ename("attribute"))
   require(wrappedElemWithoutChildren.attributeOption("name".ename).isDefined)
 
+  require(content forall { comp =>
+    comp.isInstanceOf[SimpleTypeDefinitionElem] ||
+      comp.isInstanceOf[AnnotationElem]
+  })
+
   def name: String = wrappedElemWithoutChildren.attribute("name".ename)
 
   override def wrappedElem: Elem = {
@@ -239,6 +244,7 @@ final class ModelGroupElem(
   require(content forall { comp =>
     comp.isInstanceOf[ParticleElem] ||
       comp.isInstanceOf[AnnotationElem]
+    // TODO Or model group definition element?
   })
 
   override def wrappedElem: Elem = {
