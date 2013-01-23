@@ -25,7 +25,8 @@ import SchemaObject._
 /**
  * Immutable XML Schema component. Inspired both by the Apache Common XML Schema API 2.0 and XSOM.
  * See http://ws.apache.org/commons/xmlschema20/xmlschema-core/apidocs/overview-summary.html and
- * http://xsom.java.net/nonav/javadoc/index.html, respectively, for both APIs.
+ * http://xsom.java.net/nonav/javadoc/index.html, respectively, for both APIs. On the other hand, terminology
+ * is taken as much as possible from the XML Schema specification Part 1 (especially section 2.2).
  *
  * This represents only schema file content, without resolving imports and includes, and without
  * resolving types, substitution groups, etc. The latter requires an appropriate collection of schema documents
@@ -133,22 +134,22 @@ final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends P
 }
 
 /**
- * Schema type, which is either a simple type or a complex type.
+ * Schema type definition, which is either a simple type or a complex type.
  */
-abstract class SchemaType(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
+abstract class TypeDefinition(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
 }
 
 /**
- * Simple type. That is, the "simpleType" XML element.
+ * Simple type definition. That is, the "simpleType" XML element.
  */
-final class SimpleType(override val wrappedElem: indexed.Elem) extends SchemaType(wrappedElem) {
+final class SimpleTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
   require(wrappedElem.resolvedName == EName(ns, "simpleType"))
 }
 
 /**
- * Complex type. That is, the "complexType" XML element.
+ * Complex type definition. That is, the "complexType" XML element.
  */
-final class ComplexType(override val wrappedElem: indexed.Elem) extends SchemaType(wrappedElem) {
+final class ComplexTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
   require(wrappedElem.resolvedName == EName(ns, "complexType"))
 }
 
@@ -192,8 +193,8 @@ object SchemaObject {
     // TODO
     case e if e.resolvedName == EName(ns, "schema") => Schema(wrappedElem)
     case e if e.resolvedName == EName(ns, "element") => ElementDeclaration(wrappedElem)
-    case e if e.resolvedName == EName(ns, "simpleType") => SimpleType(wrappedElem)
-    case e if e.resolvedName == EName(ns, "complexType") => ComplexType(wrappedElem)
+    case e if e.resolvedName == EName(ns, "simpleType") => SimpleTypeDefinition(wrappedElem)
+    case e if e.resolvedName == EName(ns, "complexType") => ComplexTypeDefinition(wrappedElem)
     case _ => new SchemaObject(wrappedElem)
   }
 }
@@ -214,18 +215,18 @@ object ElementDeclaration {
   }
 }
 
-object SimpleType {
+object SimpleTypeDefinition {
 
-  def apply(wrappedElem: indexed.Elem): SimpleType = {
+  def apply(wrappedElem: indexed.Elem): SimpleTypeDefinition = {
     require(wrappedElem.resolvedName == EName(ns, "simpleType"))
-    new SimpleType(wrappedElem)
+    new SimpleTypeDefinition(wrappedElem)
   }
 }
 
-object ComplexType {
+object ComplexTypeDefinition {
 
-  def apply(wrappedElem: indexed.Elem): ComplexType = {
+  def apply(wrappedElem: indexed.Elem): ComplexTypeDefinition = {
     require(wrappedElem.resolvedName == EName(ns, "complexType"))
-    new ComplexType(wrappedElem)
+    new ComplexTypeDefinition(wrappedElem)
   }
 }
