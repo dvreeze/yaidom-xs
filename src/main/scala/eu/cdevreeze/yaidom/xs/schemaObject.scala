@@ -74,7 +74,7 @@ final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(
     this filterElemsOrSelf { e => e.resolvedName == EName(ns, "element") } collect { case e: ElementDeclaration => e }
 
   final def globalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    elementDeclarations filter { e => e.wrappedElem.elemPath.entries.size == 1 }
+    elementDeclarations filter { e => e.isTopLevel }
 }
 
 /**
