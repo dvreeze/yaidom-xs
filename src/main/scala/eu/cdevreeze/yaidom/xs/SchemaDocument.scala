@@ -26,7 +26,7 @@ import eu.cdevreeze.yaidom._
  *
  * @author Chris de Vreeze
  */
-sealed class SchemaDocument(val wrappedDocument: indexed.Document) extends Immutable {
+final class SchemaDocument(val wrappedDocument: indexed.Document) extends Immutable {
 
   final val schema: Schema = Schema(wrappedDocument.documentElement)
 
