@@ -3,12 +3,12 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<properties>
-		<scala.version>2.9.1</scala.version>
+		<scala.version>2.9.2</scala.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<groupId>eu.cdevreeze.yaidom</groupId>
-	<artifactId>yaidom-xs_2.9.1</artifactId>
+	<artifactId>yaidom-xs_2.9.2</artifactId>
 	<version>0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -18,8 +18,8 @@
 		<version>7</version>
 	</parent>
 
-	<name>XML Schema support for yaidom</name>
-	<description>XML Schema support for yaidom</description>
+	<name>Yaidom query API applied to XML Schema</name>
+	<description>Yaidom query API applied to XML Schema</description>
 	<url>https://github.com/dvreeze/yaidom</url>
 
 	<licenses>
@@ -128,25 +128,13 @@
 		<dependency>
 			<groupId>eu.cdevreeze.yaidom</groupId>
 			<artifactId>yaidom_${scala.version}</artifactId>
-			<version>0.5.1</version>
+			<version>0.6.6</version>
 		</dependency>
 
 		<dependency>
-			<groupId>xml-apis</groupId>
-			<artifactId>xml-apis</artifactId>
-			<version>1.4.01</version>
-		</dependency>
-
-		<dependency>
-			<groupId>xerces</groupId>
-			<artifactId>xercesImpl</artifactId>
-			<version>2.10.0</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.sun.xsom</groupId>
-			<artifactId>xsom</artifactId>
-			<version>20110809</version>
+			<groupId>org.apache.ws.xmlschema</groupId>
+			<artifactId>xmlschema-core</artifactId>
+			<version>2.0.3</version>
 		</dependency>
 
 		<!-- Testing dependencies -->
@@ -161,7 +149,7 @@
 		<dependency>
 			<groupId>org.scalatest</groupId>
 			<artifactId>scalatest_${scala.version}</artifactId>
-			<version>1.6.1</version>
+			<version>1.8</version>
 			<scope>test</scope>
 		</dependency>
 
