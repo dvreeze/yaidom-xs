@@ -88,7 +88,7 @@ final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(
     this filterElemsOrSelf { e => e.resolvedName == EName(ns, "element") } collect { case e: ElementDeclaration => e }
 
   final def globalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    elementDeclarations filter { e => e.isTopLevel }
+    elementDeclarations filter { e => e.isSchemaElementChild }
 }
 
 // Schema Components
@@ -106,6 +106,13 @@ abstract class SchemaComponent(override val wrappedElem: indexed.Elem) extends S
 
 /**
  * Particle, having a min and max occurs (possibly default).
+ *
+ * As documented for `SchemaComponent`, an element declaration (for example) is regarded a particle, because the element
+ * declaration and the particle that it is a part of in the abstract schema model can not be separated in the XML representation.
+ *
+ * Moreover, top-level element declarations are not part of any particle in the abstract schema model. Hence, from a
+ * "modelling perspective", regarding an element declaration (among other terms) to be particles is not correct, yet from
+ * an XML representation point of view it makes sense.
  */
 abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
   require(minOccursStringOption.getOrElse("") forall (_.isDigit))
@@ -131,7 +138,18 @@ abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaCo
 final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends Particle(wrappedElem) {
   require(wrappedElem.resolvedName == EName(ns, "element"))
 
-  final def isTopLevel: Boolean = wrappedElem.elemPath.entries.size == 1
+  if (isSchemaElementChild) {
+    require(minOccurs == 1, "Element declarations with the schema element as parent are not particles, so have no minOccurs")
+    require(maxOccurs == 1, "Element declarations with the schema element as parent are not particles, so have no maxOccurs")
+  } else {
+    require(refOption.isDefined || enameOption.isDefined, "One of ref or name must be present")
+    require(refOption.isEmpty || enameOption.isEmpty, "One of ref or name must be absent")
+  }
+
+  /**
+   * Returns true if and only if the element declaration has the schema element as its parent.
+   */
+  final def isSchemaElementChild: Boolean = wrappedElem.elemPath.entries.size == 1
 
   final def enameOption: Option[EName] = {
     val tnsOption = wrappedElem.rootElem \@ EName("targetNamespace")

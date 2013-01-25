@@ -114,6 +114,40 @@ class CreateSchemaTest extends Suite {
 
     assert(globalElemDecls.size >= 40)
     assert(globalElemDecls.size <= 50)
+    assert(elemDecls.size > globalElemDecls.size)
+  }
+
+  @Test def testCreateValidLargeSchema() {
+    val docParser = parse.DocumentParserUsingSax.newInstance
+    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("ifrs-gp-2006-08-15.xsd"))
+
+    val schemaDoc = new SchemaDocument(indexed.Document(doc))
+    val schema = schemaDoc.schema
+
+    val globalElemDecls = schema.globalElementDeclarations
+    val elemDecls = schema.elementDeclarations
+
+    assert(globalElemDecls.size >= 4000)
+    assert(globalElemDecls.size <= 5000)
+    assert(elemDecls.size > globalElemDecls.size)
+
+    expect(22) {
+      val filteredElemDecls = globalElemDecls filter { elemDecl =>
+        elemDecl.enameOption.map(_.localPart).getOrElse("").startsWith("Accumulated")
+      }
+      filteredElemDecls.size
+    }
+
+    val nsXbrli = "http://www.xbrl.org/2003/instance"
+
+    expect(Set(EName(nsXbrli, "item"), EName(nsXbrli, "tuple"))) {
+      val result = globalElemDecls flatMap { elemDecl => elemDecl.substitutionGroupOption }
+      result.toSet
+    }
+    expect(Set("instant", "duration")) {
+      val result = globalElemDecls flatMap { elemDecl => elemDecl.attributeOption(EName(nsXbrli, "periodType")) }
+      result.toSet
+    }
   }
 
   trait MyEntityResolver extends EntityResolver {
