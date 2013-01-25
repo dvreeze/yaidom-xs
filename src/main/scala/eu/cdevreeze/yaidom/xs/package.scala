@@ -18,7 +18,9 @@ package eu.cdevreeze.yaidom
 
 /**
  * This package represents XML Schema document content as immutable yaidom "elements". These schema objects offer the
- * [[eu.cdevreeze.yaidom.ElemLike]] query API. They wrap an [[eu.cdevreeze.yaidom.indexed.Elem]].
+ * `ElemLike` query API. They wrap an `eu.cdevreeze.yaidom.indexed.Elem`.
+ *
+ * This API only represents schemas. It is not capable of validating instance documents against schemas.
  *
  * @author Chris de Vreeze
  */

@@ -23,10 +23,13 @@ import eu.cdevreeze.yaidom._
 import SchemaObject._
 
 /**
- * Immutable XML Schema component. Inspired both by the Apache Common XML Schema API 2.0 and XSOM.
+ * Immutable XML Schema or a part thereof.
+ *
+ * Terminology is taken as much as possible from the XML Schema specification Part 1 (especially section 2.2).
+ *
+ * Still, the API has been inspired both by the Apache Common XML Schema API 2.0 and XSOM.
  * See http://ws.apache.org/commons/xmlschema20/xmlschema-core/apidocs/overview-summary.html and
- * http://xsom.java.net/nonav/javadoc/index.html, respectively, for both APIs. On the other hand, terminology
- * is taken as much as possible from the XML Schema specification Part 1 (especially section 2.2).
+ * http://xsom.java.net/nonav/javadoc/index.html, respectively.
  *
  * This represents only schema file content, without resolving imports and includes, and without
  * resolving types, substitution groups, etc. The latter requires an appropriate collection of schema documents
@@ -36,8 +39,12 @@ import SchemaObject._
  *
  * @author Chris de Vreeze
  */
-sealed class SchemaObject(
+sealed abstract class SchemaObject(
   val wrappedElem: indexed.Elem) extends ElemLike[SchemaObject] with SchemaObject.HasParent[SchemaObject] with HasText with Immutable {
+
+  require(wrappedElem ne null)
+  require(wrappedElem.rootElem.resolvedName == EName(ns, "schema"))
+  require((wrappedElem.resolvedName == EName(ns, "schema")) || (!wrappedElem.elemPath.isRoot))
 
   final override def allChildElems: immutable.IndexedSeq[SchemaObject] = {
     wrappedElem.allChildElems map { e => SchemaObject(e) }
@@ -64,10 +71,16 @@ sealed class SchemaObject(
 
 /**
  * XML Schema (from one document). That is, the "schema" XML element.
+ *
+ * This is what the XML Schema specification calls a schema document, or the document element thereof.
+ * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
 final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
   require(wrappedElem.resolvedName == EName(ns, "schema"))
   require(wrappedElem.elemPath.isRoot)
+
+  // The following val variable contains and therefore validates the top level child elements
+  final val childSchemaObjects: immutable.IndexedSeq[SchemaObject] = allChildElems
 
   final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
 
@@ -78,14 +91,38 @@ final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(
     elementDeclarations filter { e => e.isTopLevel }
 }
 
+// Schema Components
+
+/**
+ * Schema component, as specified in the XML Schema specification, part 1, section 2.2.
+ *
+ * There is an important difference, however. For example, in the abstract schema model, a particle contains a term, such
+ * as an element declaration. In the concrete XML representation of the schema, the particle and the term that it contains,
+ * such as an element declaration, are part of the same XML element. To keep close to the XML representation of XML Schema,
+ * a term like an element declaration IS a particle, so a particle does NOT HAVE a term. More generally, it is the schema
+ * XML document that is leading, and not the abstract schema model that has no knowledge about its XML representation.
+ */
+abstract class SchemaComponent(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem)
+
 /**
  * Particle, having a min and max occurs (possibly default).
  */
-abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
+abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
+  require(minOccursStringOption.getOrElse("") forall (_.isDigit))
+  require((maxOccursStringOption.getOrElse("").toLowerCase(java.util.Locale.ENGLISH) == "unbounded") ||
+    (maxOccursStringOption.getOrElse("") forall (_.isDigit)))
 
-  final def minOccurs: String = (wrappedElem \@ EName("minOccurs")).getOrElse(1.toString)
+  final def minOccurs: Int = minOccursStringOption map (_.toInt) getOrElse 1
 
-  final def maxOccursOption: String = (wrappedElem \@ EName("maxOccurs")).getOrElse(1.toString)
+  final def maxOccurs: Int = {
+    maxOccursStringOption map { v =>
+      if (v.toLowerCase(java.util.Locale.ENGLISH) == "unbounded") Particle.Unbounded else 1
+    } getOrElse 1
+  }
+
+  private final def minOccursStringOption: Option[String] = (wrappedElem \@ EName("minOccurs"))
+
+  private final def maxOccursStringOption: Option[String] = (wrappedElem \@ EName("maxOccurs"))
 }
 
 /**
@@ -136,8 +173,7 @@ final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends P
 /**
  * Schema type definition, which is either a simple type or a complex type.
  */
-abstract class TypeDefinition(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
-}
+abstract class TypeDefinition(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem)
 
 /**
  * Simple type definition. That is, the "simpleType" XML element.
@@ -152,6 +188,43 @@ final class SimpleTypeDefinition(override val wrappedElem: indexed.Elem) extends
 final class ComplexTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
   require(wrappedElem.resolvedName == EName(ns, "complexType"))
 }
+
+/**
+ * Annotation schema component.
+ */
+final class Annotation(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
+  require(wrappedElem.resolvedName == EName(ns, "annotation"),
+    "Expected <xs:annotation> but got %s instead".format(wrappedElem.resolvedName))
+
+  val expectedChildNames = Set(EName(ns, "appinfo"), EName(ns, "documentation"))
+  val unexpectedChildNames = (wrappedElem.allChildElems map (_.resolvedName)).toSet diff expectedChildNames
+
+  require(wrappedElem.allChildElems forall (e =>
+    expectedChildNames.contains(e.resolvedName)),
+    "Unexpected child elements %s of <xs:annotation>".format(unexpectedChildNames))
+}
+
+object SchemaComponent {
+
+  def apply(elem: indexed.Elem): SchemaComponent = {
+    wrapOption(elem).getOrElse(sys.error("%s is not a schema component".format(elem.resolvedName)))
+  }
+
+  def wrapOption(elem: indexed.Elem): Option[SchemaComponent] = elem match {
+    // TODO
+    case e if e.resolvedName == EName(ns, "element") => Some(new ElementDeclaration(e))
+    case e if e.resolvedName == EName(ns, "simpleType") => Some(new SimpleTypeDefinition(e))
+    case e if e.resolvedName == EName(ns, "complexType") => Some(new ComplexTypeDefinition(e))
+    case e => None
+  }
+}
+
+// Other schema parts, that are not Schema Components themselves
+
+/**
+ * Simple type content, which can be a restriction, list or union
+ */
+abstract class SimpleTypeContent(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem)
 
 object SchemaObject {
 
@@ -191,42 +264,16 @@ object SchemaObject {
 
   def apply(wrappedElem: indexed.Elem): SchemaObject = wrappedElem match {
     // TODO
-    case e if e.resolvedName == EName(ns, "schema") => Schema(wrappedElem)
-    case e if e.resolvedName == EName(ns, "element") => ElementDeclaration(wrappedElem)
-    case e if e.resolvedName == EName(ns, "simpleType") => SimpleTypeDefinition(wrappedElem)
-    case e if e.resolvedName == EName(ns, "complexType") => ComplexTypeDefinition(wrappedElem)
-    case _ => new SchemaObject(wrappedElem)
+    case e if e.resolvedName == EName(ns, "schema") => new Schema(wrappedElem)
+    case e if Set(
+      EName(ns, "element"),
+      EName(ns, "simpleType"),
+      EName(ns, "complexType")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
+    case _ => new SchemaObject(wrappedElem) {}
   }
 }
 
-object Schema {
+object Particle {
 
-  def apply(wrappedElem: indexed.Elem): Schema = {
-    require(wrappedElem.resolvedName == EName(ns, "schema"))
-    new Schema(wrappedElem)
-  }
-}
-
-object ElementDeclaration {
-
-  def apply(wrappedElem: indexed.Elem): ElementDeclaration = {
-    require(wrappedElem.resolvedName == EName(ns, "element"))
-    new ElementDeclaration(wrappedElem)
-  }
-}
-
-object SimpleTypeDefinition {
-
-  def apply(wrappedElem: indexed.Elem): SimpleTypeDefinition = {
-    require(wrappedElem.resolvedName == EName(ns, "simpleType"))
-    new SimpleTypeDefinition(wrappedElem)
-  }
-}
-
-object ComplexTypeDefinition {
-
-  def apply(wrappedElem: indexed.Elem): ComplexTypeDefinition = {
-    require(wrappedElem.resolvedName == EName(ns, "complexType"))
-    new ComplexTypeDefinition(wrappedElem)
-  }
+  val Unbounded = -1
 }
