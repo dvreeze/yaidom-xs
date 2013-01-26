@@ -35,29 +35,31 @@ import SchemaObject._
  * resolving types, substitution groups, etc. The latter requires an appropriate collection of schema documents
  * (closed under imports and includes).
  *
+ * Note that `allChildElems`, being a val variable, is very fast, as it should be (see the `ElemLike` query API).
+ *
  * TODO Use yaidom trait HasParent.
  *
  * @author Chris de Vreeze
  */
-sealed abstract class SchemaObject(
-  val wrappedElem: indexed.Elem) extends ElemLike[SchemaObject] with SchemaObject.HasParent[SchemaObject] with HasText with Immutable {
+sealed abstract class SchemaObject private[xs] (
+  val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with SchemaObject.HasParent[SchemaObject] with HasText with Immutable {
 
   require(wrappedElem ne null)
+  require(allChildElems ne null)
+
+  require(wrappedElem.allChildElems == allChildElems.map(_.wrappedElem), "Inconsistent SchemaObject")
+
   require(wrappedElem.rootElem.resolvedName == EName(ns, "schema"), "The root of the element tree must be a 'schema' element")
   require(
     (wrappedElem.resolvedName == EName(ns, "schema")) || (!wrappedElem.elemPath.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
 
   /**
-   * Val variable containing all child elements, to avoid repeated expensive re-computations.
-   * Note that this function needs to be fast, in order for the `ElemLike` query API methods to be fast.
-   *
-   * Also note that this val variable allChildElems causes validation of the child elements during construction of the SchemaObject.
-   * This is done recursively, because the children, grand-children etc. are also SchemaObjects.
+   * Expensive auxiliary constructor.
    */
-  final override val allChildElems: immutable.IndexedSeq[SchemaObject] = {
-    wrappedElem.allChildElems map { e => SchemaObject(e) }
-  }
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def resolvedName: EName = wrappedElem.resolvedName
 
@@ -84,8 +86,16 @@ sealed abstract class SchemaObject(
  * This is what the XML Schema specification calls a schema document, or the document element thereof.
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
-final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
+final class Schema private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
   SchemaObjects.checkSchemaElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
 
@@ -113,7 +123,9 @@ final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(
  * a term like an element declaration IS a particle, so a particle does NOT HAVE a term. More generally, it is the schema
  * XML document that is leading, and not the abstract schema model that has no knowledge about its XML representation.
  */
-abstract class SchemaComponent(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem)
+abstract class SchemaComponent private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems)
 
 /**
  * Particle, having a min and max occurs (possibly default).
@@ -125,7 +137,9 @@ abstract class SchemaComponent(override val wrappedElem: indexed.Elem) extends S
  * "modelling perspective", regarding an element declaration (among other terms) to be a particle is not correct, yet from
  * an XML representation point of view it makes sense.
  */
-abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
+abstract class Particle private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
   SchemaObjects.checkParticleElem(wrappedElem)
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
@@ -144,8 +158,16 @@ abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaCo
 /**
  * Element declaration. That is, the "element" XML element.
  */
-final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends Particle(wrappedElem) {
+final class ElementDeclaration private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
   SchemaObjects.checkElementDeclarationElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
@@ -204,27 +226,53 @@ final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends P
 /**
  * Schema type definition, which is either a simple type or a complex type.
  */
-abstract class TypeDefinition(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem)
+abstract class TypeDefinition private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems)
 
 /**
  * Simple type definition. That is, the "simpleType" XML element.
  */
-final class SimpleTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
+final class SimpleTypeDefinition private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
   SchemaObjects.checkSimpleTypeDefinitionElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
 /**
  * Complex type definition. That is, the "complexType" XML element.
  */
-final class ComplexTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
+final class ComplexTypeDefinition private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
   SchemaObjects.checkComplexTypeDefinitionElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
 /**
  * Annotation schema component.
  */
-final class Annotation(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
+final class Annotation private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
   SchemaObjects.checkAnnotationElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
 object SchemaComponent {
