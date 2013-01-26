@@ -150,6 +150,36 @@ class CreateSchemaTest extends Suite {
     }
   }
 
+  @Test def testCreateInvalidSchema() {
+    val docParser = parse.DocumentParserUsingSax.newInstance
+    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
+
+    import NodeBuilder._
+    val invalidChild =
+      textElem(QName("xyz"), "invalid").build(doc.documentElement.scope.withoutDefaultNamespace)
+
+    val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
+
+    intercept[Exception] {
+      new SchemaDocument(indexed.Document(invalidDoc))
+    }
+  }
+
+  @Test def testCreateAnotherInvalidSchema() {
+    val docParser = parse.DocumentParserUsingSax.newInstance
+    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
+
+    import NodeBuilder._
+    val invalidChild =
+      textElem(QName("xs:complexContent"), "invalid").build(doc.documentElement.scope ++ Scope.from("xs" -> ns))
+
+    val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
+
+    intercept[Exception] {
+      new SchemaDocument(indexed.Document(invalidDoc))
+    }
+  }
+
   trait MyEntityResolver extends EntityResolver {
     override def resolveEntity(publicId: String, systemId: String): InputSource = {
       new InputSource(new java.io.StringReader(""))

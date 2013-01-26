@@ -43,10 +43,19 @@ sealed abstract class SchemaObject(
   val wrappedElem: indexed.Elem) extends ElemLike[SchemaObject] with SchemaObject.HasParent[SchemaObject] with HasText with Immutable {
 
   require(wrappedElem ne null)
-  require(wrappedElem.rootElem.resolvedName == EName(ns, "schema"))
-  require((wrappedElem.resolvedName == EName(ns, "schema")) || (!wrappedElem.elemPath.isRoot))
+  require(wrappedElem.rootElem.resolvedName == EName(ns, "schema"), "The root of the element tree must be a 'schema' element")
+  require(
+    (wrappedElem.resolvedName == EName(ns, "schema")) || (!wrappedElem.elemPath.isRoot),
+    "This element must either be a 'schema' element, or not be the root of the element tree")
 
-  final override def allChildElems: immutable.IndexedSeq[SchemaObject] = {
+  /**
+   * Val variable containing all child elements, to avoid repeated expensive re-computations.
+   * Note that this function needs to be fast, in order for the `ElemLike` query API methods to be fast.
+   *
+   * Also note that this val variable allChildElems causes validation of the child elements during construction of the SchemaObject.
+   * This is done recursively, because the children, grand-children etc. are also SchemaObjects.
+   */
+  final override val allChildElems: immutable.IndexedSeq[SchemaObject] = {
     wrappedElem.allChildElems map { e => SchemaObject(e) }
   }
 
@@ -76,7 +85,7 @@ sealed abstract class SchemaObject(
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
 final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
-  SchemaObjects.checkSchema(wrappedElem)
+  SchemaObjects.checkSchemaElem(wrappedElem)
 
   final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
 
@@ -117,7 +126,7 @@ abstract class SchemaComponent(override val wrappedElem: indexed.Elem) extends S
  * an XML representation point of view it makes sense.
  */
 abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
-  SchemaObjects.checkParticle(wrappedElem)
+  SchemaObjects.checkParticleElem(wrappedElem)
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
 
@@ -136,7 +145,7 @@ abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaCo
  * Element declaration. That is, the "element" XML element.
  */
 final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends Particle(wrappedElem) {
-  SchemaObjects.checkElementDeclaration(wrappedElem)
+  SchemaObjects.checkElementDeclarationElem(wrappedElem)
 
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
@@ -201,21 +210,21 @@ abstract class TypeDefinition(override val wrappedElem: indexed.Elem) extends Sc
  * Simple type definition. That is, the "simpleType" XML element.
  */
 final class SimpleTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
-  SchemaObjects.checkSimpleTypeDefinition(wrappedElem)
+  SchemaObjects.checkSimpleTypeDefinitionElem(wrappedElem)
 }
 
 /**
  * Complex type definition. That is, the "complexType" XML element.
  */
 final class ComplexTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
-  SchemaObjects.checkComplexTypeDefinition(wrappedElem)
+  SchemaObjects.checkComplexTypeDefinitionElem(wrappedElem)
 }
 
 /**
  * Annotation schema component.
  */
 final class Annotation(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
-  SchemaObjects.checkAnnotation(wrappedElem)
+  SchemaObjects.checkAnnotationElem(wrappedElem)
 }
 
 object SchemaComponent {
@@ -233,12 +242,7 @@ object SchemaComponent {
   }
 }
 
-// Other schema parts, that are not Schema Components themselves
-
-/**
- * Simple type content, which can be a restriction, list or union
- */
-abstract class SimpleTypeContent(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem)
+// TODO Other schema parts, that are not Schema Components themselves
 
 object SchemaObject {
 

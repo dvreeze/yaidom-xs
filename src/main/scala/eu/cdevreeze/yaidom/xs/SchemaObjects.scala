@@ -30,22 +30,71 @@ private[xs] object SchemaObjects {
   /**
    * Checks the XML element as XML Schema (root element), throwing an exception if invalid.
    */
-  def checkSchema(e: indexed.Elem): Unit = {
-    require(e.resolvedName == EName(ns, "schema"))
-    require(e.elemPath.isRoot)
+  def checkSchemaElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "schema"), "The element must be a 'schema' element")
+    require(e.elemPath.isRoot, "The element must be the root of the element tree")
+
+    val childElems = e.allChildElems
+
+    val expectedChildENames = Set(
+      EName(ns, "include"),
+      EName(ns, "import"),
+      EName(ns, "redefine"),
+      EName(ns, "annotation"),
+      EName(ns, "element"),
+      EName(ns, "attribute"),
+      EName(ns, "notation"),
+      EName(ns, "simpleType"),
+      EName(ns, "complexType"),
+      EName(ns, "group"),
+      EName(ns, "attributeGroup"))
+    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+      "Expected 'schema' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    val expectedFirstChildNames = Set(EName(ns, "include"), EName(ns, "import"), EName(ns, "redefine"))
+
+    val childElemsWithoutAnnotations = childElems filterNot { e => e.resolvedName == EName(ns, "annotation") }
+    val childElems1 = childElemsWithoutAnnotations filter (e => expectedFirstChildNames.contains(e.resolvedName))
+    val childElems2 = childElemsWithoutAnnotations filterNot (e => expectedFirstChildNames.contains(e.resolvedName))
+
+    require(
+      childElems1.map(_.resolvedName) ++ childElems2.map(_.resolvedName) == childElemsWithoutAnnotations.map(_.resolvedName),
+      "Expected 'include', 'import' and 'redefine' child elements to come before the others (ignoring annotations)")
   }
 
   /**
    * Checks the XML element as XML Schema element declaration, throwing an exception if invalid.
    */
-  def checkElementDeclaration(e: indexed.Elem): Unit = {
+  def checkElementDeclarationElem(e: indexed.Elem): Unit = {
     def isTopLevel: Boolean = e.elemPath.entries.size == 1
 
     def isReference: Boolean = refOption(e).isDefined
 
     def isAbstract: Boolean = abstractOption(e) == Some(true)
 
-    require(e.resolvedName == EName(ns, "element"))
+    require(e.resolvedName == EName(ns, "element"), "The element must be an 'element' element")
+
+    val childElems = e.allChildElems
+
+    val expectedChildENames = Set(
+      EName(ns, "simpleType"),
+      EName(ns, "complexType"),
+      EName(ns, "annotation"),
+      EName(ns, "unique"),
+      EName(ns, "key"),
+      EName(ns, "keyref"))
+    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+      "Expected 'element' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    val expectedFirstChildNames = Set(EName(ns, "simpleType"), EName(ns, "complexType"))
+
+    val childElemsWithoutAnnotations = childElems filterNot { e => e.resolvedName == EName(ns, "annotation") }
+    val childElems1 = childElemsWithoutAnnotations filter (e => expectedFirstChildNames.contains(e.resolvedName))
+    val childElems2 = childElemsWithoutAnnotations filterNot (e => expectedFirstChildNames.contains(e.resolvedName))
+
+    require(
+      childElems1.map(_.resolvedName) ++ childElems2.map(_.resolvedName) == childElemsWithoutAnnotations.map(_.resolvedName),
+      "Expected 'simpleType' and 'complexType' child elements to come before the others (ignoring annotations)")
 
     if (isTopLevel) {
       require(minOccursAttrOption(e).isEmpty, "Top level element declarations are not particles, so have no 'minOccurs'")
@@ -84,35 +133,47 @@ private[xs] object SchemaObjects {
         EName("type"))).isEmpty,
         "Element declarations that are references must not have attributes 'nillable', 'default', 'fixed', 'form', 'block', 'type'")
     }
+
+    if (isReference) {
+      assert(!isTopLevel)
+      require((e.allChildElems.map(_.resolvedName).toSet intersect Set(
+        EName(ns, "complexType"),
+        EName(ns, "simpleType"),
+        EName(ns, "key"),
+        EName(ns, "keyref"),
+        EName(ns, "unique"))).isEmpty,
+        "Element declarations that are references must not have child elements 'complexType', 'simpleType', 'key', 'keyref', 'unique'")
+    }
   }
 
   /**
    * Checks the XML element as XML Schema particle, throwing an exception if invalid.
    */
-  def checkParticle(e: indexed.Elem): Unit = {
-    require(minOccursAttrOption(e).getOrElse("") forall (_.isDigit))
+  def checkParticleElem(e: indexed.Elem): Unit = {
+    require(minOccursAttrOption(e).getOrElse("") forall (_.isDigit), "@minOccurs must be a non-negative integer")
     require((maxOccursAttrOption(e).getOrElse("").toLowerCase(java.util.Locale.ENGLISH) == "unbounded") ||
-      (maxOccursAttrOption(e).getOrElse("") forall (_.isDigit)))
+      (maxOccursAttrOption(e).getOrElse("") forall (_.isDigit)),
+      "@maxOccurs must be a non-negative integer, or 'unbounded'")
   }
 
   /**
    * Checks the XML element as XML Schema simple type definition, throwing an exception if invalid.
    */
-  def checkSimpleTypeDefinition(e: indexed.Elem): Unit = {
-    require(e.resolvedName == EName(ns, "simpleType"))
+  def checkSimpleTypeDefinitionElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "simpleType"), "The element must be a 'simpleType' element")
   }
 
   /**
    * Checks the XML element as XML Schema complex type definition, throwing an exception if invalid.
    */
-  def checkComplexTypeDefinition(e: indexed.Elem): Unit = {
-    require(e.resolvedName == EName(ns, "complexType"))
+  def checkComplexTypeDefinitionElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "complexType"), "The element must be a 'complexType' element")
   }
 
   /**
    * Checks the XML element as XML Schema annotation, throwing an exception if invalid.
    */
-  def checkAnnotation(e: indexed.Elem): Unit = {
+  def checkAnnotationElem(e: indexed.Elem): Unit = {
     require(e.resolvedName == EName(ns, "annotation"),
       "Expected <xs:annotation> but got %s instead".format(e.resolvedName))
 
