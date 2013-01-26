@@ -41,7 +41,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.globalElementDeclarations
+    val globalElemDecls = schema.topLevelElementDeclarations
     val elemDecls = schema.elementDeclarations
 
     val globalElemDecls2 = schema \\! EName(ns, "element")
@@ -109,7 +109,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.globalElementDeclarations
+    val globalElemDecls = schema.topLevelElementDeclarations
     val elemDecls = schema.elementDeclarations
 
     assert(globalElemDecls.size >= 40)
@@ -124,7 +124,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.globalElementDeclarations
+    val globalElemDecls = schema.topLevelElementDeclarations
     val elemDecls = schema.elementDeclarations
 
     assert(globalElemDecls.size >= 4000)

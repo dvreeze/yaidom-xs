@@ -76,19 +76,21 @@ sealed abstract class SchemaObject(
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
 final class Schema(override val wrappedElem: indexed.Elem) extends SchemaObject(wrappedElem) {
-  require(wrappedElem.resolvedName == EName(ns, "schema"))
-  require(wrappedElem.elemPath.isRoot)
-
-  // The following val variable contains and therefore validates the top level child elements
-  final val childSchemaObjects: immutable.IndexedSeq[SchemaObject] = allChildElems
+  SchemaObjects.checkSchema(wrappedElem)
 
   final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
 
+  /**
+   * Returns all element declarations, whether top-level or local.
+   */
   final def elementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
     this filterElemsOrSelf { e => e.resolvedName == EName(ns, "element") } collect { case e: ElementDeclaration => e }
 
-  final def globalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    elementDeclarations filter { e => e.isSchemaElementChild }
+  /**
+   * Returns all top-level element declarations.
+   */
+  final def topLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    elementDeclarations filter { e => e.isTopLevel }
 }
 
 // Schema Components
@@ -111,81 +113,83 @@ abstract class SchemaComponent(override val wrappedElem: indexed.Elem) extends S
  * declaration and the particle that it is a part of in the abstract schema model can not be separated in the XML representation.
  *
  * Moreover, top-level element declarations are not part of any particle in the abstract schema model. Hence, from a
- * "modelling perspective", regarding an element declaration (among other terms) to be particles is not correct, yet from
+ * "modelling perspective", regarding an element declaration (among other terms) to be a particle is not correct, yet from
  * an XML representation point of view it makes sense.
  */
 abstract class Particle(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
-  require(minOccursStringOption.getOrElse("") forall (_.isDigit))
-  require((maxOccursStringOption.getOrElse("").toLowerCase(java.util.Locale.ENGLISH) == "unbounded") ||
-    (maxOccursStringOption.getOrElse("") forall (_.isDigit)))
+  SchemaObjects.checkParticle(wrappedElem)
 
-  final def minOccurs: Int = minOccursStringOption map (_.toInt) getOrElse 1
+  final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
 
   final def maxOccurs: Int = {
-    maxOccursStringOption map { v =>
+    maxOccursAttrOption map { v =>
       if (v.toLowerCase(java.util.Locale.ENGLISH) == "unbounded") Particle.Unbounded else 1
     } getOrElse 1
   }
 
-  private final def minOccursStringOption: Option[String] = (wrappedElem \@ EName("minOccurs"))
+  final def minOccursAttrOption: Option[String] = SchemaObjects.minOccursAttrOption(wrappedElem)
 
-  private final def maxOccursStringOption: Option[String] = (wrappedElem \@ EName("maxOccurs"))
+  final def maxOccursAttrOption: Option[String] = SchemaObjects.maxOccursAttrOption(wrappedElem)
 }
 
 /**
  * Element declaration. That is, the "element" XML element.
  */
 final class ElementDeclaration(override val wrappedElem: indexed.Elem) extends Particle(wrappedElem) {
-  require(wrappedElem.resolvedName == EName(ns, "element"))
-
-  if (isSchemaElementChild) {
-    require(minOccurs == 1, "Element declarations with the schema element as parent are not particles, so have no minOccurs")
-    require(maxOccurs == 1, "Element declarations with the schema element as parent are not particles, so have no maxOccurs")
-  } else {
-    require(refOption.isDefined || enameOption.isDefined, "One of ref or name must be present")
-    require(refOption.isEmpty || enameOption.isEmpty, "One of ref or name must be absent")
-  }
+  SchemaObjects.checkElementDeclaration(wrappedElem)
 
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
    */
-  final def isSchemaElementChild: Boolean = wrappedElem.elemPath.entries.size == 1
+  final def isTopLevel: Boolean = wrappedElem.elemPath.entries.size == 1
 
-  final def enameOption: Option[EName] = {
-    val tnsOption = wrappedElem.rootElem \@ EName("targetNamespace")
-    val localNameOption = wrappedElem \@ EName("name")
-    localNameOption map { nm => EName(tnsOption, nm) }
-  }
+  /**
+   * Returns true if and only if the element declaration is a reference to another (global) element declaration.
+   * Top level element declarations are never references.
+   */
+  final def isReference: Boolean = refOption.isDefined
 
-  final def idOption: Option[String] = wrappedElem \@ EName("id")
+  /**
+   * Returns true if and only if the element declaration is abstract.
+   * Only top level element declarations can be references.
+   */
+  final def isAbstract: Boolean = abstractOption == Some(true)
 
-  final def typeAttributeOption: Option[EName] = {
-    val typeAttrStringOption = wrappedElem \@ EName("type")
-    typeAttrStringOption map { tpe =>
-      wrappedElem.elem.scope.resolveQNameOption(QName(tpe)).getOrElse(
-        sys.error("Could not resolve type '%s' as expanded name".format(tpe)))
-    }
-  }
+  /**
+   * Returns the `EName` by combining the (root) target namespace and the value of the "name" attribute,
+   * if any, wrapped in an Option.
+   */
+  final def enameOption: Option[EName] = SchemaObjects.enameOption(wrappedElem)
 
-  final def substitutionGroupOption: Option[EName] = {
-    val substGroupStringOption = wrappedElem \@ EName("substitutionGroup")
-    substGroupStringOption map { substGroup =>
-      wrappedElem.elem.scope.resolveQNameOption(QName(substGroup)).getOrElse(
-        sys.error("Could not resolve substitution group '%s' as expanded name".format(substGroup)))
-    }
-  }
+  /**
+   * Returns the value of the 'id' attribute, if any, wrapped in an Option.
+   */
+  final def idOption: Option[String] = SchemaObjects.idOption(wrappedElem)
 
-  final def abstractOption: Option[Boolean] = (wrappedElem \@ EName("abstract")) map (_.toBoolean)
+  /**
+   * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
+   */
+  final def typeAttributeOption: Option[EName] = SchemaObjects.typeAttributeOption(wrappedElem)
 
-  final def nillableOption: Option[Boolean] = (wrappedElem \@ EName("nillable")) map (_.toBoolean)
+  /**
+   * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
+   */
+  final def substitutionGroupOption: Option[EName] = SchemaObjects.substitutionGroupOption(wrappedElem)
 
-  final def refOption: Option[EName] = {
-    val refOption = wrappedElem \@ EName("ref")
-    refOption map { ref =>
-      wrappedElem.elem.scope.resolveQNameOption(QName(ref)).getOrElse(
-        sys.error("Could not resolve ref '%s' as expanded name".format(ref)))
-    }
-  }
+  /**
+   * Returns the value of the 'abstract' attribute, if any, wrapped in an Option.
+   */
+  final def abstractOption: Option[Boolean] = SchemaObjects.abstractOption(wrappedElem)
+
+  /**
+   * Returns the value of the 'nillable' attribute, if any, wrapped in an Option.
+   */
+  final def nillableOption: Option[Boolean] = SchemaObjects.nillableOption(wrappedElem)
+
+  /**
+   * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
+   */
+  final def refOption: Option[EName] = SchemaObjects.refOption(wrappedElem)
 }
 
 /**
@@ -197,29 +201,21 @@ abstract class TypeDefinition(override val wrappedElem: indexed.Elem) extends Sc
  * Simple type definition. That is, the "simpleType" XML element.
  */
 final class SimpleTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
-  require(wrappedElem.resolvedName == EName(ns, "simpleType"))
+  SchemaObjects.checkSimpleTypeDefinition(wrappedElem)
 }
 
 /**
  * Complex type definition. That is, the "complexType" XML element.
  */
 final class ComplexTypeDefinition(override val wrappedElem: indexed.Elem) extends TypeDefinition(wrappedElem) {
-  require(wrappedElem.resolvedName == EName(ns, "complexType"))
+  SchemaObjects.checkComplexTypeDefinition(wrappedElem)
 }
 
 /**
  * Annotation schema component.
  */
 final class Annotation(override val wrappedElem: indexed.Elem) extends SchemaComponent(wrappedElem) {
-  require(wrappedElem.resolvedName == EName(ns, "annotation"),
-    "Expected <xs:annotation> but got %s instead".format(wrappedElem.resolvedName))
-
-  val expectedChildNames = Set(EName(ns, "appinfo"), EName(ns, "documentation"))
-  val unexpectedChildNames = (wrappedElem.allChildElems map (_.resolvedName)).toSet diff expectedChildNames
-
-  require(wrappedElem.allChildElems forall (e =>
-    expectedChildNames.contains(e.resolvedName)),
-    "Unexpected child elements %s of <xs:annotation>".format(unexpectedChildNames))
+  SchemaObjects.checkAnnotation(wrappedElem)
 }
 
 object SchemaComponent {
