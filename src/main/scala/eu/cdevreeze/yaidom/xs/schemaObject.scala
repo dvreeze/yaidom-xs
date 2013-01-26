@@ -110,6 +110,18 @@ final class Schema private[xs] (
    */
   final def topLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
     elementDeclarations filter { e => e.isTopLevel }
+
+  /**
+   * Returns all attribute declarations, whether top-level or local.
+   */
+  final def attributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    this filterElemsOrSelf { e => e.resolvedName == EName(ns, "attribute") } collect { case e: AttributeDeclaration => e }
+
+  /**
+   * Returns all top-level attribute declarations.
+   */
+  final def topLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    attributeDeclarations filter { e => e.isTopLevel }
 }
 
 // Schema Components
@@ -224,6 +236,59 @@ final class ElementDeclaration private[xs] (
 }
 
 /**
+ * Attribute use. The correspondence between attribute use and attribute declarations is analogous to the one between
+ * particles and element declarations.
+ */
+abstract class AttributeUse private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  SchemaObjects.checkAttributeUseElem(wrappedElem)
+
+  // TODO
+}
+
+/**
+ * Attribute declaration. That is, the "attribute" XML element.
+ */
+final class AttributeDeclaration private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeUse(wrappedElem, allChildElems) {
+  SchemaObjects.checkAttributeDeclarationElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  /**
+   * Returns true if and only if the attribute declaration has the schema element as its parent.
+   */
+  final def isTopLevel: Boolean = wrappedElem.elemPath.entries.size == 1
+
+  /**
+   * Returns true if and only if the attribute declaration is a reference to another (global) attribute declaration.
+   * Top level attribute declarations are never references.
+   */
+  final def isReference: Boolean = refOption.isDefined
+
+  /**
+   * Returns the value of the 'id' attribute, if any, wrapped in an Option.
+   */
+  final def idOption: Option[String] = SchemaObjects.idOption(wrappedElem)
+
+  /**
+   * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
+   */
+  final def typeAttributeOption: Option[EName] = SchemaObjects.typeAttributeOption(wrappedElem)
+
+  /**
+   * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
+   */
+  final def refOption: Option[EName] = SchemaObjects.refOption(wrappedElem)
+}
+
+/**
  * Schema type definition, which is either a simple type or a complex type.
  */
 abstract class TypeDefinition private[xs] (
@@ -284,6 +349,7 @@ object SchemaComponent {
   def wrapOption(elem: indexed.Elem): Option[SchemaComponent] = elem match {
     // TODO
     case e if e.resolvedName == EName(ns, "element") => Some(new ElementDeclaration(e))
+    case e if e.resolvedName == EName(ns, "attribute") => Some(new AttributeDeclaration(e))
     case e if e.resolvedName == EName(ns, "simpleType") => Some(new SimpleTypeDefinition(e))
     case e if e.resolvedName == EName(ns, "complexType") => Some(new ComplexTypeDefinition(e))
     case e => None
@@ -333,6 +399,7 @@ object SchemaObject {
     case e if e.resolvedName == EName(ns, "schema") => new Schema(wrappedElem)
     case e if Set(
       EName(ns, "element"),
+      EName(ns, "attribute"),
       EName(ns, "simpleType"),
       EName(ns, "complexType")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
     case _ => new SchemaObject(wrappedElem) {}

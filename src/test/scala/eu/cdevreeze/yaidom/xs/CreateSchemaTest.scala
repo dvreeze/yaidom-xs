@@ -50,6 +50,9 @@ class CreateSchemaTest extends Suite {
     val globalElemDecls3 = schema.wrappedElem \\! EName(ns, "element")
     val elemDecls3 = schema.wrappedElem \\ EName(ns, "element")
 
+    val globalAttrDecls = schema.topLevelAttributeDeclarations
+    val attrDecls = schema.attributeDeclarations
+
     val tns = "http://shiporder"
 
     expect(Seq(EName(tns, "shiporder"))) {
@@ -92,6 +95,13 @@ class CreateSchemaTest extends Suite {
         val name = (e \@ "name").get
         EName(tnsOption, name)
       }
+    }
+
+    expect(Seq()) {
+      globalAttrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
+    }
+    expect(Seq("orderid")) {
+      attrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
   }
 

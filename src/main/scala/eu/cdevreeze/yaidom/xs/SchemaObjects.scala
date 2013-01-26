@@ -88,6 +88,9 @@ private[xs] object SchemaObjects {
 
     val expectedFirstChildNames = Set(EName(ns, "simpleType"), EName(ns, "complexType"))
 
+    require(childElems.count(e => expectedFirstChildNames.contains(e.resolvedName)) <= 1,
+      "At most one complex/simple type definition child allowed")
+
     val childElemsWithoutAnnotations = childElems filterNot { e => e.resolvedName == EName(ns, "annotation") }
     val childElems1 = childElemsWithoutAnnotations filter (e => expectedFirstChildNames.contains(e.resolvedName))
     val childElems2 = childElemsWithoutAnnotations filterNot (e => expectedFirstChildNames.contains(e.resolvedName))
@@ -154,6 +157,21 @@ private[xs] object SchemaObjects {
     require((maxOccursAttrOption(e).getOrElse("").toLowerCase(java.util.Locale.ENGLISH) == "unbounded") ||
       (maxOccursAttrOption(e).getOrElse("") forall (_.isDigit)),
       "@maxOccurs must be a non-negative integer, or 'unbounded'")
+  }
+
+  /**
+   * Checks the XML element as XML Schema attribute declaration, throwing an exception if invalid.
+   */
+  def checkAttributeDeclarationElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "attribute"), "The element must be an 'attribute' element")
+    // TODO
+  }
+
+  /**
+   * Checks the XML element as XML Schema attribute-use, throwing an exception if invalid.
+   */
+  def checkAttributeUseElem(e: indexed.Elem): Unit = {
+    // TODO
   }
 
   /**
