@@ -125,6 +125,59 @@ class CreateSchemaTest extends Suite {
     assert(globalElemDecls.size >= 40)
     assert(globalElemDecls.size <= 50)
     assert(elemDecls.size > globalElemDecls.size)
+
+    val occursAttrGroupOption =
+      schema collectFromElemsOrSelf { case e: AttributeGroupDefinition => e } find { e => (e \@ "name") == Some("occurs") }
+
+    assert(occursAttrGroupOption.isDefined)
+
+    val minOccursAttrOption =
+      occursAttrGroupOption.get findElem { e =>
+        e match {
+          case e: AttributeDeclaration if (e \@ "name") == Some("minOccurs") => true
+          case _ => false
+        }
+      }
+
+    assert(minOccursAttrOption.isDefined)
+
+    val openAttrsComplexTypeOption =
+      schema findElem { e =>
+        e match {
+          case e: ComplexTypeDefinition if (e \@ "name") == Some("openAttrs") => true
+          case _ => false
+        }
+      }
+
+    assert(openAttrsComplexTypeOption.isDefined)
+    expect(2) {
+      openAttrsComplexTypeOption.get.allChildElems.size
+    }
+
+    val secondChildElem = openAttrsComplexTypeOption.get.allChildElems(1)
+
+    expect("complexContent") {
+      secondChildElem.localName
+    }
+
+    import NodeBuilder._
+    val expectedElemBuilder =
+      elem(
+        qname = QName("xs:complexContent"),
+        children =
+          Vector(
+            elem(
+              qname = QName("xs:restriction"),
+              attributes = Vector(QName("base") -> "xs:anyType"),
+              children = Vector(
+                elem(
+                  qname = QName("xs:anyAttribute"),
+                  attributes = Vector(QName("namespace") -> "##other", QName("processContents") -> "lax"))))))
+    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.wrappedElem.elem.scope ++ Scope.from("xs" -> ns))
+
+    expect(resolved.Elem(expectedElem)) {
+      resolved.Elem(secondChildElem.wrappedElem.elem).removeAllInterElementWhitespace
+    }
   }
 
   @Test def testCreateValidLargeSchema() {
