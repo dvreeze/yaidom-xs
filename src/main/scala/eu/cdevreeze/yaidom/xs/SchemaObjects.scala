@@ -189,6 +189,51 @@ private[xs] object SchemaObjects {
   }
 
   /**
+   * Checks the XML element as XML Schema attribute group definition, throwing an exception if invalid.
+   */
+  def checkAttributeGroupDefinitionElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "attributeGroup"), "The element must be a 'attributeGroup' element")
+  }
+
+  /**
+   * Checks the XML element as XML Schema identity constraint definition, throwing an exception if invalid.
+   */
+  def checkIdentityConstraintDefinitionElem(e: indexed.Elem): Unit = {
+    val expectedENames = Set(EName(ns, "key"), EName(ns, "keyref"), EName(ns, "unique"))
+    require(expectedENames.contains(e.resolvedName), "The element must be a 'key', 'keyref' or 'unique' element")
+  }
+
+  /**
+   * Checks the XML element as XML Schema model group definition, throwing an exception if invalid.
+   */
+  def checkModelGroupDefinitionElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "group"), "The element must be a 'group' element")
+  }
+
+  /**
+   * Checks the XML element as XML Schema notation declaration, throwing an exception if invalid.
+   */
+  def checkNotationDeclarationElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "notation"), "The element must be a 'notation' element")
+  }
+
+  /**
+   * Checks the XML element as XML Schema model group, throwing an exception if invalid.
+   */
+  def checkModelGroupElem(e: indexed.Elem): Unit = {
+    val expectedENames = Set(EName(ns, "all"), EName(ns, "sequence"), EName(ns, "choice"))
+    require(expectedENames.contains(e.resolvedName), "The element must be a 'all', 'sequence' or 'choice' element")
+  }
+
+  /**
+   * Checks the XML element as XML Schema wildcard, throwing an exception if invalid.
+   */
+  def checkWildcardElem(e: indexed.Elem): Unit = {
+    val expectedENames = Set(EName(ns, "any"), EName(ns, "anyAttribute"))
+    require(expectedENames.contains(e.resolvedName), "The element must be a 'any' or 'anyAttribute' element")
+  }
+
+  /**
    * Checks the XML element as XML Schema annotation, throwing an exception if invalid.
    */
   def checkAnnotationElem(e: indexed.Elem): Unit = {

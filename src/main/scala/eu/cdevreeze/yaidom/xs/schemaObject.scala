@@ -326,6 +326,96 @@ final class ComplexTypeDefinition private[xs] (
 }
 
 /**
+ * Attribute group definition. That is, the "attributeGroup" XML element.
+ */
+final class AttributeGroupDefinition private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  SchemaObjects.checkAttributeGroupDefinitionElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * Identity constraint definition. That is, the "key", "keyref" or "unique" XML element.
+ */
+final class IdentityConstraintDefinition private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  SchemaObjects.checkIdentityConstraintDefinitionElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * Model group definition. That is, the "group" XML element.
+ */
+final class ModelGroupDefinition private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  SchemaObjects.checkModelGroupDefinitionElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * Notation declaration. That is, the "notation" XML element.
+ */
+final class NotationDeclaration private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  SchemaObjects.checkNotationDeclarationElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * Model group. That is, the "all", "sequence" or "choice" XML element.
+ */
+final class ModelGroup private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  SchemaObjects.checkModelGroupElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * Wildcard. That is, the "any" or "anyAttribute" XML element.
+ */
+final class Wildcard private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  SchemaObjects.checkWildcardElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
  * Annotation schema component.
  */
 final class Annotation private[xs] (
@@ -347,11 +437,22 @@ object SchemaComponent {
   }
 
   def wrapOption(elem: indexed.Elem): Option[SchemaComponent] = elem match {
-    // TODO
     case e if e.resolvedName == EName(ns, "element") => Some(new ElementDeclaration(e))
     case e if e.resolvedName == EName(ns, "attribute") => Some(new AttributeDeclaration(e))
     case e if e.resolvedName == EName(ns, "simpleType") => Some(new SimpleTypeDefinition(e))
     case e if e.resolvedName == EName(ns, "complexType") => Some(new ComplexTypeDefinition(e))
+    case e if e.resolvedName == EName(ns, "attributeGroup") => Some(new AttributeGroupDefinition(e))
+    case e if e.resolvedName == EName(ns, "key") => Some(new IdentityConstraintDefinition(e))
+    case e if e.resolvedName == EName(ns, "keyref") => Some(new IdentityConstraintDefinition(e))
+    case e if e.resolvedName == EName(ns, "unique") => Some(new IdentityConstraintDefinition(e))
+    case e if e.resolvedName == EName(ns, "group") => Some(new ModelGroupDefinition(e))
+    case e if e.resolvedName == EName(ns, "notation") => Some(new NotationDeclaration(e))
+    case e if e.resolvedName == EName(ns, "all") => Some(new ModelGroup(e))
+    case e if e.resolvedName == EName(ns, "sequence") => Some(new ModelGroup(e))
+    case e if e.resolvedName == EName(ns, "choice") => Some(new ModelGroup(e))
+    case e if e.resolvedName == EName(ns, "any") => Some(new Wildcard(e))
+    case e if e.resolvedName == EName(ns, "anyAttribute") => Some(new Wildcard(e))
+    case e if e.resolvedName == EName(ns, "annotation") => Some(new Annotation(e))
     case e => None
   }
 }
@@ -401,7 +502,19 @@ object SchemaObject {
       EName(ns, "element"),
       EName(ns, "attribute"),
       EName(ns, "simpleType"),
-      EName(ns, "complexType")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
+      EName(ns, "complexType"),
+      EName(ns, "attributeGroup"),
+      EName(ns, "key"),
+      EName(ns, "keyref"),
+      EName(ns, "unique"),
+      EName(ns, "group"),
+      EName(ns, "notation"),
+      EName(ns, "all"),
+      EName(ns, "sequence"),
+      EName(ns, "choice"),
+      EName(ns, "any"),
+      EName(ns, "anyAttribute"),
+      EName(ns, "annotation")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
     case _ => new SchemaObject(wrappedElem) {}
   }
 }

@@ -128,7 +128,14 @@ class CreateSchemaTest extends Suite {
   }
 
   @Test def testCreateValidLargeSchema() {
-    val docParser = parse.DocumentParserUsingSax.newInstance
+    val spf = SAXParserFactory.newInstance
+    spf.setFeature("http://xml.org/sax/features/namespaces", true)
+    spf.setFeature("http://xml.org/sax/features/namespace-prefixes", true)
+
+    val docParser = parse.DocumentParserUsingSax.newInstance(
+      spf,
+      () => new parse.DefaultElemProducingSaxHandler with MyEntityResolver)
+
     val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("ifrs-gp-2006-08-15.xsd"))
 
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
