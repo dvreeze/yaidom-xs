@@ -240,7 +240,7 @@ final class ElementDeclaration private[xs] (
       val elementFormDefaultOption = this.wrappedElem.rootElem.attributeOption(EName("elementFormDefault"))
 
       if (formOption == Some("qualified")) tnsOption
-      else if (elementFormDefaultOption == Some("qualified")) tnsOption
+      else if (formOption.isEmpty && (elementFormDefaultOption == Some("qualified"))) tnsOption
       else None
     }
   }
@@ -337,7 +337,7 @@ final class AttributeDeclaration private[xs] (
       val attributeFormDefaultOption = this.wrappedElem.rootElem.attributeOption(EName("attributeFormDefault"))
 
       if (formOption == Some("qualified")) tnsOption
-      else if (attributeFormDefaultOption == Some("qualified")) tnsOption
+      else if (formOption.isEmpty && (attributeFormDefaultOption == Some("qualified"))) tnsOption
       else None
     }
   }
