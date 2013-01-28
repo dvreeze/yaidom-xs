@@ -218,6 +218,15 @@ class CreateSchemaTest extends Suite {
       val result = globalElemDecls flatMap { elemDecl => elemDecl.attributeOption(EName(nsXbrli, "periodType")) }
       result.toSet
     }
+
+    val topmostElemDecls = schema.topmostElementDeclarations
+
+    expect(globalElemDecls) {
+      topmostElemDecls
+    }
+    expect(elemDecls) {
+      topmostElemDecls flatMap { e => e +: e.elementDeclarations }
+    }
   }
 
   @Test def testCreateInvalidSchema() {

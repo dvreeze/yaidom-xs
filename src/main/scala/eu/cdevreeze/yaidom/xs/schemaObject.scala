@@ -78,6 +78,46 @@ sealed abstract class SchemaObject private[xs] (
     wrappedElem.parentOption map { e => SchemaObject(e) }
 
   final override def toString: String = wrappedElem.elem.toString
+
+  /**
+   * Returns all element declarations inside this SchemaObject (excluding self).
+   */
+  final def elementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    this collectFromElems { case e: ElementDeclaration => e }
+
+  /**
+   * Returns all topmost element declarations inside this SchemaObject (excluding self).
+   * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
+   */
+  final def topmostElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    this findTopmostElems { e => e.resolvedName == EName(ns, "element") } collect { case e: ElementDeclaration => e }
+
+  /**
+   * Returns all attribute declarations inside this SchemaObject (excluding self).
+   */
+  final def attributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    this collectFromElems { case e: AttributeDeclaration => e }
+
+  /**
+   * Returns all topmost attribute declarations inside this SchemaObject (excluding self).
+   * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
+   */
+  final def topmostAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    this findTopmostElems { e => e.resolvedName == EName(ns, "attribute") } collect { case e: AttributeDeclaration => e }
+
+  /**
+   * Returns all type definitions inside this SchemaObject (excluding self).
+   */
+  final def typeDefinitions: immutable.IndexedSeq[TypeDefinition] =
+    this collectFromElems { case e: TypeDefinition => e }
+
+  /**
+   * Returns all topmost type definitions inside this SchemaObject (excluding self).
+   * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
+   */
+  final def topmostTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
+    this findTopmostElems { e => Set(EName(ns, "complexType"), EName(ns, "simpleType")).contains(e.resolvedName) } collect
+      { case e: TypeDefinition => e }
 }
 
 /**
@@ -100,28 +140,16 @@ final class Schema private[xs] (
   final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
 
   /**
-   * Returns all element declarations, whether top-level or local.
-   */
-  final def elementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    this filterElemsOrSelf { e => e.resolvedName == EName(ns, "element") } collect { case e: ElementDeclaration => e }
-
-  /**
    * Returns all top-level element declarations.
    */
   final def topLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    elementDeclarations filter { e => e.isTopLevel }
-
-  /**
-   * Returns all attribute declarations, whether top-level or local.
-   */
-  final def attributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    this filterElemsOrSelf { e => e.resolvedName == EName(ns, "attribute") } collect { case e: AttributeDeclaration => e }
+    topmostElementDeclarations filter { e => e.isTopLevel }
 
   /**
    * Returns all top-level attribute declarations.
    */
   final def topLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    attributeDeclarations filter { e => e.isTopLevel }
+    topmostAttributeDeclarations filter { e => e.isTopLevel }
 }
 
 // Schema Components
@@ -194,7 +222,7 @@ final class ElementDeclaration private[xs] (
 
   /**
    * Returns true if and only if the element declaration is abstract.
-   * Only top level element declarations can be references.
+   * Only top level element declarations can be abstract.
    */
   final def isAbstract: Boolean = abstractOption == Some(true)
 
