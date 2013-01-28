@@ -227,10 +227,33 @@ final class ElementDeclaration private[xs] (
   final def isAbstract: Boolean = abstractOption == Some(true)
 
   /**
-   * Returns the `EName` by combining the (root) target namespace and the value of the "name" attribute,
+   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
+   * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
+   */
+  final def targetNamespaceOption: Option[String] = {
+    val tnsOption = this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+
+    if (isTopLevel) tnsOption
+    else if (isReference) None
+    else {
+      val formOption = this.wrappedElem.attributeOption(EName("form"))
+      val elementFormDefaultOption = this.wrappedElem.rootElem.attributeOption(EName("elementFormDefault"))
+
+      if (formOption == Some("qualified")) tnsOption
+      else if (elementFormDefaultOption == Some("qualified")) tnsOption
+      else None
+    }
+  }
+
+  /**
+   * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
    * if any, wrapped in an Option.
    */
-  final def enameOption: Option[EName] = SchemaObjects.enameOption(wrappedElem)
+  final def enameOption: Option[EName] = {
+    val tnsOption = targetNamespaceOption
+    val localNameOption = this.wrappedElem \@ EName("name")
+    localNameOption map { nm => EName(tnsOption, nm) }
+  }
 
   /**
    * Returns the value of the 'id' attribute, if any, wrapped in an Option.
@@ -299,6 +322,35 @@ final class AttributeDeclaration private[xs] (
    * Top level attribute declarations are never references.
    */
   final def isReference: Boolean = refOption.isDefined
+
+  /**
+   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
+   * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
+   */
+  final def targetNamespaceOption: Option[String] = {
+    val tnsOption = this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+
+    if (isTopLevel) tnsOption
+    else if (isReference) None
+    else {
+      val formOption = this.wrappedElem.attributeOption(EName("form"))
+      val attributeFormDefaultOption = this.wrappedElem.rootElem.attributeOption(EName("attributeFormDefault"))
+
+      if (formOption == Some("qualified")) tnsOption
+      else if (attributeFormDefaultOption == Some("qualified")) tnsOption
+      else None
+    }
+  }
+
+  /**
+   * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
+   * if any, wrapped in an Option.
+   */
+  final def enameOption: Option[EName] = {
+    val tnsOption = targetNamespaceOption
+    val localNameOption = this.wrappedElem \@ EName("name")
+    localNameOption map { nm => EName(tnsOption, nm) }
+  }
 
   /**
    * Returns the value of the 'id' attribute, if any, wrapped in an Option.

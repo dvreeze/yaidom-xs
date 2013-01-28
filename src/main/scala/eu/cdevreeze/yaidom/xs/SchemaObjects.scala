@@ -106,10 +106,10 @@ private[xs] object SchemaObjects {
       require(!isReference, "Top level element declarations can not be references")
       require(e.attributeOption(EName("form")).isEmpty, "Top level element declarations can not have a 'form' attribute")
 
-      require(enameOption(e).isDefined, "Top level element declarations must have a name attribute")
+      require(nameOption(e).isDefined, "Top level element declarations must have a name attribute")
     } else {
-      require(refOption(e).isDefined || enameOption(e).isDefined, "One of 'ref' or 'name' must be present")
-      require(refOption(e).isEmpty || enameOption(e).isEmpty, "One of 'ref' or 'name' must be absent")
+      require(refOption(e).isDefined || nameOption(e).isDefined, "One of 'ref' or 'name' must be present")
+      require(refOption(e).isEmpty || nameOption(e).isEmpty, "One of 'ref' or 'name' must be absent")
 
       require(substitutionGroupOption(e).isEmpty, "Local element declarations must not have a 'substitutionGroup'")
       require(e.attributeOption(EName("abstract")).isEmpty, "Local element declarations must not have attribute 'abstract'")
@@ -249,14 +249,9 @@ private[xs] object SchemaObjects {
   }
 
   /**
-   * Returns the `EName` by combining the (root) target namespace and the value of the "name" attribute,
-   * if any, wrapped in an Option.
+   * Returns the value of the 'name' attribute, if any, wrapped in an Option.
    */
-  def enameOption(e: indexed.Elem): Option[EName] = {
-    val tnsOption = e.rootElem \@ EName("targetNamespace")
-    val localNameOption = e \@ EName("name")
-    localNameOption map { nm => EName(tnsOption, nm) }
-  }
+  def nameOption(e: indexed.Elem): Option[String] = e \@ EName("name")
 
   /**
    * Returns the value of the 'id' attribute, if any, wrapped in an Option.
