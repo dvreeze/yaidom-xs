@@ -165,7 +165,15 @@ final class Schema private[xs] (
  */
 abstract class SchemaComponent private[xs] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems)
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  /**
+   * Returns the target namespace of the schema component, if any, wrapped in an Option.
+   * Some types of schema component do not have the notion of a target namespace (in which case None is returned), but most do
+   * (whether it is defined or not).
+   */
+  def targetNamespaceOption: Option[String]
+}
 
 /**
  * Particle, having a min and max occurs (possibly default).
@@ -230,7 +238,7 @@ final class ElementDeclaration private[xs] (
    * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
    * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
    */
-  final def targetNamespaceOption: Option[String] = {
+  final override def targetNamespaceOption: Option[String] = {
     val tnsOption = this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
 
     if (isTopLevel) tnsOption
@@ -327,7 +335,7 @@ final class AttributeDeclaration private[xs] (
    * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
    * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
    */
-  final def targetNamespaceOption: Option[String] = {
+  final override def targetNamespaceOption: Option[String] = {
     val tnsOption = this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
 
     if (isTopLevel) tnsOption
@@ -388,6 +396,10 @@ final class SimpleTypeDefinition private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = {
+    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+  }
 }
 
 /**
@@ -403,6 +415,10 @@ final class ComplexTypeDefinition private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = {
+    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+  }
 }
 
 /**
@@ -418,6 +434,10 @@ final class AttributeGroupDefinition private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = {
+    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+  }
 }
 
 /**
@@ -433,6 +453,10 @@ final class IdentityConstraintDefinition private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = {
+    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+  }
 }
 
 /**
@@ -448,6 +472,10 @@ final class ModelGroupDefinition private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = {
+    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+  }
 }
 
 /**
@@ -463,6 +491,10 @@ final class NotationDeclaration private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = {
+    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+  }
 }
 
 /**
@@ -478,6 +510,8 @@ final class ModelGroup private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = None
 }
 
 /**
@@ -493,6 +527,8 @@ final class Wildcard private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = None
 }
 
 /**
@@ -508,6 +544,8 @@ final class Annotation private[xs] (
    */
   def this(wrappedElem: indexed.Elem) =
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+
+  final override def targetNamespaceOption: Option[String] = None
 }
 
 object SchemaComponent {
