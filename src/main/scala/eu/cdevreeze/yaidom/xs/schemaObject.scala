@@ -259,8 +259,34 @@ final class ElementDeclaration private[xs] (
    */
   final def enameOption: Option[EName] = {
     val tnsOption = targetNamespaceOption
-    val localNameOption = this.wrappedElem \@ EName("name")
+    val localNameOption = nameAttributeOption
     localNameOption map { nm => EName(tnsOption, nm) }
+  }
+
+  /**
+   * Returns the value of the "name" attribute, if any, wrapped in an Option.
+   */
+  final def nameAttributeOption: Option[String] = this.wrappedElem \@ EName("name")
+
+  /**
+   * Returns the "scope", if any, wrapped in an Option.
+   *
+   * That is, if this element declaration is not a reference, and has a complex type definition as ancestor, that complex
+   * type definition is returned, wrapped in an Option. In all other cases, None is returned.
+   */
+  final def scopeOption: Option[ComplexTypeDefinition] = {
+    if (isTopLevel) None
+    else if (isReference) None
+    else {
+      val complexTypeOption = this findAncestor {
+        case complexTypeDef: ComplexTypeDefinition => true
+        case _ => false
+      } collect {
+        case complexTypeDef: ComplexTypeDefinition => complexTypeDef
+      }
+
+      complexTypeOption
+    }
   }
 
   /**
@@ -356,8 +382,34 @@ final class AttributeDeclaration private[xs] (
    */
   final def enameOption: Option[EName] = {
     val tnsOption = targetNamespaceOption
-    val localNameOption = this.wrappedElem \@ EName("name")
+    val localNameOption = nameAttributeOption
     localNameOption map { nm => EName(tnsOption, nm) }
+  }
+
+  /**
+   * Returns the value of the "name" attribute, if any, wrapped in an Option.
+   */
+  final def nameAttributeOption: Option[String] = this.wrappedElem \@ EName("name")
+
+  /**
+   * Returns the "scope", if any, wrapped in an Option.
+   *
+   * That is, if this attribute declaration is not a reference, and has a complex type definition as ancestor, that complex
+   * type definition is returned, wrapped in an Option. In all other cases, None is returned.
+   */
+  final def scopeOption: Option[ComplexTypeDefinition] = {
+    if (isTopLevel) None
+    else if (isReference) None
+    else {
+      val complexTypeOption = this findAncestor {
+        case complexTypeDef: ComplexTypeDefinition => true
+        case _ => false
+      } collect {
+        case complexTypeDef: ComplexTypeDefinition => complexTypeDef
+      }
+
+      complexTypeOption
+    }
   }
 
   /**

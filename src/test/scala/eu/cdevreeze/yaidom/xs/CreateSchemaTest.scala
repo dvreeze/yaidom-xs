@@ -259,6 +259,65 @@ class CreateSchemaTest extends Suite {
     }
   }
 
+  @Test def testTargetNamespace() {
+    val docParser = parse.DocumentParserUsingSax.newInstance
+    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
+
+    val schemaDoc = new SchemaDocument(indexed.Document(doc))
+    val schema = schemaDoc.schema
+
+    val expectedTns = "http://shiporder"
+
+    expect(Some(expectedTns)) {
+      schema.targetNamespaceOption
+    }
+
+    val shipOrderElemDeclOption = schema.topLevelElementDeclarations find { e => e.nameAttributeOption == Some("shiporder") }
+
+    assert(shipOrderElemDeclOption.isDefined)
+    assert(shipOrderElemDeclOption.get.isTopLevel)
+
+    expect(Some(expectedTns)) {
+      shipOrderElemDeclOption.get.targetNamespaceOption
+    }
+    expect(Some(EName(expectedTns, "shiporder"))) {
+      shipOrderElemDeclOption.get.enameOption
+    }
+    expect(None) {
+      shipOrderElemDeclOption.get.scopeOption
+    }
+
+    val nameElemDeclOption = schema.elementDeclarations find { e => e.nameAttributeOption == Some("name") }
+
+    assert(nameElemDeclOption.isDefined)
+    assert(!nameElemDeclOption.get.isTopLevel)
+
+    expect(Some(expectedTns)) {
+      nameElemDeclOption.get.targetNamespaceOption
+    }
+    expect(Some(EName(expectedTns, "name"))) {
+      nameElemDeclOption.get.enameOption
+    }
+    expect(Some(5)) {
+      nameElemDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.wrappedElem.elemPath.entries.size }
+    }
+
+    val orderidAttrDeclOption = schema.topmostAttributeDeclarations find { e => e.nameAttributeOption == Some("orderid") }
+
+    assert(orderidAttrDeclOption.isDefined)
+    assert(!orderidAttrDeclOption.get.isTopLevel)
+
+    expect(None) {
+      orderidAttrDeclOption.get.targetNamespaceOption
+    }
+    expect(Some(EName(None, "orderid"))) {
+      orderidAttrDeclOption.get.enameOption
+    }
+    expect(Some(2)) {
+      orderidAttrDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.wrappedElem.elemPath.entries.size }
+    }
+  }
+
   trait MyEntityResolver extends EntityResolver {
     override def resolveEntity(publicId: String, systemId: String): InputSource = {
       new InputSource(new java.io.StringReader(""))
