@@ -3,12 +3,13 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<properties>
-		<scala.version>2.9.2</scala.version>
+		<scala.version>2.10.0</scala.version>
+		<scala.binary.version>2.10</scala.binary.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
 	<groupId>eu.cdevreeze.yaidom</groupId>
-	<artifactId>yaidom-xs_2.9.2</artifactId>
+	<artifactId>yaidom-xs_${scala.binary.version}</artifactId>
 	<version>0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
@@ -20,28 +21,28 @@
 
 	<name>Yaidom query API applied to XML Schema</name>
 	<description>Yaidom query API applied to XML Schema</description>
-	<url>https://github.com/dvreeze/yaidom</url>
+	<url>https://github.com/dvreeze/yaidom-xs</url>
 
 	<licenses>
 		<license>
 			<name>Apache License, Version 2.0</name>
 			<url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
 			<distribution>repo</distribution>
-			<comments>Yaidom is licensed under Apache License, Version 2.0</comments>
+			<comments>Yaidom-XS is licensed under Apache License, Version 2.0</comments>
 		</license>
 	</licenses>
 
 	<scm>
-		<connection>scm:git:git@github.com:dvreeze/yaidom.git</connection>
-		<url>https://github.com/dvreeze/yaidom.git</url>
-		<developerConnection>scm:git:git@github.com:dvreeze/yaidom.git</developerConnection>
+		<connection>scm:git:git@github.com:dvreeze/yaidom-xs.git</connection>
+		<url>https://github.com/dvreeze/yaidom-xs.git</url>
+		<developerConnection>scm:git:git@github.com:dvreeze/yaidom-xs.git</developerConnection>
 	</scm>
 
 	<developers>
 		<developer>
 			<id>dvreeze</id>
 			<name>Chris de Vreeze</name>
-			<email>dvreeze@xs4all.nl</email>
+			<email>chris.de.vreeze@caiway.net</email>
 		</developer>
 	</developers>
 
@@ -61,6 +62,13 @@
 						</goals>
 					</execution>
 				</executions>
+				<configuration>
+					<args>
+						<arg>-unchecked</arg>
+						<arg>-deprecation</arg>
+						<arg>-feature</arg>
+					</args>
+				</configuration>
 			</plugin>
 			<plugin>
 				<!-- See: http://www.assembla.com/spaces/scala-ide/wiki/With_Maven_CLI -->
@@ -127,8 +135,8 @@
 
 		<dependency>
 			<groupId>eu.cdevreeze.yaidom</groupId>
-			<artifactId>yaidom_${scala.version}</artifactId>
-			<version>0.6.6</version>
+			<artifactId>yaidom_${scala.binary.version}</artifactId>
+			<version>0.6.7</version>
 		</dependency>
 
 		<dependency>

@@ -9,9 +9,9 @@ organization := "eu.cdevreeze.yaidom"
 
 version := "0.1-SNAPSHOT"
 
-scalaVersion := "2.9.2"
+scalaVersion := "2.10.0"
 
-crossScalaVersions := Seq("2.9.2", "2.9.1", "2.9.0-1", "2.9.0", "2.10.0")
+crossScalaVersions := Seq("2.10.0", "2.9.2", "2.9.1", "2.9.0-1", "2.9.0")
 
 scalacOptions ++= Seq("-unchecked", "-deprecation")
 
@@ -19,7 +19,7 @@ scalacOptions <++= scalaBinaryVersion map { version =>
   if (version.contains("2.10")) Seq("-feature") else Seq()
 }
 
-libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "0.6.6"
+libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "0.6.7"
 
 libraryDependencies += "junit" % "junit" % "4.10" % "test"
 

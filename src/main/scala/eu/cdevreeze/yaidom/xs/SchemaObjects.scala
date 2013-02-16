@@ -163,8 +163,57 @@ private[xs] object SchemaObjects {
    * Checks the XML element as XML Schema attribute declaration, throwing an exception if invalid.
    */
   def checkAttributeDeclarationElem(e: indexed.Elem): Unit = {
+    def isTopLevel: Boolean = e.elemPath.entries.size == 1
+
+    def isReference: Boolean = refOption(e).isDefined
+
     require(e.resolvedName == EName(ns, "attribute"), "The element must be an 'attribute' element")
+
+    val childElems = e.allChildElems
+
+    val expectedChildENames = Set(EName(ns, "annotation"), EName(ns, "simpleType"))
+    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+      "Expected 'element' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(
+      childElems.filter(_.resolvedName == EName(ns, "annotation")).map(_.resolvedName) ++
+        childElems.filter(_.resolvedName == EName(ns, "simpleType")).map(_.resolvedName) ==
+        childElems.map(_.resolvedName),
+      "Expected optional 'annotation' before optional 'simpleType'")
+
     // TODO
+
+    if (isTopLevel) {
+      // TODO Attribute 'use' prohibited
+
+      require(!isReference, "Top level attribute declarations can not be references")
+      require(e.attributeOption(EName("form")).isEmpty, "Top level attribute declarations can not have a 'form' attribute")
+
+      require(nameOption(e).isDefined, "Top level attribute declarations must have a name attribute")
+    } else {
+      require(refOption(e).isDefined || nameOption(e).isDefined, "One of 'ref' or 'name' must be present")
+      require(refOption(e).isEmpty || nameOption(e).isEmpty, "One of 'ref' or 'name' must be absent")
+    }
+
+    require(
+      (e \@ EName("default")).isEmpty || (e \@ EName("fixed")).isEmpty,
+      "Attribute declarations can not have both 'default' and 'fixed'")
+
+    if ((e \@ EName("default")).isDefined && (e \@ EName("use")).isDefined) {
+      require(e.attribute(EName("use")) == "optional", "If attributes 'default' and 'use' are both present, 'use' must have value 'optional'")
+    }
+
+    if (isReference) {
+      assert(!isTopLevel)
+      require((e.resolvedAttributes.toMap.keySet intersect Set(EName("form"), EName("type"))).isEmpty,
+        "Attribute declarations that are references must not have attributes 'form', 'type'")
+    }
+
+    if (isReference) {
+      assert(!isTopLevel)
+      require((e.allChildElems.map(_.resolvedName).toSet intersect Set(EName(ns, "simpleType"))).isEmpty,
+        "Attribute declarations that are references must not have child element 'simpleType'")
+    }
   }
 
   /**
