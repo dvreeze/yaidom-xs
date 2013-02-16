@@ -37,13 +37,11 @@ import SchemaObject._
  *
  * Note that `allChildElems`, being a val variable, is very fast, as it should be (see the `ElemLike` query API).
  *
- * TODO Use yaidom trait HasParent.
- *
  * @author Chris de Vreeze
  */
 sealed abstract class SchemaObject private[xs] (
   val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with SchemaObject.HasParent[SchemaObject] with HasText with Immutable {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasParent[SchemaObject] with HasText with Immutable {
 
   require(wrappedElem ne null)
   require(allChildElems ne null)
@@ -630,40 +628,6 @@ object SchemaComponent {
 // TODO Other schema parts, that are not Schema Components themselves
 
 object SchemaObject {
-
-  trait HasParent[E <: HasParent[E]] { self: E =>
-
-    /**
-     * Returns the parent element, if any, wrapped in an Option
-     */
-    def parentOption: Option[E]
-
-    /**
-     * Returns the equivalent `parentOption.get`, throwing an exception if this is the root element
-     */
-    final def parent: E = parentOption.getOrElse(sys.error("There is no parent element"))
-
-    /**
-     * Returns all ancestor elements or self
-     */
-    final def ancestorsOrSelf: immutable.IndexedSeq[E] =
-      self +: (parentOption.toIndexedSeq flatMap ((e: E) => e.ancestorsOrSelf))
-
-    /**
-     * Returns `ancestorsOrSelf.drop(1)`
-     */
-    final def ancestors: immutable.IndexedSeq[E] = ancestorsOrSelf.drop(1)
-
-    /**
-     * Returns the first found ancestor-or-self element obeying the given predicate, if any, wrapped in an Option
-     */
-    final def findAncestorOrSelf(p: E => Boolean): Option[E] = ancestorsOrSelf find p
-
-    /**
-     * Returns the first found ancestor element obeying the given predicate, if any, wrapped in an Option
-     */
-    final def findAncestor(p: E => Boolean): Option[E] = ancestors find p
-  }
 
   def apply(wrappedElem: indexed.Elem): SchemaObject = wrappedElem match {
     // TODO
