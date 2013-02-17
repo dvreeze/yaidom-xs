@@ -161,9 +161,11 @@ class CreateSchemaTest extends Suite {
     }
 
     import NodeBuilder._
+
     val expectedElemBuilder =
       elem(
         qname = QName("xs:complexContent"),
+        namespaces = Declarations.from("xs" -> ns),
         children =
           Vector(
             elem(
@@ -173,10 +175,20 @@ class CreateSchemaTest extends Suite {
                 elem(
                   qname = QName("xs:anyAttribute"),
                   attributes = Vector(QName("namespace") -> "##other", QName("processContents") -> "lax"))))))
-    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.wrappedElem.elem.scope ++ Scope.from("xs" -> ns))
+    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.wrappedElem.elem.scope)
 
     expect(resolved.Elem(expectedElem)) {
       resolved.Elem(secondChildElem.wrappedElem.elem).removeAllInterElementWhitespace
+    }
+
+    expect(1) {
+      schema.imports.size
+    }
+    expect(0) {
+      schema.includes.size
+    }
+    expect(0) {
+      schema.redefines.size
     }
   }
 
@@ -226,6 +238,16 @@ class CreateSchemaTest extends Suite {
     }
     expect(elemDecls) {
       topmostElemDecls flatMap { e => e +: e.elementDeclarations }
+    }
+
+    expect(4) {
+      schema.imports.size
+    }
+    expect(0) {
+      schema.includes.size
+    }
+    expect(0) {
+      schema.redefines.size
     }
   }
 

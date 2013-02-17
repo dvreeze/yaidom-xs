@@ -159,6 +159,24 @@ final class Schema private[xs] (
    */
   final def topLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
     topmostAttributeDeclarations filter { e => e.isTopLevel }
+
+  /**
+   * Returns all imports.
+   */
+  final def imports: immutable.IndexedSeq[Import] =
+    this collectFromElems { case e: Import => e }
+
+  /**
+   * Returns all includes.
+   */
+  final def includes: immutable.IndexedSeq[Include] =
+    this collectFromElems { case e: Include => e }
+
+  /**
+   * Returns all redefines.
+   */
+  final def redefines: immutable.IndexedSeq[Redefine] =
+    this collectFromElems { case e: Redefine => e }
 }
 
 // Schema Components
@@ -622,6 +640,58 @@ final class Annotation private[xs] (
   final override def targetNamespaceOption: Option[String] = None
 }
 
+// Import, include, redefine
+
+/**
+ * The "xs:import" XML element.
+ */
+final class Import private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkImportElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * The "xs:include" XML element.
+ */
+final class Include private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkIncludeElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+/**
+ * The "xs:redefine" XML element.
+ */
+final class Redefine private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkRedefineElem(wrappedElem)
+
+  /**
+   * Expensive auxiliary constructor.
+   */
+  def this(wrappedElem: indexed.Elem) =
+    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
+}
+
+// Companion objects
+
 object SchemaComponent {
 
   def apply(elem: indexed.Elem): SchemaComponent = {
@@ -673,6 +743,9 @@ object SchemaObject {
       EName(ns, "any"),
       EName(ns, "anyAttribute"),
       EName(ns, "annotation")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
+    case e if e.resolvedName == EName(ns, "import") => new Import(wrappedElem)
+    case e if e.resolvedName == EName(ns, "include") => new Include(wrappedElem)
+    case e if e.resolvedName == EName(ns, "redefine") => new Redefine(wrappedElem)
     case _ => new SchemaObject(wrappedElem) {}
   }
 }

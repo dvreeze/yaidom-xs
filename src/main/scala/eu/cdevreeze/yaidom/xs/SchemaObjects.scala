@@ -298,6 +298,34 @@ private[xs] object SchemaObjects {
   }
 
   /**
+   * Checks the XML element as "xs:import", throwing an exception if invalid.
+   */
+  def checkImportElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "import"),
+      "Expected <xs:import> but got %s instead".format(e.resolvedName))
+  }
+
+  /**
+   * Checks the XML element as "xs:include", throwing an exception if invalid.
+   */
+  def checkIncludeElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "include"),
+      "Expected <xs:include> but got %s instead".format(e.resolvedName))
+
+    require(e.attributeOption(EName("schemaLocation")).isDefined, "Expected attribute 'schemaLocation'")
+  }
+
+  /**
+   * Checks the XML element as "xs:redefine", throwing an exception if invalid.
+   */
+  def checkRedefineElem(e: indexed.Elem): Unit = {
+    require(e.resolvedName == EName(ns, "redefine"),
+      "Expected <xs:redefine> but got %s instead".format(e.resolvedName))
+
+    require(e.attributeOption(EName("schemaLocation")).isDefined, "Expected attribute 'schemaLocation'")
+  }
+
+  /**
    * Returns the value of the 'name' attribute, if any, wrapped in an Option.
    */
   def nameOption(e: indexed.Elem): Option[String] = e \@ EName("name")
