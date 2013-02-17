@@ -37,6 +37,16 @@ import SchemaObject._
  *
  * Note that `allChildElems`, being a val variable, is very fast, as it should be (see the `ElemLike` query API).
  *
+ * A well-constructed `SchemaObject` obeys a few (unsurprising) properties, such as:
+ * {{{
+ * wrappedElem.rootElem.resolvedName == EName("http://www.w3.org/2001/XMLSchema", "schema")
+ * }}}
+ * and
+ * {{{
+ * wrappedElem.allChildElems == allChildElems.map(_.wrappedElem)
+ * }}}
+ * The package-private primary constructor indeed enforces these properties.
+ *
  * @author Chris de Vreeze
  */
 sealed abstract class SchemaObject private[xs] (
@@ -119,7 +129,7 @@ sealed abstract class SchemaObject private[xs] (
 }
 
 /**
- * XML Schema (from one document). That is, the "schema" XML element.
+ * XML Schema (from one document). That is, the "xs:schema" XML element.
  *
  * This is what the XML Schema specification calls a schema document, or the document element thereof.
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
@@ -127,6 +137,7 @@ sealed abstract class SchemaObject private[xs] (
 final class Schema private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
   SchemaObjects.checkSchemaElem(wrappedElem)
 
   /**
@@ -186,6 +197,7 @@ abstract class SchemaComponent private[xs] (
 abstract class Particle private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+
   SchemaObjects.checkParticleElem(wrappedElem)
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
@@ -202,11 +214,12 @@ abstract class Particle private[xs] (
 }
 
 /**
- * Element declaration. That is, the "element" XML element.
+ * Element declaration. That is, the "xs:element" XML element.
  */
 final class ElementDeclaration private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+
   SchemaObjects.checkElementDeclarationElem(wrappedElem)
 
   /**
@@ -325,17 +338,19 @@ final class ElementDeclaration private[xs] (
 abstract class AttributeUse private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+
   SchemaObjects.checkAttributeUseElem(wrappedElem)
 
   // TODO
 }
 
 /**
- * Attribute declaration. That is, the "attribute" XML element.
+ * Attribute declaration. That is, the "xs:attribute" XML element.
  */
 final class AttributeDeclaration private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeUse(wrappedElem, allChildElems) {
+
   SchemaObjects.checkAttributeDeclarationElem(wrappedElem)
 
   /**
@@ -434,11 +449,12 @@ abstract class TypeDefinition private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems)
 
 /**
- * Simple type definition. That is, the "simpleType" XML element.
+ * Simple type definition. That is, the "xs:simpleType" XML element.
  */
 final class SimpleTypeDefinition private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
+
   SchemaObjects.checkSimpleTypeDefinitionElem(wrappedElem)
 
   /**
@@ -453,11 +469,12 @@ final class SimpleTypeDefinition private[xs] (
 }
 
 /**
- * Complex type definition. That is, the "complexType" XML element.
+ * Complex type definition. That is, the "xs:complexType" XML element.
  */
 final class ComplexTypeDefinition private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
+
   SchemaObjects.checkComplexTypeDefinitionElem(wrappedElem)
 
   /**
@@ -472,11 +489,12 @@ final class ComplexTypeDefinition private[xs] (
 }
 
 /**
- * Attribute group definition. That is, the "attributeGroup" XML element.
+ * Attribute group definition. That is, the "xs:attributeGroup" XML element.
  */
 final class AttributeGroupDefinition private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+
   SchemaObjects.checkAttributeGroupDefinitionElem(wrappedElem)
 
   /**
@@ -491,11 +509,12 @@ final class AttributeGroupDefinition private[xs] (
 }
 
 /**
- * Identity constraint definition. That is, the "key", "keyref" or "unique" XML element.
+ * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
 final class IdentityConstraintDefinition private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+
   SchemaObjects.checkIdentityConstraintDefinitionElem(wrappedElem)
 
   /**
@@ -510,11 +529,12 @@ final class IdentityConstraintDefinition private[xs] (
 }
 
 /**
- * Model group definition. That is, the "group" XML element.
+ * Model group definition. That is, the "xs:group" XML element.
  */
 final class ModelGroupDefinition private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+
   SchemaObjects.checkModelGroupDefinitionElem(wrappedElem)
 
   /**
@@ -529,11 +549,12 @@ final class ModelGroupDefinition private[xs] (
 }
 
 /**
- * Notation declaration. That is, the "notation" XML element.
+ * Notation declaration. That is, the "xs:notation" XML element.
  */
 final class NotationDeclaration private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+
   SchemaObjects.checkNotationDeclarationElem(wrappedElem)
 
   /**
@@ -548,11 +569,12 @@ final class NotationDeclaration private[xs] (
 }
 
 /**
- * Model group. That is, the "all", "sequence" or "choice" XML element.
+ * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
 final class ModelGroup private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+
   SchemaObjects.checkModelGroupElem(wrappedElem)
 
   /**
@@ -565,11 +587,12 @@ final class ModelGroup private[xs] (
 }
 
 /**
- * Wildcard. That is, the "any" or "anyAttribute" XML element.
+ * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
  */
 final class Wildcard private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+
   SchemaObjects.checkWildcardElem(wrappedElem)
 
   /**
@@ -582,11 +605,12 @@ final class Wildcard private[xs] (
 }
 
 /**
- * Annotation schema component.
+ * Annotation schema component. That is, the "xs:annotation" XML element.
  */
 final class Annotation private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+
   SchemaObjects.checkAnnotationElem(wrappedElem)
 
   /**
