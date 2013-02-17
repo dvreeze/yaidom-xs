@@ -73,11 +73,17 @@ sealed abstract class SchemaObject private[xs] (
 
   final override def resolvedAttributes: immutable.IndexedSeq[(EName, String)] = wrappedElem.resolvedAttributes
 
+  /**
+   * Returns true if this SchemaObject has the same `wrappedElem` as the passed object, if it is also a SchemaObject.
+   */
   final override def equals(obj: Any): Boolean = obj match {
     case other: SchemaObject => (other.wrappedElem == this.wrappedElem)
     case _ => false
   }
 
+  /**
+   * Returns `wrappedElem.hashCode`
+   */
   final override def hashCode: Int = wrappedElem.hashCode
 
   final override def text: String = wrappedElem.text
@@ -715,6 +721,8 @@ final class Redefine private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
+// TODO Other schema parts, that are not Schema Components themselves
+
 // Companion objects
 
 object SchemaComponent {
@@ -743,8 +751,6 @@ object SchemaComponent {
     case e => None
   }
 }
-
-// TODO Other schema parts, that are not Schema Components themselves
 
 object SchemaObject {
 
