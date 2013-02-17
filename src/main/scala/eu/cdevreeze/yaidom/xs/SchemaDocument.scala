@@ -28,7 +28,7 @@ import eu.cdevreeze.yaidom._
  */
 final class SchemaDocument(val wrappedDocument: indexed.Document) extends Immutable {
 
-  final val schema: Schema = new Schema(wrappedDocument.documentElement)
+  final val schema: Schema = Schema(wrappedDocument.documentElement)
 
   final override def toString: String = wrappedDocument.document.toString
 }

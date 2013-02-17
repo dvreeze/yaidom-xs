@@ -63,12 +63,6 @@ sealed abstract class SchemaObject private[xs] (
     (wrappedElem.resolvedName == EName(ns, "schema")) || (!wrappedElem.elemPath.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final override def resolvedName: EName = wrappedElem.resolvedName
 
   final override def resolvedAttributes: immutable.IndexedSeq[(EName, String)] = wrappedElem.resolvedAttributes
@@ -171,12 +165,6 @@ final class Schema private[xs] (
 
   SchemaObjects.checkSchemaElem(wrappedElem)
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
 
   /**
@@ -270,12 +258,6 @@ final class ElementDeclaration private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
 
   SchemaObjects.checkElementDeclarationElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
@@ -403,12 +385,6 @@ final class AttributeDeclaration private[xs] (
   SchemaObjects.checkAttributeDeclarationElem(wrappedElem)
 
   /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
-  /**
    * Returns true if and only if the attribute declaration has the schema element as its parent.
    */
   final def isTopLevel: Boolean = elemPath.entries.size == 1
@@ -506,12 +482,6 @@ final class SimpleTypeDefinition private[xs] (
 
   SchemaObjects.checkSimpleTypeDefinitionElem(wrappedElem)
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(EName("targetNamespace"))
   }
@@ -525,12 +495,6 @@ final class ComplexTypeDefinition private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
 
   SchemaObjects.checkComplexTypeDefinitionElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(EName("targetNamespace"))
@@ -546,12 +510,6 @@ final class AttributeGroupDefinition private[xs] (
 
   SchemaObjects.checkAttributeGroupDefinitionElem(wrappedElem)
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(EName("targetNamespace"))
   }
@@ -565,12 +523,6 @@ final class IdentityConstraintDefinition private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkIdentityConstraintDefinitionElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(EName("targetNamespace"))
@@ -586,12 +538,6 @@ final class ModelGroupDefinition private[xs] (
 
   SchemaObjects.checkModelGroupDefinitionElem(wrappedElem)
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(EName("targetNamespace"))
   }
@@ -605,12 +551,6 @@ final class NotationDeclaration private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkNotationDeclarationElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(EName("targetNamespace"))
@@ -626,12 +566,6 @@ final class ModelGroup private[xs] (
 
   SchemaObjects.checkModelGroupElem(wrappedElem)
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final override def targetNamespaceOption: Option[String] = None
 }
 
@@ -644,12 +578,6 @@ final class Wildcard private[xs] (
 
   SchemaObjects.checkWildcardElem(wrappedElem)
 
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
-
   final override def targetNamespaceOption: Option[String] = None
 }
 
@@ -661,12 +589,6 @@ final class Annotation private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkAnnotationElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = None
 }
@@ -681,12 +603,6 @@ final class Import private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
   SchemaObjects.checkImportElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
 /**
@@ -697,12 +613,6 @@ final class Include private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
   SchemaObjects.checkIncludeElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
 /**
@@ -713,17 +623,18 @@ final class Redefine private[xs] (
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
   SchemaObjects.checkRedefineElem(wrappedElem)
-
-  /**
-   * Expensive auxiliary constructor.
-   */
-  def this(wrappedElem: indexed.Elem) =
-    this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 }
 
-// TODO Other schema parts, that are not Schema Components themselves
+// TODO Other schema parts, that are not Schema Components themselves, such as complexContent, simpleContent, extension,
+// restriction, appinfo, documentation, etc.
 
 // Companion objects
+
+object Schema {
+
+  def apply(elem: indexed.Elem): Schema =
+    new Schema(elem, SchemaObject.childSchemaObjects(elem))
+}
 
 object SchemaComponent {
 
@@ -731,24 +642,28 @@ object SchemaComponent {
     wrapOption(elem).getOrElse(sys.error("%s is not a schema component".format(elem.resolvedName)))
   }
 
-  def wrapOption(elem: indexed.Elem): Option[SchemaComponent] = elem match {
-    case e if e.resolvedName == EName(ns, "element") => Some(new ElementDeclaration(e))
-    case e if e.resolvedName == EName(ns, "attribute") => Some(new AttributeDeclaration(e))
-    case e if e.resolvedName == EName(ns, "simpleType") => Some(new SimpleTypeDefinition(e))
-    case e if e.resolvedName == EName(ns, "complexType") => Some(new ComplexTypeDefinition(e))
-    case e if e.resolvedName == EName(ns, "attributeGroup") => Some(new AttributeGroupDefinition(e))
-    case e if e.resolvedName == EName(ns, "key") => Some(new IdentityConstraintDefinition(e))
-    case e if e.resolvedName == EName(ns, "keyref") => Some(new IdentityConstraintDefinition(e))
-    case e if e.resolvedName == EName(ns, "unique") => Some(new IdentityConstraintDefinition(e))
-    case e if e.resolvedName == EName(ns, "group") => Some(new ModelGroupDefinition(e))
-    case e if e.resolvedName == EName(ns, "notation") => Some(new NotationDeclaration(e))
-    case e if e.resolvedName == EName(ns, "all") => Some(new ModelGroup(e))
-    case e if e.resolvedName == EName(ns, "sequence") => Some(new ModelGroup(e))
-    case e if e.resolvedName == EName(ns, "choice") => Some(new ModelGroup(e))
-    case e if e.resolvedName == EName(ns, "any") => Some(new Wildcard(e))
-    case e if e.resolvedName == EName(ns, "anyAttribute") => Some(new Wildcard(e))
-    case e if e.resolvedName == EName(ns, "annotation") => Some(new Annotation(e))
-    case e => None
+  def wrapOption(elem: indexed.Elem): Option[SchemaComponent] = {
+    import SchemaObject._
+
+    elem match {
+      case e if e.resolvedName == EName(ns, "element") => Some(new ElementDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "attribute") => Some(new AttributeDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "simpleType") => Some(new SimpleTypeDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "complexType") => Some(new ComplexTypeDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "attributeGroup") => Some(new AttributeGroupDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "key") => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "keyref") => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "unique") => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "group") => Some(new ModelGroupDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "notation") => Some(new NotationDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "all") => Some(new ModelGroup(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "sequence") => Some(new ModelGroup(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "choice") => Some(new ModelGroup(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "any") => Some(new Wildcard(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "anyAttribute") => Some(new Wildcard(e, childSchemaObjects(e)))
+      case e if e.resolvedName == EName(ns, "annotation") => Some(new Annotation(e, childSchemaObjects(e)))
+      case e => None
+    }
   }
 }
 
@@ -756,7 +671,7 @@ object SchemaObject {
 
   def apply(wrappedElem: indexed.Elem): SchemaObject = wrappedElem match {
     // TODO
-    case e if e.resolvedName == EName(ns, "schema") => new Schema(wrappedElem)
+    case e if e.resolvedName == EName(ns, "schema") => new Schema(wrappedElem, childSchemaObjects(wrappedElem))
     case e if Set(
       EName(ns, "element"),
       EName(ns, "attribute"),
@@ -774,11 +689,14 @@ object SchemaObject {
       EName(ns, "any"),
       EName(ns, "anyAttribute"),
       EName(ns, "annotation")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
-    case e if e.resolvedName == EName(ns, "import") => new Import(wrappedElem)
-    case e if e.resolvedName == EName(ns, "include") => new Include(wrappedElem)
-    case e if e.resolvedName == EName(ns, "redefine") => new Redefine(wrappedElem)
-    case _ => new SchemaObject(wrappedElem) {}
+    case e if e.resolvedName == EName(ns, "import") => new Import(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == EName(ns, "include") => new Include(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == EName(ns, "redefine") => new Redefine(wrappedElem, childSchemaObjects(wrappedElem))
+    case _ => new SchemaObject(wrappedElem, childSchemaObjects(wrappedElem)) {}
   }
+
+  private[xs] def childSchemaObjects(e: indexed.Elem): immutable.IndexedSeq[SchemaObject] =
+    e.allChildElems.map(e => SchemaObject(e))
 }
 
 object Particle {
