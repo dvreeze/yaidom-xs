@@ -321,7 +321,7 @@ class CreateSchemaTest extends Suite {
       nameElemDeclOption.get.enameOption
     }
     expect(Some(5)) {
-      nameElemDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.wrappedElem.elemPath.entries.size }
+      nameElemDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
     }
 
     val orderidAttrDeclOption = schema.topmostAttributeDeclarations find { e => e.nameAttributeOption == Some("orderid") }
@@ -336,7 +336,7 @@ class CreateSchemaTest extends Suite {
       orderidAttrDeclOption.get.enameOption
     }
     expect(Some(2)) {
-      orderidAttrDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.wrappedElem.elemPath.entries.size }
+      orderidAttrDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
     }
   }
 

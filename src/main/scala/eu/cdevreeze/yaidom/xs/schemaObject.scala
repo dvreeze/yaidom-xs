@@ -82,10 +82,35 @@ sealed abstract class SchemaObject private[xs] (
 
   final override def text: String = wrappedElem.text
 
+  /**
+   * Returns the parent SchemaObject, if any, wrapped in an Option.
+   *
+   * The wrapped SchemaObject, if any, `equals` any parent SchemaObject found by querying for it from any ancestor.
+   */
   final override def parentOption: Option[SchemaObject] =
     wrappedElem.parentOption map { e => SchemaObject(e) }
 
   final override def toString: String = wrappedElem.elem.toString
+
+  /**
+   * Returns `wrappedElem.rootElem`
+   */
+  final def rootElem: Elem = wrappedElem.rootElem
+
+  /**
+   * Returns `wrappedElem.elemPath`
+   */
+  final def elemPath: ElemPath = wrappedElem.elemPath
+
+  /**
+   * Returns the root element as Schema object.
+   */
+  final def schema: Schema = {
+    val resultOption = this.ancestors collectFirst { case e: Schema => e }
+    assert(resultOption.isDefined)
+    assert(resultOption.get.elemPath.isRoot)
+    resultOption.get
+  }
 
   /**
    * Returns all element declarations inside this SchemaObject (excluding self).
@@ -249,7 +274,7 @@ final class ElementDeclaration private[xs] (
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
    */
-  final def isTopLevel: Boolean = wrappedElem.elemPath.entries.size == 1
+  final def isTopLevel: Boolean = elemPath.entries.size == 1
 
   /**
    * Returns true if and only if the element declaration is a reference to another (global) element declaration.
@@ -268,13 +293,13 @@ final class ElementDeclaration private[xs] (
    * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
    */
   final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    val tnsOption = this.rootElem.attributeOption(EName("targetNamespace"))
 
     if (isTopLevel) tnsOption
     else if (isReference) None
     else {
       val formOption = this.wrappedElem.attributeOption(EName("form"))
-      val elementFormDefaultOption = this.wrappedElem.rootElem.attributeOption(EName("elementFormDefault"))
+      val elementFormDefaultOption = this.rootElem.attributeOption(EName("elementFormDefault"))
 
       if (formOption == Some("qualified")) tnsOption
       else if (formOption.isEmpty && (elementFormDefaultOption == Some("qualified"))) tnsOption
@@ -380,7 +405,7 @@ final class AttributeDeclaration private[xs] (
   /**
    * Returns true if and only if the attribute declaration has the schema element as its parent.
    */
-  final def isTopLevel: Boolean = wrappedElem.elemPath.entries.size == 1
+  final def isTopLevel: Boolean = elemPath.entries.size == 1
 
   /**
    * Returns true if and only if the attribute declaration is a reference to another (global) attribute declaration.
@@ -393,13 +418,13 @@ final class AttributeDeclaration private[xs] (
    * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
    */
   final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    val tnsOption = this.rootElem.attributeOption(EName("targetNamespace"))
 
     if (isTopLevel) tnsOption
     else if (isReference) None
     else {
       val formOption = this.wrappedElem.attributeOption(EName("form"))
-      val attributeFormDefaultOption = this.wrappedElem.rootElem.attributeOption(EName("attributeFormDefault"))
+      val attributeFormDefaultOption = this.rootElem.attributeOption(EName("attributeFormDefault"))
 
       if (formOption == Some("qualified")) tnsOption
       else if (formOption.isEmpty && (attributeFormDefaultOption == Some("qualified"))) tnsOption
@@ -482,7 +507,7 @@ final class SimpleTypeDefinition private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
-    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(EName("targetNamespace"))
   }
 }
 
@@ -502,7 +527,7 @@ final class ComplexTypeDefinition private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
-    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(EName("targetNamespace"))
   }
 }
 
@@ -522,7 +547,7 @@ final class AttributeGroupDefinition private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
-    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(EName("targetNamespace"))
   }
 }
 
@@ -542,7 +567,7 @@ final class IdentityConstraintDefinition private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
-    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(EName("targetNamespace"))
   }
 }
 
@@ -562,7 +587,7 @@ final class ModelGroupDefinition private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
-    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(EName("targetNamespace"))
   }
 }
 
@@ -582,7 +607,7 @@ final class NotationDeclaration private[xs] (
     this(wrappedElem, wrappedElem.allChildElems.map(e => SchemaObject(e)))
 
   final override def targetNamespaceOption: Option[String] = {
-    this.wrappedElem.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(EName("targetNamespace"))
   }
 }
 
