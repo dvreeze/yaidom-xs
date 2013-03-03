@@ -292,6 +292,20 @@ private[xs] object SchemaObjects {
     checkRedefineElemAgainstSchema(elem)
   }
 
+  /**
+   * Checks the XML element as "xs:complexContent", throwing an exception if invalid.
+   */
+  def checkComplexContentElem(elem: indexed.Elem): Unit = {
+    checkComplexContentElemAgainstSchema(elem)
+  }
+
+  /**
+   * Checks the XML element as "xs:simpleContent", throwing an exception if invalid.
+   */
+  def checkSimpleContentElem(elem: indexed.Elem): Unit = {
+    checkSimpleContentElemAgainstSchema(elem)
+  }
+
   // Public helper methods
 
   /**
@@ -1117,7 +1131,7 @@ private[xs] object SchemaObjects {
   }
 
   /**
-   * See http://www.schemacentral.com/sc/xsd/e-xsd_any.html
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_anyAttribute.html
    */
   private def checkAnyAttributeElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameAnyAttribute, "The element must be an 'anyAttribute' element")
@@ -1130,6 +1144,64 @@ private[xs] object SchemaObjects {
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
+
+    // TODO Validate attributes and their types
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_complexContent.html
+   */
+  private def checkComplexContentElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameComplexContent, "The element must be a 'complexContent' element")
+
+    val childElems = elem.allChildElems
+
+    val expectedChildENames = Set(
+      enameAnnotation,
+      enameRestriction,
+      enameExtension)
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'complexContent' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    require(
+      isCorrectlyOrdered(
+        childElems,
+        Seq(
+          Set(enameAnnotation),
+          Set(enameRestriction, enameExtension))),
+      "Expected 'annotation' child element, if any, to come before the other elements")
+
+    // TODO Validate attributes and their types
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_simpleContent.html
+   */
+  private def checkSimpleContentElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameSimpleContent, "The element must be a 'simpleContent' element")
+
+    val childElems = elem.allChildElems
+
+    val expectedChildENames = Set(
+      enameAnnotation,
+      enameRestriction,
+      enameExtension)
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'simpleContent' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    require(
+      isCorrectlyOrdered(
+        childElems,
+        Seq(
+          Set(enameAnnotation),
+          Set(enameRestriction, enameExtension))),
+      "Expected 'annotation' child element, if any, to come before the other elements")
 
     // TODO Validate attributes and their types
   }
@@ -1206,6 +1278,19 @@ private[xs] object SchemaObjects {
   val enameSelector = EName(ns, "selector")
   val enameField = EName(ns, "field")
   val enameAny = EName(ns, "any")
+
+  val enameMinExclusive = EName(ns, "minExclusive")
+  val enameMinInclusive = EName(ns, "minInclusive")
+  val enameMaxExclusive = EName(ns, "maxExclusive")
+  val enameMaxInclusive = EName(ns, "maxInclusive")
+  val enameTotalDigits = EName(ns, "totalDigits")
+  val enameFractionDigits = EName(ns, "fractionDigits")
+  val enameLength = EName(ns, "length")
+  val enameMinLength = EName(ns, "minLength")
+  val enameMaxLength = EName(ns, "maxLength")
+  val enameEnumeration = EName(ns, "enumeration")
+  val enameWhiteSpace = EName(ns, "whiteSpace")
+  val enamePattern = EName(ns, "pattern")
 
   val enameName = EName("name")
   val enameId = EName("id")

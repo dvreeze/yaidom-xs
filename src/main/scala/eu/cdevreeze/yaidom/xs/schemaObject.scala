@@ -625,8 +625,47 @@ final class Redefine private[xs] (
   SchemaObjects.checkRedefineElem(wrappedElem)
 }
 
-// TODO Other schema parts, that are not Schema Components themselves, such as complexContent, simpleContent, extension,
-// restriction, appinfo, documentation, etc.
+// TODO Other schema parts, that are not Schema Components themselves, such as extension, restriction, etc.
+
+/**
+ * The "xs:complexContent" XML element.
+ */
+final class ComplexContent private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkComplexContentElem(wrappedElem)
+}
+
+/**
+ * The "xs:simpleContent" XML element.
+ */
+final class SimpleContent private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkSimpleContentElem(wrappedElem)
+}
+
+/**
+ * The "xs:appinfo" XML element.
+ */
+final class Appinfo private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  require(wrappedElem.resolvedName == EName(ns, "appinfo"), "The element must be an 'appinfo' element")
+}
+
+/**
+ * The "xs:documentation" XML element.
+ */
+final class Documentation private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  require(wrappedElem.resolvedName == EName(ns, "documentation"), "The element must be a 'documentation' element")
+}
 
 // Companion objects
 
@@ -692,6 +731,10 @@ object SchemaObject {
     case e if e.resolvedName == EName(ns, "import") => new Import(wrappedElem, childSchemaObjects(wrappedElem))
     case e if e.resolvedName == EName(ns, "include") => new Include(wrappedElem, childSchemaObjects(wrappedElem))
     case e if e.resolvedName == EName(ns, "redefine") => new Redefine(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == EName(ns, "complexContent") => new ComplexContent(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == EName(ns, "simpleContent") => new SimpleContent(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == EName(ns, "appinfo") => new Appinfo(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == EName(ns, "documentation") => new Documentation(wrappedElem, childSchemaObjects(wrappedElem))
     case _ => new SchemaObject(wrappedElem, childSchemaObjects(wrappedElem)) {}
   }
 
