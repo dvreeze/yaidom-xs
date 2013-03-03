@@ -264,28 +264,21 @@ private[xs] object SchemaObjects {
    * Checks the XML element as "xs:import", throwing an exception if invalid.
    */
   def checkImportElem(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameImport,
-      "Expected <xs:import> but got %s instead".format(elem.resolvedName))
+    checkImportElemAgainstSchema(elem)
   }
 
   /**
    * Checks the XML element as "xs:include", throwing an exception if invalid.
    */
   def checkIncludeElem(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameInclude,
-      "Expected <xs:include> but got %s instead".format(elem.resolvedName))
-
-    require(elem.attributeOption(EName("schemaLocation")).isDefined, "Expected attribute 'schemaLocation'")
+    checkIncludeElemAgainstSchema(elem)
   }
 
   /**
    * Checks the XML element as "xs:redefine", throwing an exception if invalid.
    */
   def checkRedefineElem(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameRedefine,
-      "Expected <xs:redefine> but got %s instead".format(elem.resolvedName))
-
-    require(elem.attributeOption(EName("schemaLocation")).isDefined, "Expected attribute 'schemaLocation'")
+    checkRedefineElemAgainstSchema(elem)
   }
 
   // Public helper methods
@@ -388,7 +381,7 @@ private[xs] object SchemaObjects {
       enameComplexType,
       enameGroup,
       enameAttributeGroup)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'schema' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     val expectedFirstChildNames = Set(enameInclude, enameImport, enameRedefine)
@@ -397,7 +390,7 @@ private[xs] object SchemaObjects {
     val childElemsWithoutAnnotations = childElems filterNot { e => e.resolvedName == enameAnnotation }
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElemsWithoutAnnotations,
         Seq(
           expectedFirstChildNames,
@@ -443,7 +436,7 @@ private[xs] object SchemaObjects {
       enameUnique,
       enameKey,
       enameKeyref)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'element' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameSimpleType, enameComplexType).contains(e.resolvedName)) <= 1,
@@ -453,7 +446,7 @@ private[xs] object SchemaObjects {
       "At most one annotation child allowed")
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElems,
         Seq(
           Set(enameAnnotation),
@@ -493,10 +486,8 @@ private[xs] object SchemaObjects {
 
     val childElems = elem.allChildElems
 
-    val expectedChildENames = Set(
-      enameSimpleType,
-      enameAnnotation)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    val expectedChildENames = Set(enameSimpleType, enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'attribute' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameSimpleType).contains(e.resolvedName)) <= 1,
@@ -506,7 +497,7 @@ private[xs] object SchemaObjects {
       "At most one annotation child allowed")
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElems,
         Seq(
           Set(enameAnnotation),
@@ -556,7 +547,7 @@ private[xs] object SchemaObjects {
       enameAttribute,
       enameAttributeGroup,
       enameAnyAttribute)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'complexType' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -581,7 +572,7 @@ private[xs] object SchemaObjects {
       "At most one anyAttribute child allowed")
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElems,
         Seq(
           Set(enameAnnotation),
@@ -604,7 +595,7 @@ private[xs] object SchemaObjects {
     }
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElemsButAnnotationAndContent,
         Seq(
           Set(enameGroup, enameAll, enameChoice, enameSequence),
@@ -649,7 +640,7 @@ private[xs] object SchemaObjects {
       enameRestriction,
       enameList,
       enameUnion)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'simpleType' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -665,7 +656,7 @@ private[xs] object SchemaObjects {
       "At most one union child allowed")
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElems,
         Seq(
           Set(enameAnnotation),
@@ -701,7 +692,7 @@ private[xs] object SchemaObjects {
       enameAll,
       enameChoice,
       enameSequence)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'group' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -717,7 +708,7 @@ private[xs] object SchemaObjects {
       "At most one sequence child allowed")
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElems,
         Seq(
           Set(enameAnnotation),
@@ -750,9 +741,8 @@ private[xs] object SchemaObjects {
 
     val childElems = elem.allChildElems
 
-    val expectedChildENames = Set(
-      enameAnnotation)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    val expectedChildENames = Set(enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'group' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -778,7 +768,7 @@ private[xs] object SchemaObjects {
       enameAttribute,
       enameAttributeGroup,
       enameAnyAttribute)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'attributeGroup' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -788,7 +778,7 @@ private[xs] object SchemaObjects {
       "At most one anyAttribute child allowed")
 
     require(
-      correctlyOrdered(
+      isCorrectlyOrdered(
         childElems,
         Seq(
           Set(enameAnnotation),
@@ -811,9 +801,8 @@ private[xs] object SchemaObjects {
 
     val childElems = elem.allChildElems
 
-    val expectedChildENames = Set(
-      enameAnnotation)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    val expectedChildENames = Set(enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'attributeGroup' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -832,9 +821,8 @@ private[xs] object SchemaObjects {
 
     val childElems = elem.allChildElems
 
-    val expectedChildENames = Set(
-      enameAnnotation)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    val expectedChildENames = Set(enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'notation' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
@@ -853,15 +841,81 @@ private[xs] object SchemaObjects {
 
     val childElems = elem.allChildElems
 
-    val expectedChildENames = Set(
-      enameAppinfo, enameDocumentation)
-    require(childElems.map(_.resolvedName).toSet.subsetOf(expectedChildENames),
+    val expectedChildENames = Set(enameAppinfo, enameDocumentation)
+    require(isWithin(childElems, expectedChildENames),
       "Expected 'annotation' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     // TODO Validate attributes and their types
   }
 
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_include.html
+   */
+  private def checkIncludeElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameInclude, "The element must be an 'include' element")
+
+    val childElems = elem.allChildElems
+
+    val expectedChildENames = Set(enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'include' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    // TODO Validate attributes and their types
+
+    require(elem.attributeOption(EName("schemaLocation")).isDefined, "Missing attribute 'schemaLocation'")
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_import.html
+   */
+  private def checkImportElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameImport, "The element must be an 'import' element")
+
+    val childElems = elem.allChildElems
+
+    val expectedChildENames = Set(enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'import' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    // TODO Validate attributes and their types
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_redefine.html
+   */
+  private def checkRedefineElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameRedefine, "The element must be a 'redefine' element")
+
+    val childElems = elem.allChildElems
+
+    val expectedChildENames = Set(
+      enameSimpleType,
+      enameComplexType,
+      enameGroup,
+      enameAttributeGroup,
+      enameAnnotation)
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'redefine' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    // TODO Validate attributes and their types
+
+    require(elem.attributeOption(EName("schemaLocation")).isDefined, "Missing attribute 'schemaLocation'")
+  }
+
   // Private constraint helper methods
+
+  /**
+   * Returns true if the passed Elems have only ENames within the given EName set.
+   */
+  private def isWithin(elems: Seq[indexed.Elem], enameSet: Set[EName]): Boolean = {
+    elems.map(_.resolvedName).toSet.subsetOf(enameSet)
+  }
 
   /**
    * Returns true if the passed Elems are ordered correctly, given the ordered sequence of EName sets.
@@ -869,7 +923,7 @@ private[xs] object SchemaObjects {
    *
    * An empty Elem sequence is also considered to be correctly ordered.
    */
-  private def correctlyOrdered(elems: Seq[indexed.Elem], enameSetOrder: Seq[Set[EName]]): Boolean = {
+  private def isCorrectlyOrdered(elems: Seq[indexed.Elem], enameSetOrder: Seq[Set[EName]]): Boolean = {
     require(enameSetOrder.map(_.size).sum == enameSetOrder.flatten.toSet.size, "The ordered EName sets must not be overlapping")
 
     val orderedElems = enameSetOrder.foldLeft(Seq[indexed.Elem]()) { (accumulatedElems, enameSet) =>
