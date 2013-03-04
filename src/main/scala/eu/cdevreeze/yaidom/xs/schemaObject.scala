@@ -20,6 +20,7 @@ package xs
 import java.net.URI
 import scala.collection.immutable
 import eu.cdevreeze.yaidom._
+import SchemaObjects._
 import SchemaObject._
 
 /**
@@ -58,9 +59,9 @@ sealed abstract class SchemaObject private[xs] (
 
   require(wrappedElem.allChildElems == allChildElems.map(_.wrappedElem), "Inconsistent SchemaObject")
 
-  require(wrappedElem.rootElem.resolvedName == EName(ns, "schema"), "The root of the element tree must be a 'schema' element")
+  require(wrappedElem.rootElem.resolvedName == enameSchema, "The root of the element tree must be a 'schema' element")
   require(
-    (wrappedElem.resolvedName == EName(ns, "schema")) || (!wrappedElem.elemPath.isRoot),
+    (wrappedElem.resolvedName == enameSchema) || (!wrappedElem.elemPath.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
 
   final override def resolvedName: EName = wrappedElem.resolvedName
@@ -123,7 +124,7 @@ sealed abstract class SchemaObject private[xs] (
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
   final def topmostElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    this findTopmostElems { e => e.resolvedName == EName(ns, "element") } collect { case e: ElementDeclaration => e }
+    this findTopmostElems { e => e.resolvedName == enameElement } collect { case e: ElementDeclaration => e }
 
   /**
    * Returns all attribute declarations inside this SchemaObject (excluding self).
@@ -136,7 +137,7 @@ sealed abstract class SchemaObject private[xs] (
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
   final def topmostAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    this findTopmostElems { e => e.resolvedName == EName(ns, "attribute") } collect { case e: AttributeDeclaration => e }
+    this findTopmostElems { e => e.resolvedName == enameAttribute } collect { case e: AttributeDeclaration => e }
 
   /**
    * Returns all type definitions inside this SchemaObject (excluding self).
@@ -149,7 +150,7 @@ sealed abstract class SchemaObject private[xs] (
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
   final def topmostTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
-    this findTopmostElems { e => Set(EName(ns, "complexType"), EName(ns, "simpleType")).contains(e.resolvedName) } collect
+    this findTopmostElems { e => Set(enameComplexType, enameSimpleType).contains(e.resolvedName) } collect
       { case e: TypeDefinition => e }
 }
 
@@ -165,7 +166,7 @@ final class Schema private[xs] (
 
   SchemaObjects.checkSchemaElem(wrappedElem)
 
-  final def targetNamespaceOption: Option[String] = wrappedElem \@ EName("targetNamespace")
+  final def targetNamespaceOption: Option[String] = wrappedElem \@ enameTargetNamespace
 
   /**
    * Returns all top-level element declarations.
@@ -281,13 +282,13 @@ final class ElementDeclaration private[xs] (
    * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
    */
   final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = this.rootElem.attributeOption(EName("targetNamespace"))
+    val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
 
     if (isTopLevel) tnsOption
     else if (isReference) None
     else {
-      val formOption = this.wrappedElem.attributeOption(EName("form"))
-      val elementFormDefaultOption = this.rootElem.attributeOption(EName("elementFormDefault"))
+      val formOption = this.wrappedElem.attributeOption(enameForm)
+      val elementFormDefaultOption = this.rootElem.attributeOption(enameElementFormDefault)
 
       if (formOption == Some("qualified")) tnsOption
       else if (formOption.isEmpty && (elementFormDefaultOption == Some("qualified"))) tnsOption
@@ -308,7 +309,7 @@ final class ElementDeclaration private[xs] (
   /**
    * Returns the value of the "name" attribute, if any, wrapped in an Option.
    */
-  final def nameAttributeOption: Option[String] = this.wrappedElem \@ EName("name")
+  final def nameAttributeOption: Option[String] = this.wrappedElem \@ enameName
 
   /**
    * Returns the "scope", if any, wrapped in an Option.
@@ -400,13 +401,13 @@ final class AttributeDeclaration private[xs] (
    * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
    */
   final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = this.rootElem.attributeOption(EName("targetNamespace"))
+    val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
 
     if (isTopLevel) tnsOption
     else if (isReference) None
     else {
-      val formOption = this.wrappedElem.attributeOption(EName("form"))
-      val attributeFormDefaultOption = this.rootElem.attributeOption(EName("attributeFormDefault"))
+      val formOption = this.wrappedElem.attributeOption(enameForm)
+      val attributeFormDefaultOption = this.rootElem.attributeOption(enameAttributeFormDefault)
 
       if (formOption == Some("qualified")) tnsOption
       else if (formOption.isEmpty && (attributeFormDefaultOption == Some("qualified"))) tnsOption
@@ -427,7 +428,7 @@ final class AttributeDeclaration private[xs] (
   /**
    * Returns the value of the "name" attribute, if any, wrapped in an Option.
    */
-  final def nameAttributeOption: Option[String] = this.wrappedElem \@ EName("name")
+  final def nameAttributeOption: Option[String] = this.wrappedElem \@ enameName
 
   /**
    * Returns the "scope", if any, wrapped in an Option.
@@ -483,7 +484,7 @@ final class SimpleTypeDefinition private[xs] (
   SchemaObjects.checkSimpleTypeDefinitionElem(wrappedElem)
 
   final override def targetNamespaceOption: Option[String] = {
-    this.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(enameTargetNamespace)
   }
 }
 
@@ -497,7 +498,7 @@ final class ComplexTypeDefinition private[xs] (
   SchemaObjects.checkComplexTypeDefinitionElem(wrappedElem)
 
   final override def targetNamespaceOption: Option[String] = {
-    this.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(enameTargetNamespace)
   }
 }
 
@@ -511,7 +512,7 @@ final class AttributeGroupDefinition private[xs] (
   SchemaObjects.checkAttributeGroupDefinitionElem(wrappedElem)
 
   final override def targetNamespaceOption: Option[String] = {
-    this.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(enameTargetNamespace)
   }
 }
 
@@ -525,7 +526,7 @@ final class IdentityConstraintDefinition private[xs] (
   SchemaObjects.checkIdentityConstraintDefinitionElem(wrappedElem)
 
   final override def targetNamespaceOption: Option[String] = {
-    this.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(enameTargetNamespace)
   }
 }
 
@@ -539,7 +540,7 @@ final class ModelGroupDefinition private[xs] (
   SchemaObjects.checkModelGroupDefinitionElem(wrappedElem)
 
   final override def targetNamespaceOption: Option[String] = {
-    this.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(enameTargetNamespace)
   }
 }
 
@@ -553,7 +554,7 @@ final class NotationDeclaration private[xs] (
   SchemaObjects.checkNotationDeclarationElem(wrappedElem)
 
   final override def targetNamespaceOption: Option[String] = {
-    this.rootElem.attributeOption(EName("targetNamespace"))
+    this.rootElem.attributeOption(enameTargetNamespace)
   }
 }
 
@@ -625,7 +626,7 @@ final class Redefine private[xs] (
   SchemaObjects.checkRedefineElem(wrappedElem)
 }
 
-// TODO Other schema parts, that are not Schema Components themselves, such as extension, restriction, etc.
+// Other schema parts, that are not Schema Components themselves, such as extension, restriction, etc.
 
 /**
  * The "xs:complexContent" XML element.
@@ -648,13 +649,33 @@ final class SimpleContent private[xs] (
 }
 
 /**
+ * The "xs:extension" XML element.
+ */
+final class Extension private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkExtensionElem(wrappedElem)
+}
+
+/**
+ * The "xs:restriction" XML element.
+ */
+final class Restriction private[xs] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+
+  SchemaObjects.checkRestrictionElem(wrappedElem)
+}
+
+/**
  * The "xs:appinfo" XML element.
  */
 final class Appinfo private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
-  require(wrappedElem.resolvedName == EName(ns, "appinfo"), "The element must be an 'appinfo' element")
+  require(wrappedElem.resolvedName == enameAppinfo, "The element must be an 'appinfo' element")
 }
 
 /**
@@ -664,7 +685,7 @@ final class Documentation private[xs] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
-  require(wrappedElem.resolvedName == EName(ns, "documentation"), "The element must be a 'documentation' element")
+  require(wrappedElem.resolvedName == enameDocumentation, "The element must be a 'documentation' element")
 }
 
 // Companion objects
@@ -685,22 +706,22 @@ object SchemaComponent {
     import SchemaObject._
 
     elem match {
-      case e if e.resolvedName == EName(ns, "element") => Some(new ElementDeclaration(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "attribute") => Some(new AttributeDeclaration(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "simpleType") => Some(new SimpleTypeDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "complexType") => Some(new ComplexTypeDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "attributeGroup") => Some(new AttributeGroupDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "key") => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "keyref") => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "unique") => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "group") => Some(new ModelGroupDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "notation") => Some(new NotationDeclaration(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "all") => Some(new ModelGroup(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "sequence") => Some(new ModelGroup(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "choice") => Some(new ModelGroup(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "any") => Some(new Wildcard(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "anyAttribute") => Some(new Wildcard(e, childSchemaObjects(e)))
-      case e if e.resolvedName == EName(ns, "annotation") => Some(new Annotation(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameElement => Some(new ElementDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAttribute => Some(new AttributeDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameSimpleType => Some(new SimpleTypeDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameComplexType => Some(new ComplexTypeDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAttributeGroup => Some(new AttributeGroupDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameKey => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameKeyref => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameUnique => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameGroup => Some(new ModelGroupDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameNotation => Some(new NotationDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAll => Some(new ModelGroup(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameSequence => Some(new ModelGroup(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameChoice => Some(new ModelGroup(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAny => Some(new Wildcard(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAnyAttribute => Some(new Wildcard(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAnnotation => Some(new Annotation(e, childSchemaObjects(e)))
       case e => None
     }
   }
@@ -710,31 +731,33 @@ object SchemaObject {
 
   def apply(wrappedElem: indexed.Elem): SchemaObject = wrappedElem match {
     // TODO
-    case e if e.resolvedName == EName(ns, "schema") => new Schema(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameSchema => new Schema(wrappedElem, childSchemaObjects(wrappedElem))
     case e if Set(
-      EName(ns, "element"),
-      EName(ns, "attribute"),
-      EName(ns, "simpleType"),
-      EName(ns, "complexType"),
-      EName(ns, "attributeGroup"),
-      EName(ns, "key"),
-      EName(ns, "keyref"),
-      EName(ns, "unique"),
-      EName(ns, "group"),
-      EName(ns, "notation"),
-      EName(ns, "all"),
-      EName(ns, "sequence"),
-      EName(ns, "choice"),
-      EName(ns, "any"),
-      EName(ns, "anyAttribute"),
-      EName(ns, "annotation")).contains(e.resolvedName) => SchemaComponent(wrappedElem)
-    case e if e.resolvedName == EName(ns, "import") => new Import(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == EName(ns, "include") => new Include(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == EName(ns, "redefine") => new Redefine(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == EName(ns, "complexContent") => new ComplexContent(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == EName(ns, "simpleContent") => new SimpleContent(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == EName(ns, "appinfo") => new Appinfo(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == EName(ns, "documentation") => new Documentation(wrappedElem, childSchemaObjects(wrappedElem))
+      enameElement,
+      enameAttribute,
+      enameSimpleType,
+      enameComplexType,
+      enameAttributeGroup,
+      enameKey,
+      enameKeyref,
+      enameUnique,
+      enameGroup,
+      enameNotation,
+      enameAll,
+      enameSequence,
+      enameChoice,
+      enameAny,
+      enameAnyAttribute,
+      enameAnnotation).contains(e.resolvedName) => SchemaComponent(wrappedElem)
+    case e if e.resolvedName == enameImport => new Import(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameInclude => new Include(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameRedefine => new Redefine(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameComplexContent => new ComplexContent(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameSimpleContent => new SimpleContent(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameAppinfo => new Appinfo(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameDocumentation => new Documentation(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameExtension => new Extension(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameRestriction => new Restriction(wrappedElem, childSchemaObjects(wrappedElem))
     case _ => new SchemaObject(wrappedElem, childSchemaObjects(wrappedElem)) {}
   }
 
