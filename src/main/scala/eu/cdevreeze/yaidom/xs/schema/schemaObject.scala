@@ -16,6 +16,7 @@
 
 package eu.cdevreeze.yaidom
 package xs
+package schema
 
 import java.net.URI
 import scala.collection.immutable
@@ -50,7 +51,7 @@ import SchemaObject._
  *
  * @author Chris de Vreeze
  */
-sealed abstract class SchemaObject private[xs] (
+sealed abstract class SchemaObject private[schema] (
   val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasParent[SchemaObject] with HasText with Immutable {
 
@@ -160,7 +161,7 @@ sealed abstract class SchemaObject private[xs] (
  * This is what the XML Schema specification calls a schema document, or the document element thereof.
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
-final class Schema private[xs] (
+final class Schema private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -210,7 +211,7 @@ final class Schema private[xs] (
  * a term like an element declaration IS a particle, so a particle does NOT HAVE a term. More generally, it is the schema
  * XML document that is leading, and not the abstract schema model that has no knowledge about its XML representation.
  */
-abstract class SchemaComponent private[xs] (
+abstract class SchemaComponent private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -232,7 +233,7 @@ abstract class SchemaComponent private[xs] (
  * "modelling perspective", regarding an element declaration (among other terms) to be a particle is not correct, yet from
  * an XML representation point of view it makes sense.
  */
-abstract class Particle private[xs] (
+abstract class Particle private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -254,7 +255,7 @@ abstract class Particle private[xs] (
 /**
  * Element declaration. That is, the "xs:element" XML element.
  */
-final class ElementDeclaration private[xs] (
+final class ElementDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
 
@@ -367,7 +368,7 @@ final class ElementDeclaration private[xs] (
  * Attribute use. The correspondence between attribute use and attribute declarations is analogous to the one between
  * particles and element declarations.
  */
-abstract class AttributeUse private[xs] (
+abstract class AttributeUse private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -379,7 +380,7 @@ abstract class AttributeUse private[xs] (
 /**
  * Attribute declaration. That is, the "xs:attribute" XML element.
  */
-final class AttributeDeclaration private[xs] (
+final class AttributeDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeUse(wrappedElem, allChildElems) {
 
@@ -470,14 +471,14 @@ final class AttributeDeclaration private[xs] (
 /**
  * Schema type definition, which is either a simple type or a complex type.
  */
-abstract class TypeDefinition private[xs] (
+abstract class TypeDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems)
 
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
  */
-final class SimpleTypeDefinition private[xs] (
+final class SimpleTypeDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
 
@@ -491,7 +492,7 @@ final class SimpleTypeDefinition private[xs] (
 /**
  * Complex type definition. That is, the "xs:complexType" XML element.
  */
-final class ComplexTypeDefinition private[xs] (
+final class ComplexTypeDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
 
@@ -505,7 +506,7 @@ final class ComplexTypeDefinition private[xs] (
 /**
  * Attribute group definition. That is, the "xs:attributeGroup" XML element.
  */
-final class AttributeGroupDefinition private[xs] (
+final class AttributeGroupDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -519,7 +520,7 @@ final class AttributeGroupDefinition private[xs] (
 /**
  * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
-final class IdentityConstraintDefinition private[xs] (
+final class IdentityConstraintDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -533,7 +534,7 @@ final class IdentityConstraintDefinition private[xs] (
 /**
  * Model group definition. That is, the "xs:group" XML element.
  */
-final class ModelGroupDefinition private[xs] (
+final class ModelGroupDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
 
@@ -547,7 +548,7 @@ final class ModelGroupDefinition private[xs] (
 /**
  * Notation declaration. That is, the "xs:notation" XML element.
  */
-final class NotationDeclaration private[xs] (
+final class NotationDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -561,7 +562,7 @@ final class NotationDeclaration private[xs] (
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-final class ModelGroup private[xs] (
+final class ModelGroup private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
 
@@ -573,7 +574,7 @@ final class ModelGroup private[xs] (
 /**
  * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
  */
-final class Wildcard private[xs] (
+final class Wildcard private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
 
@@ -585,7 +586,7 @@ final class Wildcard private[xs] (
 /**
  * Annotation schema component. That is, the "xs:annotation" XML element.
  */
-final class Annotation private[xs] (
+final class Annotation private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -599,7 +600,7 @@ final class Annotation private[xs] (
 /**
  * The "xs:import" XML element.
  */
-final class Import private[xs] (
+final class Import private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -609,7 +610,7 @@ final class Import private[xs] (
 /**
  * The "xs:include" XML element.
  */
-final class Include private[xs] (
+final class Include private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -619,7 +620,7 @@ final class Include private[xs] (
 /**
  * The "xs:redefine" XML element.
  */
-final class Redefine private[xs] (
+final class Redefine private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -631,7 +632,7 @@ final class Redefine private[xs] (
 /**
  * The "xs:complexContent" XML element.
  */
-final class ComplexContent private[xs] (
+final class ComplexContent private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -641,7 +642,7 @@ final class ComplexContent private[xs] (
 /**
  * The "xs:simpleContent" XML element.
  */
-final class SimpleContent private[xs] (
+final class SimpleContent private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -651,7 +652,7 @@ final class SimpleContent private[xs] (
 /**
  * The "xs:extension" XML element.
  */
-final class Extension private[xs] (
+final class Extension private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -661,7 +662,7 @@ final class Extension private[xs] (
 /**
  * The "xs:restriction" XML element.
  */
-final class Restriction private[xs] (
+final class Restriction private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -671,7 +672,7 @@ final class Restriction private[xs] (
 /**
  * The "xs:appinfo" XML element.
  */
-final class Appinfo private[xs] (
+final class Appinfo private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -681,7 +682,7 @@ final class Appinfo private[xs] (
 /**
  * The "xs:documentation" XML element.
  */
-final class Documentation private[xs] (
+final class Documentation private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
 
@@ -761,7 +762,7 @@ object SchemaObject {
     case _ => new SchemaObject(wrappedElem, childSchemaObjects(wrappedElem)) {}
   }
 
-  private[xs] def childSchemaObjects(e: indexed.Elem): immutable.IndexedSeq[SchemaObject] =
+  private[schema] def childSchemaObjects(e: indexed.Elem): immutable.IndexedSeq[SchemaObject] =
     e.allChildElems.map(e => SchemaObject(e))
 }
 

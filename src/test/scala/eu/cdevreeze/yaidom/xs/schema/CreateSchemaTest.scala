@@ -16,6 +16,7 @@
 
 package eu.cdevreeze.yaidom
 package xs
+package schema
 
 import java.{ util => jutil, io => jio }
 import javax.xml.parsers.SAXParserFactory

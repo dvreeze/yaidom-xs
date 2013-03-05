@@ -17,18 +17,15 @@
 package eu.cdevreeze.yaidom
 package xs
 
-import java.net.URI
-import scala.collection.immutable
-import eu.cdevreeze.yaidom._
-
 /**
- * Immutable XML Schema Document.
+ * This package represents XML Schema document content as immutable yaidom "elements". These schema objects offer the
+ * `ElemLike` query API. They wrap an `eu.cdevreeze.yaidom.indexed.Elem`.
+ *
+ * This API only represents schemas. It is not capable of validating instance documents against schemas.
  *
  * @author Chris de Vreeze
  */
-final class SchemaDocument(val wrappedDocument: indexed.Document) extends Immutable {
+package object schema {
 
-  final val schema: Schema = Schema(wrappedDocument.documentElement)
-
-  final override def toString: String = wrappedDocument.document.toString
+  val ns = "http://www.w3.org/2001/XMLSchema"
 }

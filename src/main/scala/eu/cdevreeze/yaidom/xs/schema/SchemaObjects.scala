@@ -16,6 +16,7 @@
 
 package eu.cdevreeze.yaidom
 package xs
+package schema
 
 import java.net.URI
 import scala.collection.immutable
@@ -25,7 +26,7 @@ import scala.collection.immutable
  *
  * @author Chris de Vreeze
  */
-private[xs] object SchemaObjects {
+private[schema] object SchemaObjects {
 
   /**
    * Checks the XML element as XML Schema (root element), throwing an exception if invalid.
@@ -318,8 +319,9 @@ private[xs] object SchemaObjects {
    * Checks the XML element as "xs:restriction", throwing an exception if invalid.
    */
   def checkRestrictionElem(elem: indexed.Elem): Unit = {
-    // TODO
-    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+    if (elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent)) checkSimpleRestrictionElemAgainstSchema(elem)
+    else if (elem.parentOption.map(_.resolvedName) == Some(enameComplexContent)) checkComplexRestrictionElemAgainstSchema(elem)
+    else checkDerivationRestrictionElemAgainstSchema(elem)
   }
 
   // Public helper methods
@@ -1323,6 +1325,177 @@ private[xs] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_restriction-1.html
+   */
+  private def checkComplexRestrictionElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+
+    require(elem.parentOption.map(_.resolvedName) == Some(enameComplexContent), "Expected 'complexContent' parent")
+
+    val childElems = elem.allChildElems
+
+    val expectedChildENames = Set(
+      enameAnnotation,
+      enameGroup,
+      enameAll,
+      enameChoice,
+      enameSequence,
+      enameAttribute,
+      enameAttributeGroup,
+      enameAnyAttribute)
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'restriction' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    require(childElems.count(e => Set(enameGroup).contains(e.resolvedName)) <= 1,
+      "At most one group child allowed")
+
+    require(childElems.count(e => Set(enameAll).contains(e.resolvedName)) <= 1,
+      "At most one all child allowed")
+
+    require(childElems.count(e => Set(enameChoice).contains(e.resolvedName)) <= 1,
+      "At most one choice child allowed")
+
+    require(childElems.count(e => Set(enameSequence).contains(e.resolvedName)) <= 1,
+      "At most one sequence child allowed")
+
+    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+      "At most one anyAttribute child allowed")
+
+    require(
+      isCorrectlyOrdered(
+        childElems,
+        Seq(
+          Set(enameAnnotation),
+          Set(enameGroup, enameAll, enameChoice, enameSequence),
+          Set(enameAttribute, enameAttributeGroup),
+          Set(enameAnyAttribute))),
+      "Expected specific order of child elements for a restriction")
+
+    require(
+      isOptionalChoice(
+        childElems filter (e => Set(enameGroup, enameAll, enameChoice, enameSequence).contains(e.resolvedName)),
+        Set(
+          Set(enameGroup),
+          Set(enameAll),
+          Set(enameChoice),
+          Set(enameSequence))),
+      "Expected optional choice between 'group', 'all', 'choice' and 'sequence'")
+
+    // TODO Validate attributes and their types
+
+    require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_restriction-2.html
+   */
+  private def checkSimpleRestrictionElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+
+    require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent), "Expected 'simpleContent' parent")
+
+    val childElems = elem.allChildElems
+
+    val facetENames = Set(
+      enameMinExclusive,
+      enameMinInclusive,
+      enameMaxExclusive,
+      enameMaxInclusive,
+      enameTotalDigits,
+      enameFractionDigits,
+      enameLength,
+      enameMinLength,
+      enameMaxLength,
+      enameEnumeration,
+      enameWhiteSpace,
+      enamePattern)
+
+    val expectedChildENames = Set(
+      enameAnnotation,
+      enameSimpleType,
+      enameAttribute,
+      enameAttributeGroup,
+      enameAnyAttribute) ++ facetENames
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'restriction' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    require(childElems.count(e => Set(enameSimpleType).contains(e.resolvedName)) <= 1,
+      "At most one simpleType child allowed")
+
+    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+      "At most one anyAttribute child allowed")
+
+    require(
+      isCorrectlyOrdered(
+        childElems,
+        Seq(
+          Set(enameAnnotation),
+          Set(enameSimpleType),
+          facetENames,
+          Set(enameAttribute, enameAttributeGroup),
+          Set(enameAnyAttribute))),
+      "Expected specific order of child elements for a restriction")
+
+    // TODO Validate attributes and their types
+
+    require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+  }
+
+  /**
+   * See http://www.schemacentral.com/sc/xsd/e-xsd_restriction.html
+   */
+  private def checkDerivationRestrictionElemAgainstSchema(elem: indexed.Elem): Unit = {
+    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+
+    require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleType), "Expected 'simpleType' parent")
+
+    val childElems = elem.allChildElems
+
+    val facetENames = Set(
+      enameMinExclusive,
+      enameMinInclusive,
+      enameMaxExclusive,
+      enameMaxInclusive,
+      enameTotalDigits,
+      enameFractionDigits,
+      enameLength,
+      enameMinLength,
+      enameMaxLength,
+      enameEnumeration,
+      enameWhiteSpace,
+      enamePattern)
+
+    val expectedChildENames = Set(
+      enameAnnotation,
+      enameSimpleType) ++ facetENames
+    require(isWithin(childElems, expectedChildENames),
+      "Expected 'restriction' child elements: %s".format(expectedChildENames.mkString(", ")))
+
+    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+      "At most one annotation child allowed")
+
+    require(childElems.count(e => Set(enameSimpleType).contains(e.resolvedName)) <= 1,
+      "At most one simpleType child allowed")
+
+    require(
+      isCorrectlyOrdered(
+        childElems,
+        Seq(
+          Set(enameAnnotation),
+          Set(enameSimpleType),
+          facetENames)),
+      "Expected specific order of child elements for a restriction")
+
+    // TODO Validate attributes and their types
   }
 
   // Private constraint helper methods
