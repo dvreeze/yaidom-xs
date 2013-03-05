@@ -51,21 +51,9 @@ private[schema] object SchemaObjects {
       checkLocalElementDeclarationElemAgainstSchema(elem)
     }
 
-    if (isTopLevel) {
-      require(minOccursAttrOption(elem).isEmpty, "Top level element declarations are not particles, so have no 'minOccurs'")
-      require(maxOccursAttrOption(elem).isEmpty, "Top level element declarations are not particles, so have no 'maxOccurs'")
-
-      require(!isReference, "Top level element declarations can not be references")
-      require(elem.attributeOption(enameForm).isEmpty, "Top level element declarations can not have a 'form' attribute")
-
-      require(nameOption(elem).isDefined, "Top level element declarations must have a name attribute")
-    } else {
+    if (!isTopLevel) {
       require(refOption(elem).isDefined || nameOption(elem).isDefined, "One of 'ref' or 'name' must be present")
       require(refOption(elem).isEmpty || nameOption(elem).isEmpty, "One of 'ref' or 'name' must be absent")
-
-      require(substitutionGroupOption(elem).isEmpty, "Local element declarations must not have a 'substitutionGroup'")
-      require(elem.attributeOption(enameAbstract).isEmpty, "Local element declarations must not have attribute 'abstract'")
-      require(elem.attributeOption(enameFinal).isEmpty, "Local element declarations must not have attribute 'final'")
     }
 
     require(
@@ -79,25 +67,40 @@ private[schema] object SchemaObjects {
 
     if (isReference) {
       assert(!isTopLevel)
-      require((elem.resolvedAttributes.toMap.keySet intersect Set(
-        enameNillable,
-        enameDefault,
-        enameFixed,
-        enameForm,
-        enameBlock,
-        enameType)).isEmpty,
-        "Element declarations that are references must not have attributes 'nillable', 'default', 'fixed', 'form', 'block', 'type'")
+
+      val noNsAttributeNames = elem.resolvedAttributes.toMap.keySet filter { attr => attr.namespaceUriOption.isEmpty }
+      require(
+        noNsAttributeNames.subsetOf(Set(enameRef, enameMinOccurs, enameMaxOccurs, enameId)),
+        "Expected only 'ref', 'minOccurs', 'maxOccurs' and 'id' attributes, but got %s".format(noNsAttributeNames.mkString(", ")))
     }
 
     if (isReference) {
       assert(!isTopLevel)
-      require((elem.allChildElems.map(_.resolvedName).toSet intersect Set(
-        enameComplexType,
-        enameSimpleType,
-        enameKey,
-        enameKeyref,
-        enameUnique)).isEmpty,
-        "Element declarations that are references must not have child elements 'complexType', 'simpleType', 'key', 'keyref', 'unique'")
+
+      val xsdChildElemNames = elem collectFromChildElems { case e if e.resolvedName.namespaceUriOption == Some(ns) => e.resolvedName }
+      require(
+        xsdChildElemNames.toSet.subsetOf(Set(enameAnnotation)),
+        "Element declarations that are references must only have 'annotation' child elements")
+    }
+
+    if (elem.attributeOption(enameTargetNamespace).isDefined) {
+      require((elem \@ enameName).isDefined, "Element declarations with targetNamespace must have a 'name' attribute")
+      require((elem \@ enameForm).isEmpty, "Element declarations with targetNamespace must have no 'form' attribute")
+
+      if (elem.rootElem.attributeOption(enameTargetNamespace) != elem.attributeOption(enameTargetNamespace)) {
+        val complexTypeOption = elem findAncestor { e => e.resolvedName == enameComplexType }
+        require(complexTypeOption.isDefined, "Expected complexType ancestor")
+
+        val restrictionOption = elem findAncestor { e =>
+          e.resolvedName == enameRestriction &&
+            e.elemPath.ancestorPaths.contains(complexTypeOption.get.elemPath)
+        }
+        require(restrictionOption.isDefined, "Expected restriction between this element and the nearest complexType ancestor")
+
+        val base = restrictionOption.get.attribute(enameBase)
+        val baseENameOption = restrictionOption.get.elem.scope.resolveQNameOption(QName(base))
+        require(baseENameOption != Some(enameAnyType), "Expected restriction base other than xs:anyType")
+      }
     }
   }
 
@@ -454,6 +457,11 @@ private[schema] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+
+    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(enameForm).isEmpty, "Attribute 'form' prohibited")
+    require(elem.attributeOption(enameMinOccurs).isEmpty, "Attribute 'minOccurs' prohibited")
+    require(elem.attributeOption(enameMaxOccurs).isEmpty, "Attribute 'maxOccurs' prohibited")
   }
 
   /**
@@ -465,6 +473,10 @@ private[schema] object SchemaObjects {
     checkElementDeclarationElemAgainstSchema(elem)
 
     // TODO Validate attributes and their types
+
+    require(elem.attributeOption(enameSubstitutionGroup).isEmpty, "Attribute 'substitutionGroup' prohibited")
+    require(elem.attributeOption(enameFinal).isEmpty, "Attribute 'final' prohibited")
+    require(elem.attributeOption(enameAbstract).isEmpty, "Attribute 'abstract' prohibited")
   }
 
   private def checkElementDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
@@ -511,6 +523,10 @@ private[schema] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+
+    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(enameForm).isEmpty, "Attribute 'form' prohibited")
+    require(elem.attributeOption(enameUse).isEmpty, "Attribute 'use' prohibited")
   }
 
   /**
@@ -572,6 +588,11 @@ private[schema] object SchemaObjects {
     checkComplexTypeDefinitionElemAgainstSchema(elem)
 
     // TODO Validate attributes and their types
+
+    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
+    require(elem.attributeOption(enameAbstract).isEmpty, "Attribute 'abstract' prohibited")
+    require(elem.attributeOption(enameFinal).isEmpty, "Attribute 'final' prohibited")
+    require(elem.attributeOption(enameBlock).isEmpty, "Attribute 'block' prohibited")
   }
 
   private def checkComplexTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
@@ -671,6 +692,9 @@ private[schema] object SchemaObjects {
     checkSimpleTypeDefinitionElemAgainstSchema(elem)
 
     // TODO Validate attributes and their types
+
+    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
+    require(elem.attributeOption(enameFinal).isEmpty, "Attribute 'final' prohibited")
   }
 
   private def checkSimpleTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
@@ -772,6 +796,10 @@ private[schema] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+
+    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(enameMinOccurs).isEmpty, "Attribute 'minOccurs' prohibited")
+    require(elem.attributeOption(enameMaxOccurs).isEmpty, "Attribute 'maxOccurs' prohibited")
   }
 
   /**
@@ -794,6 +822,8 @@ private[schema] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameRef).isDefined, "Missing attribute 'ref'")
+
+    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
   }
 
   /**
@@ -832,6 +862,8 @@ private[schema] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+
+    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
   }
 
   /**
@@ -854,6 +886,8 @@ private[schema] object SchemaObjects {
     // TODO Validate attributes and their types
 
     require(elem.attributeOption(enameRef).isDefined, "Missing attribute 'ref'")
+
+    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
   }
 
   /**
@@ -1577,6 +1611,7 @@ private[schema] object SchemaObjects {
   val enameSelector = EName(ns, "selector")
   val enameField = EName(ns, "field")
   val enameAny = EName(ns, "any")
+  val enameAnyType = EName(ns, "anyType")
 
   val enameMinExclusive = EName(ns, "minExclusive")
   val enameMinInclusive = EName(ns, "minInclusive")
