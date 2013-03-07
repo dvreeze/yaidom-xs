@@ -646,7 +646,7 @@ private[schema] object SchemaObjects {
     val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == enameAnnotation)
 
     require(
-      isChoice(
+      isOptionalChoice(
         childElemsButAnnotation,
         Set(
           Set(enameSimpleContent),
