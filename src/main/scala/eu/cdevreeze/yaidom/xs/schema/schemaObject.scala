@@ -117,40 +117,40 @@ sealed abstract class SchemaObject private[schema] (
   /**
    * Returns all element declarations inside this SchemaObject (excluding self).
    */
-  final def elementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+  final def findAllElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
     this collectFromElems { case e: ElementDeclaration => e }
 
   /**
    * Returns all topmost element declarations inside this SchemaObject (excluding self).
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
-  final def topmostElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+  final def findTopmostElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
     this findTopmostElems { e => e.resolvedName == enameElement } collect { case e: ElementDeclaration => e }
 
   /**
    * Returns all attribute declarations inside this SchemaObject (excluding self).
    */
-  final def attributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+  final def findAllAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
     this collectFromElems { case e: AttributeDeclaration => e }
 
   /**
    * Returns all topmost attribute declarations inside this SchemaObject (excluding self).
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
-  final def topmostAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+  final def findTopmostAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
     this findTopmostElems { e => e.resolvedName == enameAttribute } collect { case e: AttributeDeclaration => e }
 
   /**
    * Returns all type definitions inside this SchemaObject (excluding self).
    */
-  final def typeDefinitions: immutable.IndexedSeq[TypeDefinition] =
+  final def findAllTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
     this collectFromElems { case e: TypeDefinition => e }
 
   /**
    * Returns all topmost type definitions inside this SchemaObject (excluding self).
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
-  final def topmostTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
+  final def findTopmostTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
     this findTopmostElems { e => Set(enameComplexType, enameSimpleType).contains(e.resolvedName) } collect
       { case e: TypeDefinition => e }
 }
@@ -172,31 +172,31 @@ final class Schema private[schema] (
   /**
    * Returns all top-level element declarations.
    */
-  final def topLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    topmostElementDeclarations filter { e => e.isTopLevel }
+  final def findTopLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    findTopmostElementDeclarations filter { e => e.isTopLevel }
 
   /**
    * Returns all top-level attribute declarations.
    */
-  final def topLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    topmostAttributeDeclarations filter { e => e.isTopLevel }
+  final def findTopLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    findTopmostAttributeDeclarations filter { e => e.isTopLevel }
 
   /**
-   * Returns all imports.
+   * Returns all findAllImports.
    */
-  final def imports: immutable.IndexedSeq[Import] =
+  final def findAllImports: immutable.IndexedSeq[Import] =
     this collectFromElems { case e: Import => e }
 
   /**
-   * Returns all includes.
+   * Returns all findAllIncludes.
    */
-  final def includes: immutable.IndexedSeq[Include] =
+  final def findAllIncludes: immutable.IndexedSeq[Include] =
     this collectFromElems { case e: Include => e }
 
   /**
-   * Returns all redefines.
+   * Returns all findAllRedefines.
    */
-  final def redefines: immutable.IndexedSeq[Redefine] =
+  final def findAllRedefines: immutable.IndexedSeq[Redefine] =
     this collectFromElems { case e: Redefine => e }
 }
 

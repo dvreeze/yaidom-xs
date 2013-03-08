@@ -22,6 +22,8 @@ package xs
  * `ElemLike` query API. They wrap an `eu.cdevreeze.yaidom.indexed.Elem`.
  *
  * This API only represents schemas. It is not capable of validating instance documents against schemas.
+ * 
+ * Only version 1.0 of XML Schema is supported.
  *
  * @author Chris de Vreeze
  */

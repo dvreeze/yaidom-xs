@@ -32,6 +32,8 @@ libraryDependencies <+= scalaBinaryVersion { version =>
 
 libraryDependencies += "org.apache.ws.xmlschema" % "xmlschema-core" % "2.0.3"
 
+libraryDependencies += "com.sun.xsom" % "xsom" % "20110809"
+
 publishMavenStyle := true
 
 publishTo <<= version { (v: String) =>
