@@ -182,19 +182,19 @@ final class Schema private[schema] (
     findTopmostAttributeDeclarations filter { e => e.isTopLevel }
 
   /**
-   * Returns all findAllImports.
+   * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =
     this collectFromElems { case e: Import => e }
 
   /**
-   * Returns all findAllIncludes.
+   * Returns all includes.
    */
   final def findAllIncludes: immutable.IndexedSeq[Include] =
     this collectFromElems { case e: Include => e }
 
   /**
-   * Returns all findAllRedefines.
+   * Returns all redefines.
    */
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
     this collectFromElems { case e: Redefine => e }
