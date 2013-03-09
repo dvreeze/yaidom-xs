@@ -11,24 +11,15 @@ version := "0.1.1-SNAPSHOT"
 
 scalaVersion := "2.10.0"
 
-crossScalaVersions := Seq("2.10.0", "2.9.2", "2.9.1", "2.9.0-1", "2.9.0")
+// crossScalaVersions := Seq("2.10.0")
 
-scalacOptions ++= Seq("-unchecked", "-deprecation")
-
-scalacOptions <++= scalaBinaryVersion map { version =>
-  if (version.contains("2.10")) Seq("-feature") else Seq()
-}
+scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
 libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "0.6.7"
 
 libraryDependencies += "junit" % "junit" % "4.10" % "test"
 
-libraryDependencies <+= scalaBinaryVersion { version =>
-  if (version.contains("2.10"))
-    "org.scalatest" % "scalatest_2.10.0" % "1.8" % "test"
-  else
-    "org.scalatest" %% "scalatest" % "1.8" % "test"
-}
+libraryDependencies += "org.scalatest" % "scalatest_2.10" % "1.9.1" % "test"
 
 libraryDependencies += "org.apache.ws.xmlschema" % "xmlschema-core" % "2.0.3"
 

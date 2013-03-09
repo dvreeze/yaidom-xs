@@ -56,13 +56,13 @@ class CreateSchemaTest extends Suite {
 
     val tns = "http://shiporder"
 
-    expect(Seq(EName(tns, "shiporder"))) {
+    expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls flatMap { elemDecl => elemDecl.enameOption }
     }
-    expect(Seq(EName(tns, "shiporder"))) {
+    expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } flatMap { elemDecl => elemDecl.enameOption }
     }
-    expect(Seq(EName(tns, "shiporder"))) {
+    expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
         val tnsOption = e.rootElem \@ "targetNamespace"
         val name = (e \@ "name").get
@@ -84,13 +84,13 @@ class CreateSchemaTest extends Suite {
       EName(tns, "quantity"),
       EName(tns, "price"))
 
-    expect(expectedElemNames) {
+    expectResult(expectedElemNames) {
       elemDecls flatMap { elemDecl => elemDecl.enameOption }
     }
-    expect(expectedElemNames) {
+    expectResult(expectedElemNames) {
       elemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } flatMap { elemDecl => elemDecl.enameOption }
     }
-    expect(expectedElemNames) {
+    expectResult(expectedElemNames) {
       elemDecls3 map { e =>
         val tnsOption = e.rootElem \@ "targetNamespace"
         val name = (e \@ "name").get
@@ -98,10 +98,10 @@ class CreateSchemaTest extends Suite {
       }
     }
 
-    expect(Seq()) {
+    expectResult(Seq()) {
       globalAttrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
-    expect(Seq("orderid")) {
+    expectResult(Seq("orderid")) {
       attrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
   }
@@ -151,13 +151,13 @@ class CreateSchemaTest extends Suite {
       }
 
     assert(openAttrsComplexTypeOption.isDefined)
-    expect(2) {
+    expectResult(2) {
       openAttrsComplexTypeOption.get.allChildElems.size
     }
 
     val secondChildElem = openAttrsComplexTypeOption.get.allChildElems(1)
 
-    expect("complexContent") {
+    expectResult("complexContent") {
       secondChildElem.localName
     }
 
@@ -178,17 +178,17 @@ class CreateSchemaTest extends Suite {
                   attributes = Vector(QName("namespace") -> "##other", QName("processContents") -> "lax"))))))
     val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.wrappedElem.elem.scope)
 
-    expect(resolved.Elem(expectedElem)) {
+    expectResult(resolved.Elem(expectedElem)) {
       resolved.Elem(secondChildElem.wrappedElem.elem).removeAllInterElementWhitespace
     }
 
-    expect(1) {
+    expectResult(1) {
       schema.findAllImports.size
     }
-    expect(0) {
+    expectResult(0) {
       schema.findAllIncludes.size
     }
-    expect(0) {
+    expectResult(0) {
       schema.findAllRedefines.size
     }
   }
@@ -214,7 +214,7 @@ class CreateSchemaTest extends Suite {
     assert(globalElemDecls.size <= 5000)
     assert(elemDecls.size > globalElemDecls.size)
 
-    expect(22) {
+    expectResult(22) {
       val filteredElemDecls = globalElemDecls filter { elemDecl =>
         elemDecl.enameOption.map(_.localPart).getOrElse("").startsWith("Accumulated")
       }
@@ -223,31 +223,31 @@ class CreateSchemaTest extends Suite {
 
     val nsXbrli = "http://www.xbrl.org/2003/instance"
 
-    expect(Set(EName(nsXbrli, "item"), EName(nsXbrli, "tuple"))) {
+    expectResult(Set(EName(nsXbrli, "item"), EName(nsXbrli, "tuple"))) {
       val result = globalElemDecls flatMap { elemDecl => elemDecl.substitutionGroupOption }
       result.toSet
     }
-    expect(Set("instant", "duration")) {
+    expectResult(Set("instant", "duration")) {
       val result = globalElemDecls flatMap { elemDecl => elemDecl.attributeOption(EName(nsXbrli, "periodType")) }
       result.toSet
     }
 
     val topmostElemDecls = schema.findTopmostElementDeclarations
 
-    expect(globalElemDecls) {
+    expectResult(globalElemDecls) {
       topmostElemDecls
     }
-    expect(elemDecls) {
+    expectResult(elemDecls) {
       topmostElemDecls flatMap { e => e +: e.findAllElementDeclarations }
     }
 
-    expect(4) {
+    expectResult(4) {
       schema.findAllImports.size
     }
-    expect(0) {
+    expectResult(0) {
       schema.findAllIncludes.size
     }
-    expect(0) {
+    expectResult(0) {
       schema.findAllRedefines.size
     }
   }
@@ -291,7 +291,7 @@ class CreateSchemaTest extends Suite {
 
     val expectedTns = "http://shiporder"
 
-    expect(Some(expectedTns)) {
+    expectResult(Some(expectedTns)) {
       schema.targetNamespaceOption
     }
 
@@ -300,13 +300,13 @@ class CreateSchemaTest extends Suite {
     assert(shipOrderElemDeclOption.isDefined)
     assert(shipOrderElemDeclOption.get.isTopLevel)
 
-    expect(Some(expectedTns)) {
+    expectResult(Some(expectedTns)) {
       shipOrderElemDeclOption.get.targetNamespaceOption
     }
-    expect(Some(EName(expectedTns, "shiporder"))) {
+    expectResult(Some(EName(expectedTns, "shiporder"))) {
       shipOrderElemDeclOption.get.enameOption
     }
-    expect(None) {
+    expectResult(None) {
       shipOrderElemDeclOption.get.scopeOption
     }
 
@@ -315,13 +315,13 @@ class CreateSchemaTest extends Suite {
     assert(nameElemDeclOption.isDefined)
     assert(!nameElemDeclOption.get.isTopLevel)
 
-    expect(Some(expectedTns)) {
+    expectResult(Some(expectedTns)) {
       nameElemDeclOption.get.targetNamespaceOption
     }
-    expect(Some(EName(expectedTns, "name"))) {
+    expectResult(Some(EName(expectedTns, "name"))) {
       nameElemDeclOption.get.enameOption
     }
-    expect(Some(5)) {
+    expectResult(Some(5)) {
       nameElemDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
     }
 
@@ -330,13 +330,13 @@ class CreateSchemaTest extends Suite {
     assert(orderidAttrDeclOption.isDefined)
     assert(!orderidAttrDeclOption.get.isTopLevel)
 
-    expect(None) {
+    expectResult(None) {
       orderidAttrDeclOption.get.targetNamespaceOption
     }
-    expect(Some(EName(None, "orderid"))) {
+    expectResult(Some(EName(None, "orderid"))) {
       orderidAttrDeclOption.get.enameOption
     }
-    expect(Some(2)) {
+    expectResult(Some(2)) {
       orderidAttrDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
     }
   }
