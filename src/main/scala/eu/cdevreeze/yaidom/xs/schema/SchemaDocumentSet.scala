@@ -40,4 +40,16 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   }
 
   // TODO Query methods for element declarations, types of element declarations, substitution groups of element declarations, etc.
+
+  def findAllElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    schemaDocuments flatMap { e => e.schema.findAllElementDeclarations }
+
+  def findTopLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    schemaDocuments flatMap { e => e.schema.findTopLevelElementDeclarations }
+
+  def filterElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    schemaDocuments flatMap { e => e.schema collectFromElems { case e: ElementDeclaration if p(e) => e } }
+
+  def filterTopLevelElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    schemaDocuments flatMap { e => e.schema collectFromElems { case e: ElementDeclaration if e.isTopLevel && p(e) => e } }
 }
