@@ -28,8 +28,12 @@ import eu.cdevreeze.yaidom.xs.schema._
 
 class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
+  val nsXLink = "http://www.w3.org/1999/xlink"
+  val nsXL = "http://www.xbrl.org/2003/XLink"
   val nsLink = "http://www.xbrl.org/2003/linkbase"
   val nsXbrli = "http://www.xbrl.org/2003/instance"
+  val nsXbrldt = "http://xbrl.org/2005/xbrldt"
+  val nsVer = "http://xbrl.org/2010/versioning-base"
   val nsSbr = "http://www.nltaxonomie.nl/2011/xbrl/xbrl-syntax-extension"
 
   val docParser: parse.DocumentParser = {
@@ -107,6 +111,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
 
       info("In fact, found %d schemas".format(schemaDocs.size))
+      info("Combined these schemas contain %d top-level element declarations".format(schemaDocSet.findAllTopLevelElementDeclarations.size))
     }
 
     scenario("All parsed linkbases are found") {
@@ -180,6 +185,72 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       expectResult(Set(EName(nsXbrli, "tuple"))) {
         substGroupElemDecls.flatMap(e => e.substitutionGroupOption).toSet
       }
+    }
+
+    scenario("Only top-level element declarations can have substitution groups") {
+
+      Given("all local element declarations")
+      val elemDecls = schemaDocSet filterElementDeclarations { e => !e.isTopLevel }
+
+      When("asking for their substitution groups")
+      val substGroups = elemDecls.flatMap(_.substitutionGroupOption).toSet
+
+      Then("no substitution groups are found")
+      expectResult(Set()) {
+        substGroups
+      }
+    }
+
+    scenario("File xbrl-syntax-extension.xsd introduces some concept substitution groups") {
+
+      Given("the xbrl-syntax-extension.xsd schema")
+      val schemaDoc = schemaDocs.values.find(doc =>
+        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("xbrl-syntax-extension.xsd")).get
+
+      When("asking for its abstract top-level element declarations")
+      val elemDecls = schemaDoc.schema filterTopLevelElementDeclarations { e => e.isAbstract }
+
+      Then("all these element declarations are in the xbrli:item or xbrli:tuple substitution group")
+      val expectedSubstGroupOptions = Set(Some(EName(nsXbrli, "item")), Some(EName(nsXbrli, "tuple")))
+
+      expectResult(expectedSubstGroupOptions) {
+        elemDecls.map(e => e.substitutionGroupOption).toSet
+      }
+
+      And("they are all in the same 'sbr' (http://www.nltaxonomie.nl/2011/xbrl/xbrl-syntax-extension) target namespace")
+      expectResult(List(Some(nsSbr))) {
+        elemDecls.map(_.targetNamespaceOption).distinct
+      }
+
+      And("indeed all these element declarations are used as substitution groups")
+      val allTopLevelElemDecls = schemaDocSet.findAllTopLevelElementDeclarations
+
+      assert(elemDecls forall (elem => allTopLevelElemDecls.find(e => e.substitutionGroupOption == elem.enameOption).isDefined))
+
+      val substGroupQNames = elemDecls flatMap { _.enameOption } map { ename => ename.toQName(Some("sbr")) }
+      info("In fact, the substitution groups introduced in xbrl-syntax-extension.xsd are: " + substGroupQNames.mkString(", "))
+    }
+
+    scenario("When searching for all substitution groups (only) in www.nltaxonomie.nl, some of them are at least expected") {
+
+      Given("all top level element declarations in www.nltaxonomie.nl")
+      val nltaxSchemaDocs = schemaDocSet.schemaDocuments filter (doc =>
+        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").contains("/www.nltaxonomie.nl/"))
+      val nltaxSchemaDocSet = new SchemaDocumentSet(nltaxSchemaDocs)
+      val elemDecls = nltaxSchemaDocSet.findAllTopLevelElementDeclarations
+
+      When("asking for their substitution groups")
+      val substGroups = elemDecls.flatMap(_.substitutionGroupOption).toSet
+
+      Then("some expected substitution groups are found")
+      assert(Set(
+        EName(nsXbrli, "item"),
+        EName(nsXbrli, "tuple"),
+        EName(nsXbrldt, "hypercubeItem"),
+        EName(nsXbrldt, "dimensionItem"),
+        EName(nsVer, "event")).subsetOf(substGroups))
+
+      info("All non-sbr substitution groups in www.nltaxonomie.nl: " + substGroups.filterNot(_.namespaceUriOption == Some(nsSbr)).mkString(", "))
     }
   }
 }

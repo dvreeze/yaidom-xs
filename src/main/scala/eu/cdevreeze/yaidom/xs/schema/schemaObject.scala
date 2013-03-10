@@ -205,6 +205,12 @@ final class Schema private[schema] (
     this collectFromElems { case e: ElementDeclaration if e.isTopLevel && p(e) => e }
 
   /**
+   * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
+   */
+  final def findTopLevelElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
+    filterTopLevelElementDeclarations(_.enameOption == Some(ename)).headOption
+
+  /**
    * Returns all top-level attribute declarations.
    */
   final def findAllTopLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
