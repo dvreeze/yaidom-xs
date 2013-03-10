@@ -132,7 +132,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
-      val elemDecl = schemaDoc.schema.findTopLevelElementDeclarations.find(e =>
+      val elemDecl = schemaDoc.schema.findAllTopLevelElementDeclarations.find(e =>
         (e \@ "id") == Some("kvk-t_ContactForDocumentPresentation")).get
 
       When("asking for its substitution group")
@@ -150,7 +150,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
-      val elemDecls = schemaDoc.schema.findTopLevelElementDeclarations
+      val elemDecls = schemaDoc.schema.findAllTopLevelElementDeclarations
 
       When("asking for their substitution groups")
       val substGroups = elemDecls flatMap { _.substitutionGroupOption }

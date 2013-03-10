@@ -42,7 +42,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.findTopLevelElementDeclarations
+    val globalElemDecls = schema.findAllTopLevelElementDeclarations
     val elemDecls = schema.findAllElementDeclarations
 
     val globalElemDecls2 = schema \\! EName(ns, "element")
@@ -51,7 +51,7 @@ class CreateSchemaTest extends Suite {
     val globalElemDecls3 = schema.wrappedElem \\! EName(ns, "element")
     val elemDecls3 = schema.wrappedElem \\ EName(ns, "element")
 
-    val globalAttrDecls = schema.findTopLevelAttributeDeclarations
+    val globalAttrDecls = schema.findAllTopLevelAttributeDeclarations
     val attrDecls = schema.findAllAttributeDeclarations
 
     val tns = "http://shiporder"
@@ -120,7 +120,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.findTopLevelElementDeclarations
+    val globalElemDecls = schema.findAllTopLevelElementDeclarations
     val elemDecls = schema.findAllElementDeclarations
 
     assert(globalElemDecls.size >= 40)
@@ -207,7 +207,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.findTopLevelElementDeclarations
+    val globalElemDecls = schema.findAllTopLevelElementDeclarations
     val elemDecls = schema.findAllElementDeclarations
 
     assert(globalElemDecls.size >= 4000)
@@ -232,7 +232,7 @@ class CreateSchemaTest extends Suite {
       result.toSet
     }
 
-    val topmostElemDecls = schema.findTopmostElementDeclarations
+    val topmostElemDecls = schema.findTopmostElementDeclarations(e => true)
 
     expectResult(globalElemDecls) {
       topmostElemDecls
@@ -295,7 +295,7 @@ class CreateSchemaTest extends Suite {
       schema.targetNamespaceOption
     }
 
-    val shipOrderElemDeclOption = schema.findTopLevelElementDeclarations find { e => e.nameAttributeOption == Some("shiporder") }
+    val shipOrderElemDeclOption = schema.findAllTopLevelElementDeclarations find { e => e.nameAttributeOption == Some("shiporder") }
 
     assert(shipOrderElemDeclOption.isDefined)
     assert(shipOrderElemDeclOption.get.isTopLevel)
@@ -325,7 +325,8 @@ class CreateSchemaTest extends Suite {
       nameElemDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
     }
 
-    val orderidAttrDeclOption = schema.findTopmostAttributeDeclarations find { e => e.nameAttributeOption == Some("orderid") }
+    val orderidAttrDeclOption =
+      (schema findTopmostAttributeDeclarations { e => e.nameAttributeOption == Some("orderid") }).headOption
 
     assert(orderidAttrDeclOption.isDefined)
     assert(!orderidAttrDeclOption.get.isTopLevel)

@@ -121,11 +121,19 @@ sealed abstract class SchemaObject private[schema] (
     this collectFromElems { case e: ElementDeclaration => e }
 
   /**
-   * Returns all topmost element declarations inside this SchemaObject (excluding self).
+   * Returns all element declarations obeying the given predicate (excluding self).
+   */
+  final def filterElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    this collectFromElems { case e: ElementDeclaration if p(e) => e }
+
+  /**
+   * Returns all topmost element declarations inside this SchemaObject (excluding self) obeying the given predicate.
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
-  final def findTopmostElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    this findTopmostElems { e => e.resolvedName == enameElement } collect { case e: ElementDeclaration => e }
+  final def findTopmostElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    this findTopmostElems { e =>
+      e.resolvedName == enameElement && p(e.asInstanceOf[ElementDeclaration])
+    } collect { case e: ElementDeclaration => e }
 
   /**
    * Returns all attribute declarations inside this SchemaObject (excluding self).
@@ -134,11 +142,19 @@ sealed abstract class SchemaObject private[schema] (
     this collectFromElems { case e: AttributeDeclaration => e }
 
   /**
-   * Returns all topmost attribute declarations inside this SchemaObject (excluding self).
+   * Returns all attribute declarations obeying the given predicate (excluding self).
+   */
+  final def filterAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
+    this collectFromElems { case e: AttributeDeclaration if p(e) => e }
+
+  /**
+   * Returns all topmost attribute declarations inside this SchemaObject (excluding self) obeying the given predicate.
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
-  final def findTopmostAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    this findTopmostElems { e => e.resolvedName == enameAttribute } collect { case e: AttributeDeclaration => e }
+  final def findTopmostAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
+    this findTopmostElems { e =>
+      e.resolvedName == enameAttribute && p(e.asInstanceOf[AttributeDeclaration])
+    } collect { case e: AttributeDeclaration => e }
 
   /**
    * Returns all type definitions inside this SchemaObject (excluding self).
@@ -147,12 +163,19 @@ sealed abstract class SchemaObject private[schema] (
     this collectFromElems { case e: TypeDefinition => e }
 
   /**
-   * Returns all topmost type definitions inside this SchemaObject (excluding self).
+   * Returns all type declarations obeying the given predicate (excluding self).
+   */
+  final def filterTypeDefinitions(p: TypeDefinition => Boolean): immutable.IndexedSeq[TypeDefinition] =
+    this collectFromElems { case e: TypeDefinition if p(e) => e }
+
+  /**
+   * Returns all topmost type declarations inside this SchemaObject (excluding self) obeying the given predicate.
    * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
    */
-  final def findTopmostTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
-    this findTopmostElems { e => Set(enameComplexType, enameSimpleType).contains(e.resolvedName) } collect
-      { case e: TypeDefinition => e }
+  final def findTopmostTypeDefinitions(p: TypeDefinition => Boolean): immutable.IndexedSeq[TypeDefinition] =
+    this findTopmostElems { e =>
+      Set(enameComplexType, enameSimpleType).contains(e.resolvedName) && p(e.asInstanceOf[TypeDefinition])
+    } collect { case e: TypeDefinition => e }
 }
 
 /**
@@ -172,14 +195,26 @@ final class Schema private[schema] (
   /**
    * Returns all top-level element declarations.
    */
-  final def findTopLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    findTopmostElementDeclarations filter { e => e.isTopLevel }
+  final def findAllTopLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    findTopmostElementDeclarations { e => e.isTopLevel }
+
+  /**
+   * Returns all top-level element declarations obeying the given predicate.
+   */
+  final def filterTopLevelElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    this collectFromElems { case e: ElementDeclaration if e.isTopLevel && p(e) => e }
 
   /**
    * Returns all top-level attribute declarations.
    */
-  final def findTopLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    findTopmostAttributeDeclarations filter { e => e.isTopLevel }
+  final def findAllTopLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    findTopmostAttributeDeclarations { e => e.isTopLevel }
+
+  /**
+   * Returns all top-level attribute declarations obeying the given predicate.
+   */
+  final def filterTopLevelAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
+    this collectFromElems { case e: AttributeDeclaration if e.isTopLevel && p(e) => e }
 
   /**
    * Returns all imports.
