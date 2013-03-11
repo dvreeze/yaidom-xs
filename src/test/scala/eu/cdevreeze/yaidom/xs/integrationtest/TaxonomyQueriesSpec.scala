@@ -171,19 +171,13 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       Given("substitution groups sbr:presentationTuple and sbr:specificationTuple")
       val substGroups = Set(EName(nsSbr, "presentationTuple"), EName(nsSbr, "specificationTuple"))
 
-      When("asking for their substitution groups")
-      val substGroupElemDecls = schemaDocSet filterTopLevelElementDeclarations { e =>
-        e.isAbstract && e.enameOption.toSet.subsetOf(substGroups)
-      }
+      When("asking for their substitution group heads")
+      val substGroupAncestries = substGroups map { substGroup => schemaDocSet.findSubstitutionGroupAncestry(substGroup) }
 
-      Then("the own abstract element declarations of these substitution groups are found")
-      expectResult(2) {
-        substGroupElemDecls.size
-      }
-
-      And("these element declarations themselves have substitution group xbrli:tuple (xbrli:tuple is the subst. group head)")
+      Then("these element declarations themselves have substitution group xbrli:tuple (xbrli:tuple is the subst. group head)")
       expectResult(Set(EName(nsXbrli, "tuple"))) {
-        substGroupElemDecls.flatMap(e => e.substitutionGroupOption).toSet
+        val result = substGroupAncestries map { _.last }
+        result.toSet
       }
     }
 
@@ -231,7 +225,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       info("In fact, the substitution groups introduced in xbrl-syntax-extension.xsd are: " + substGroupQNames.mkString(", "))
     }
 
-    scenario("When searching for all substitution groups (only) in www.nltaxonomie.nl, some of them are at least expected") {
+    scenario("When searching for all substitution groups (only) in www.nltaxonomie.nl, some expected ones should be present") {
 
       Given("all top level element declarations in www.nltaxonomie.nl")
       val nltaxSchemaDocs = schemaDocSet.schemaDocuments filter (doc =>

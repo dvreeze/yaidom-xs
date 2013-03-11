@@ -223,6 +223,14 @@ final class Schema private[schema] (
     this collectFromElems { case e: AttributeDeclaration if e.isTopLevel && p(e) => e }
 
   /**
+   * Returns all top-level element declarations that have precisely the given substitution group.
+   */
+  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
+    val substGroupOption = Some(substGroup)
+    filterTopLevelElementDeclarations { e => e.substitutionGroupOption == substGroupOption }
+  }
+
+  /**
    * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =

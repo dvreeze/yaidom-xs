@@ -72,4 +72,44 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    */
   final def findTopLevelElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
     filterTopLevelElementDeclarations(_.enameOption == Some(ename)).headOption
+
+  /**
+   * Returns the substitution group "ancestry". The result always starts with the passed substitution group EName.
+   *
+   * This is an expensive method.
+   */
+  final def findSubstitutionGroupAncestry(substGroup: EName): immutable.IndexedSeq[EName] = {
+    val substGroupDeclOption = findTopLevelElementDeclarationByEName(substGroup)
+
+    val ancestors: immutable.IndexedSeq[EName] = {
+      val nextSubstGroupOption =
+        for {
+          substGroupDecl <- substGroupDeclOption
+          attrValue <- substGroupDeclOption.get \@ EName("substitutionGroup")
+          qname = QName(attrValue)
+          ename <- substGroupDeclOption.get.wrappedElem.elem.scope.resolveQNameOption(qname)
+        } yield ename
+
+      if (nextSubstGroupOption.isEmpty) Vector()
+      else {
+        // Recursive (non-tail-recursive) call
+        findSubstitutionGroupAncestry(nextSubstGroupOption.get)
+      }
+    }
+
+    val result = substGroup +: ancestors
+
+    assert(result.headOption == Some(substGroup))
+    result
+  }
+
+  /**
+   * Returns all top-level element declarations that have precisely the given substitution group.
+   *
+   * This is an expensive method.
+   */
+  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
+    val substGroupOption = Some(substGroup)
+    filterTopLevelElementDeclarations { elemDecl => elemDecl.substitutionGroupOption == substGroupOption }
+  }
 }
