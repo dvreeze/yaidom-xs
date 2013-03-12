@@ -649,7 +649,7 @@ sealed class ModelGroup private[schema] (
     assert(wrappedElem.parentOption.isDefined)
     val parent = wrappedElem.parent
 
-    (parent.resolvedName == enameGroup) && ((parent \@ EName("name")).isDefined)
+    (parent.resolvedName == enameGroup) && ((parent \@ enameName).isDefined)
   }
 }
 
@@ -799,7 +799,7 @@ object ElementDeclaration {
 object ModelGroupDefinition {
 
   def apply(elem: indexed.Elem): ModelGroupDefinition = {
-    if ((elem \@ EName("ref")).isEmpty) new ModelGroupDefinition(elem, childSchemaObjects(elem))
+    if ((elem \@ enameRef).isEmpty) new ModelGroupDefinition(elem, childSchemaObjects(elem))
     else new ModelGroupDefinition(elem, childSchemaObjects(elem)) with Particle
   }
 }
@@ -815,7 +815,7 @@ object ModelGroup {
     assert(elem.parentOption.isDefined)
     val parent = elem.parent
 
-    (parent.resolvedName == enameGroup) && ((parent \@ EName("name")).isDefined)
+    (parent.resolvedName == enameGroup) && ((parent \@ enameName).isDefined)
   }
 }
 

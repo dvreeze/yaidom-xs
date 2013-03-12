@@ -183,7 +183,7 @@ private[schema] object SchemaObjects {
    */
   def checkNotAnAttributeUseElem(elem: indexed.Elem): Unit = {
     // TODO
-    require((elem \@ EName("use")).isEmpty, "Expected no attribute 'use'")
+    require((elem \@ enameUse).isEmpty, "Expected no attribute 'use'")
   }
 
   /**
