@@ -788,6 +788,9 @@ object Schema {
 
 object ElementDeclaration {
 
+  /**
+   * Creates an `ElementDeclaration` from an `indexed.Elem`. If not top-level, the result is also a `Particle`.
+   */
   def apply(elem: indexed.Elem): ElementDeclaration = {
     def isTopLevel: Boolean = elem.elemPath.entries.size == 1
 
@@ -798,6 +801,9 @@ object ElementDeclaration {
 
 object ModelGroupDefinition {
 
+  /**
+   * Creates a `ModelGroupDefinition` from an `indexed.Elem`. If it has a "ref" attribute, the result is also a `Particle`.
+   */
   def apply(elem: indexed.Elem): ModelGroupDefinition = {
     if ((elem \@ enameRef).isEmpty) new ModelGroupDefinition(elem, childSchemaObjects(elem))
     else new ModelGroupDefinition(elem, childSchemaObjects(elem)) with Particle
@@ -806,6 +812,10 @@ object ModelGroupDefinition {
 
 object ModelGroup {
 
+  /**
+   * Creates a `ModelGroup` from an `indexed.Elem`. If not inside a named group (xs:group with "name" attribute),
+   * the result is also a `Particle`.
+   */
   def apply(elem: indexed.Elem): ModelGroup = {
     if (inNamedGroup(elem)) new ModelGroup(elem, childSchemaObjects(elem))
     else new ModelGroup(elem, childSchemaObjects(elem)) with Particle
@@ -821,6 +831,9 @@ object ModelGroup {
 
 object Wildcard {
 
+  /**
+   * Creates a `Wildcard` from an `indexed.Elem`. If it is an xs:any, the result is also a `Particle`.
+   */
   def apply(elem: indexed.Elem): Wildcard = {
     if (elem.resolvedName == enameAnyAttribute) new Wildcard(elem, childSchemaObjects(elem))
     else new Wildcard(elem, childSchemaObjects(elem)) with Particle
@@ -829,6 +842,9 @@ object Wildcard {
 
 object AttributeDeclaration {
 
+  /**
+   * Creates an `AttributeDeclaration` from an `indexed.Elem`. If not top-level, the result is also an `AttributeUse`.
+   */
   def apply(elem: indexed.Elem): AttributeDeclaration = {
     def isTopLevel: Boolean = elem.elemPath.entries.size == 1
 
