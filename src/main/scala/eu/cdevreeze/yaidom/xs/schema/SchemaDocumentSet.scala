@@ -28,6 +28,9 @@ import scala.collection.immutable
  * This class contains methods for obtaining type definitions, substitution group heads, etc. Such methods often require
  * the traversal of multiple schema documents, and are therefore part of this class.
  *
+ * TODO Make this a trait, and make different subclasses/traits for "raw" schema document sets, schema document sets that
+ * cache all found substitution groups, etc.
+ *
  * @author Chris de Vreeze
  */
 final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDocument]) extends Immutable {
@@ -111,5 +114,15 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOption = Some(substGroup)
     filterTopLevelElementDeclarations { elemDecl => elemDecl.substitutionGroupOption == substGroupOption }
+  }
+
+  /**
+   * Returns all top-level element declarations that have one of the given substitution groups.
+   *
+   * This is an expensive method.
+   */
+  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
+    val substGroupOptions = substGroups map { sg => Option(sg) }
+    filterTopLevelElementDeclarations { elemDecl => substGroupOptions.contains(elemDecl.substitutionGroupOption) }
   }
 }

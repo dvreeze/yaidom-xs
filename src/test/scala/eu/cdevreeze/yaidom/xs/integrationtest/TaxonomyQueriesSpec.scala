@@ -246,5 +246,23 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       info("All non-sbr substitution groups in www.nltaxonomie.nl: " + substGroups.filterNot(_.namespaceUriOption == Some(nsSbr)).mkString(", "))
     }
+
+    scenario("Only tuple concepts are found at top level in kvk-tuples.xsd") {
+
+      Given("schema kvk-tuples.xsd")
+      val schemaDoc = schemaDocs.values.find(doc =>
+        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
+
+      When("finding top-level concepts (with some known substitution groups for tuples)")
+      val conceptSubstGroups =
+        Set(EName(nsXbrli, "tuple"), EName(nsSbr, "presentationTuple"), EName(nsSbr, "specificationTuple"))
+
+      val topLevelConcepts = schemaDoc.schema.findAllDirectSubstitutables(conceptSubstGroups)
+
+      Then("all top-level element declarations are found")
+      expectResult(schemaDoc.schema.findAllTopLevelElementDeclarations) {
+        topLevelConcepts
+      }
+    }
   }
 }

@@ -115,6 +115,14 @@ private[schema] object SchemaObjects {
   }
 
   /**
+   * Checks that the XML element is not an XML Schema particle, throwing an exception otherwise.
+   */
+  def checkNotAParticleElem(elem: indexed.Elem): Unit = {
+    require(minOccursAttrOption(elem).isEmpty, "no @minOccurs expected")
+    require(maxOccursAttrOption(elem).isEmpty, "no @maxOccurs expected")
+  }
+
+  /**
    * Checks the XML element as XML Schema attribute declaration, throwing an exception if invalid.
    */
   def checkAttributeDeclarationElem(elem: indexed.Elem): Unit = {
@@ -168,6 +176,14 @@ private[schema] object SchemaObjects {
    */
   def checkAttributeUseElem(elem: indexed.Elem): Unit = {
     // TODO
+  }
+
+  /**
+   * Checks that the XML element is not an XML Schema attribute-use, throwing an exception otherwise.
+   */
+  def checkNotAnAttributeUseElem(elem: indexed.Elem): Unit = {
+    // TODO
+    require((elem \@ EName("use")).isEmpty, "Expected no attribute 'use'")
   }
 
   /**

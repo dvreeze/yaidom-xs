@@ -231,6 +231,14 @@ final class Schema private[schema] (
   }
 
   /**
+   * Returns all top-level element declarations that have one of the given substitution groups.
+   */
+  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
+    val substGroupOptions = substGroups map { sg => Option(sg) }
+    filterTopLevelElementDeclarations { e => substGroupOptions.contains(e.substitutionGroupOption) }
+  }
+
+  /**
    * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =
@@ -274,19 +282,10 @@ abstract class SchemaComponent private[schema] (
 
 /**
  * Particle, having a min and max occurs (possibly default).
- *
- * As documented for `SchemaComponent`, an element declaration (for example) is regarded a particle, because the element
- * declaration and the particle that it is a part of in the abstract schema model can not be separated in the XML representation.
- *
- * Moreover, top-level element declarations are not part of any particle in the abstract schema model. Hence, from a
- * "modelling perspective", regarding an element declaration (among other terms) to be a particle is not correct, yet from
- * an XML representation point of view it makes sense.
  */
-abstract class Particle private[schema] (
-  override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+trait Particle extends SchemaComponent {
 
-  SchemaObjects.checkParticleElem(wrappedElem)
+  def wrappedElem: indexed.Elem
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
 
@@ -304,11 +303,17 @@ abstract class Particle private[schema] (
 /**
  * Element declaration. That is, the "xs:element" XML element.
  */
-final class ElementDeclaration private[schema] (
+sealed class ElementDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkElementDeclarationElem(wrappedElem)
+
+  if (isTopLevel) {
+    SchemaObjects.checkNotAParticleElem(wrappedElem)
+  } else {
+    SchemaObjects.checkParticleElem(wrappedElem)
+  }
 
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
@@ -415,13 +420,11 @@ final class ElementDeclaration private[schema] (
 
 /**
  * Attribute use. The correspondence between attribute use and attribute declarations is analogous to the one between
- * particles and element declarations.
+ * particles and (for example) element declarations.
  */
-abstract class AttributeUse private[schema] (
-  override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+trait AttributeUse extends SchemaComponent {
 
-  SchemaObjects.checkAttributeUseElem(wrappedElem)
+  def wrappedElem: indexed.Elem
 
   // TODO
 }
@@ -429,11 +432,17 @@ abstract class AttributeUse private[schema] (
 /**
  * Attribute declaration. That is, the "xs:attribute" XML element.
  */
-final class AttributeDeclaration private[schema] (
+sealed class AttributeDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeUse(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkAttributeDeclarationElem(wrappedElem)
+
+  if (isTopLevel) {
+    SchemaObjects.checkNotAnAttributeUseElem(wrappedElem)
+  } else {
+    SchemaObjects.checkAttributeUseElem(wrappedElem)
+  }
 
   /**
    * Returns true if and only if the attribute declaration has the schema element as its parent.
@@ -583,15 +592,26 @@ final class IdentityConstraintDefinition private[schema] (
 /**
  * Model group definition. That is, the "xs:group" XML element.
  */
-final class ModelGroupDefinition private[schema] (
+sealed class ModelGroupDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkModelGroupDefinitionElem(wrappedElem)
+
+  if (refOption.isEmpty) {
+    SchemaObjects.checkNotAParticleElem(wrappedElem)
+  } else {
+    SchemaObjects.checkParticleElem(wrappedElem)
+  }
 
   final override def targetNamespaceOption: Option[String] = {
     this.rootElem.attributeOption(enameTargetNamespace)
   }
+
+  /**
+   * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
+   */
+  final def refOption: Option[EName] = SchemaObjects.refOption(wrappedElem)
 }
 
 /**
@@ -611,23 +631,43 @@ final class NotationDeclaration private[schema] (
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-final class ModelGroup private[schema] (
+sealed class ModelGroup private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkModelGroupElem(wrappedElem)
 
+  if (inNamedGroup) {
+    SchemaObjects.checkNotAParticleElem(wrappedElem)
+  } else {
+    SchemaObjects.checkParticleElem(wrappedElem)
+  }
+
   final override def targetNamespaceOption: Option[String] = None
+
+  final def inNamedGroup: Boolean = {
+    assert(wrappedElem.parentOption.isDefined)
+    val parent = wrappedElem.parent
+
+    (parent.resolvedName == enameGroup) && ((parent \@ EName("name")).isDefined)
+  }
 }
 
 /**
  * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
  */
-final class Wildcard private[schema] (
+sealed class Wildcard private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends Particle(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
   SchemaObjects.checkWildcardElem(wrappedElem)
+
+  if (wrappedElem.resolvedName == enameAnyAttribute) {
+    SchemaObjects.checkNotAParticleElem(wrappedElem)
+  } else {
+    assert(wrappedElem.resolvedName == enameAny)
+    SchemaObjects.checkParticleElem(wrappedElem)
+  }
 
   final override def targetNamespaceOption: Option[String] = None
 }
@@ -746,6 +786,57 @@ object Schema {
     new Schema(elem, SchemaObject.childSchemaObjects(elem))
 }
 
+object ElementDeclaration {
+
+  def apply(elem: indexed.Elem): ElementDeclaration = {
+    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+
+    if (isTopLevel) new ElementDeclaration(elem, childSchemaObjects(elem))
+    else new ElementDeclaration(elem, childSchemaObjects(elem)) with Particle
+  }
+}
+
+object ModelGroupDefinition {
+
+  def apply(elem: indexed.Elem): ModelGroupDefinition = {
+    if ((elem \@ EName("ref")).isEmpty) new ModelGroupDefinition(elem, childSchemaObjects(elem))
+    else new ModelGroupDefinition(elem, childSchemaObjects(elem)) with Particle
+  }
+}
+
+object ModelGroup {
+
+  def apply(elem: indexed.Elem): ModelGroup = {
+    if (inNamedGroup(elem)) new ModelGroup(elem, childSchemaObjects(elem))
+    else new ModelGroup(elem, childSchemaObjects(elem)) with Particle
+  }
+
+  private def inNamedGroup(elem: indexed.Elem): Boolean = {
+    assert(elem.parentOption.isDefined)
+    val parent = elem.parent
+
+    (parent.resolvedName == enameGroup) && ((parent \@ EName("name")).isDefined)
+  }
+}
+
+object Wildcard {
+
+  def apply(elem: indexed.Elem): Wildcard = {
+    if (elem.resolvedName == enameAnyAttribute) new Wildcard(elem, childSchemaObjects(elem))
+    else new Wildcard(elem, childSchemaObjects(elem)) with Particle
+  }
+}
+
+object AttributeDeclaration {
+
+  def apply(elem: indexed.Elem): AttributeDeclaration = {
+    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+
+    if (isTopLevel) new AttributeDeclaration(elem, childSchemaObjects(elem))
+    else new AttributeDeclaration(elem, childSchemaObjects(elem)) with AttributeUse
+  }
+}
+
 object SchemaComponent {
 
   def apply(elem: indexed.Elem): SchemaComponent = {
@@ -756,21 +847,21 @@ object SchemaComponent {
     import SchemaObject._
 
     elem match {
-      case e if e.resolvedName == enameElement => Some(new ElementDeclaration(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameAttribute => Some(new AttributeDeclaration(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameElement => Some(ElementDeclaration(e))
+      case e if e.resolvedName == enameAttribute => Some(AttributeDeclaration(e))
       case e if e.resolvedName == enameSimpleType => Some(new SimpleTypeDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameComplexType => Some(new ComplexTypeDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameAttributeGroup => Some(new AttributeGroupDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameKey => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameKeyref => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameUnique => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameGroup => Some(new ModelGroupDefinition(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameGroup => Some(ModelGroupDefinition(e))
       case e if e.resolvedName == enameNotation => Some(new NotationDeclaration(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameAll => Some(new ModelGroup(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameSequence => Some(new ModelGroup(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameChoice => Some(new ModelGroup(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameAny => Some(new Wildcard(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameAnyAttribute => Some(new Wildcard(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameAll => Some(ModelGroup(e))
+      case e if e.resolvedName == enameSequence => Some(ModelGroup(e))
+      case e if e.resolvedName == enameChoice => Some(ModelGroup(e))
+      case e if e.resolvedName == enameAny => Some(Wildcard(e))
+      case e if e.resolvedName == enameAnyAttribute => Some(Wildcard(e))
       case e if e.resolvedName == enameAnnotation => Some(new Annotation(e, childSchemaObjects(e)))
       case e => None
     }
