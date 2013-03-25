@@ -128,7 +128,7 @@ class CreateSchemaTest extends Suite {
     assert(elemDecls.size > globalElemDecls.size)
 
     val occursAttrGroupOption =
-      schema collectFromElemsOrSelf { case e: AttributeGroupDefinition => e } find { e => (e \@ "name") == Some("occurs") }
+      schema.findAllElemsOrSelf collect { case e: AttributeGroupDefinition => e } find { e => (e \@ "name") == Some("occurs") }
 
     assert(occursAttrGroupOption.isDefined)
 

@@ -53,17 +53,19 @@ import SchemaObject._
  */
 sealed abstract class SchemaObject private[schema] (
   val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasParent[SchemaObject] with HasText with Immutable {
+  val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasParent[SchemaObject] with HasText with Immutable {
 
   require(wrappedElem ne null)
   require(allChildElems ne null)
 
-  require(wrappedElem.allChildElems == allChildElems.map(_.wrappedElem), "Inconsistent SchemaObject")
+  require(wrappedElem.findAllChildElems == allChildElems.map(_.wrappedElem), "Inconsistent SchemaObject")
 
   require(wrappedElem.rootElem.resolvedName == enameSchema, "The root of the element tree must be a 'schema' element")
   require(
     (wrappedElem.resolvedName == enameSchema) || (!wrappedElem.elemPath.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
+
+  final override def findAllChildElems: immutable.IndexedSeq[SchemaObject] = allChildElems
 
   final override def resolvedName: EName = wrappedElem.resolvedName
 
@@ -118,13 +120,13 @@ sealed abstract class SchemaObject private[schema] (
    * Returns all element declarations inside this SchemaObject (excluding self).
    */
   final def findAllElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    this collectFromElems { case e: ElementDeclaration => e }
+    this.findAllElems collect { case e: ElementDeclaration => e }
 
   /**
    * Returns all element declarations obeying the given predicate (excluding self).
    */
   final def filterElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    this collectFromElems { case e: ElementDeclaration if p(e) => e }
+    this.findAllElems collect { case e: ElementDeclaration if p(e) => e }
 
   /**
    * Returns all topmost element declarations inside this SchemaObject (excluding self) obeying the given predicate.
@@ -139,13 +141,13 @@ sealed abstract class SchemaObject private[schema] (
    * Returns all attribute declarations inside this SchemaObject (excluding self).
    */
   final def findAllAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    this collectFromElems { case e: AttributeDeclaration => e }
+    this.findAllElems collect { case e: AttributeDeclaration => e }
 
   /**
    * Returns all attribute declarations obeying the given predicate (excluding self).
    */
   final def filterAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
-    this collectFromElems { case e: AttributeDeclaration if p(e) => e }
+    this.findAllElems collect { case e: AttributeDeclaration if p(e) => e }
 
   /**
    * Returns all topmost attribute declarations inside this SchemaObject (excluding self) obeying the given predicate.
@@ -160,13 +162,13 @@ sealed abstract class SchemaObject private[schema] (
    * Returns all type definitions inside this SchemaObject (excluding self).
    */
   final def findAllTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
-    this collectFromElems { case e: TypeDefinition => e }
+    this.findAllElems collect { case e: TypeDefinition => e }
 
   /**
    * Returns all type declarations obeying the given predicate (excluding self).
    */
   final def filterTypeDefinitions(p: TypeDefinition => Boolean): immutable.IndexedSeq[TypeDefinition] =
-    this collectFromElems { case e: TypeDefinition if p(e) => e }
+    this.findAllElems collect { case e: TypeDefinition if p(e) => e }
 
   /**
    * Returns all topmost type declarations inside this SchemaObject (excluding self) obeying the given predicate.
@@ -202,7 +204,7 @@ final class Schema private[schema] (
    * Returns all top-level element declarations obeying the given predicate.
    */
   final def filterTopLevelElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    this collectFromElems { case e: ElementDeclaration if e.isTopLevel && p(e) => e }
+    this.findAllElems collect { case e: ElementDeclaration if e.isTopLevel && p(e) => e }
 
   /**
    * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
@@ -220,7 +222,7 @@ final class Schema private[schema] (
    * Returns all top-level attribute declarations obeying the given predicate.
    */
   final def filterTopLevelAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
-    this collectFromElems { case e: AttributeDeclaration if e.isTopLevel && p(e) => e }
+    this.findAllElems collect { case e: AttributeDeclaration if e.isTopLevel && p(e) => e }
 
   /**
    * Returns all top-level element declarations that have precisely the given substitution group.
@@ -242,19 +244,19 @@ final class Schema private[schema] (
    * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =
-    this collectFromElems { case e: Import => e }
+    this.findAllElems collect { case e: Import => e }
 
   /**
    * Returns all includes.
    */
   final def findAllIncludes: immutable.IndexedSeq[Include] =
-    this collectFromElems { case e: Include => e }
+    this.findAllElems collect { case e: Include => e }
 
   /**
    * Returns all redefines.
    */
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
-    this collectFromElems { case e: Redefine => e }
+    this.findAllElems collect { case e: Redefine => e }
 }
 
 // Schema Components
@@ -919,7 +921,7 @@ object SchemaObject {
   }
 
   private[schema] def childSchemaObjects(e: indexed.Elem): immutable.IndexedSeq[SchemaObject] =
-    e.allChildElems.map(e => SchemaObject(e))
+    e.findAllChildElems.map(e => SchemaObject(e))
 }
 
 object Particle {

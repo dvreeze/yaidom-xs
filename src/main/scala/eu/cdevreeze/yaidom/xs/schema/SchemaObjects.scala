@@ -77,7 +77,7 @@ private[schema] object SchemaObjects {
     if (isReference) {
       assert(!isTopLevel)
 
-      val xsdChildElemNames = elem collectFromChildElems { case e if e.resolvedName.namespaceUriOption == Some(ns) => e.resolvedName }
+      val xsdChildElemNames = elem.findAllChildElems collect { case e if e.resolvedName.namespaceUriOption == Some(ns) => e.resolvedName }
       require(
         xsdChildElemNames.toSet.subsetOf(Set(enameAnnotation)),
         "Element declarations that are references must only have 'annotation' child elements")
@@ -166,7 +166,7 @@ private[schema] object SchemaObjects {
 
     if (isReference) {
       assert(!isTopLevel)
-      require((elem.allChildElems.map(_.resolvedName).toSet intersect Set(enameSimpleType)).isEmpty,
+      require((elem.findAllChildElems.map(_.resolvedName).toSet intersect Set(enameSimpleType)).isEmpty,
         "Attribute declarations that are references must not have child element 'simpleType'")
     }
   }
@@ -429,7 +429,7 @@ private[schema] object SchemaObjects {
     require(elem.resolvedName == enameSchema, "The element must be a 'schema' element")
     require(elem.elemPath.isRoot, "The element must be the root of the element tree")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameInclude,
@@ -498,7 +498,7 @@ private[schema] object SchemaObjects {
   private def checkElementDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameElement, "The element must be an 'element' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameSimpleType,
@@ -559,7 +559,7 @@ private[schema] object SchemaObjects {
   private def checkAttributeDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameAttribute, "The element must be an 'attribute' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameSimpleType, enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -614,7 +614,7 @@ private[schema] object SchemaObjects {
   private def checkComplexTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameComplexType, "The element must be a 'complexType' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -716,7 +716,7 @@ private[schema] object SchemaObjects {
   private def checkSimpleTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameSimpleType, "The element must be a 'simpleType' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -768,7 +768,7 @@ private[schema] object SchemaObjects {
 
     require(elem.resolvedName == enameGroup, "The element must be a 'group' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -826,7 +826,7 @@ private[schema] object SchemaObjects {
 
     require(elem.resolvedName == enameGroup, "The element must be a 'group' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -850,7 +850,7 @@ private[schema] object SchemaObjects {
 
     require(elem.resolvedName == enameAttributeGroup, "The element must be an 'attributeGroup' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -890,7 +890,7 @@ private[schema] object SchemaObjects {
 
     require(elem.resolvedName == enameAttributeGroup, "The element must be an 'attributeGroup' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -912,7 +912,7 @@ private[schema] object SchemaObjects {
   private def checkNotationDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameNotation, "The element must be a 'notation' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -932,7 +932,7 @@ private[schema] object SchemaObjects {
   private def checkAnnotationElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameAnnotation, "The element must be an 'annotation' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAppinfo, enameDocumentation)
     require(isWithin(childElems, expectedChildENames),
@@ -947,7 +947,7 @@ private[schema] object SchemaObjects {
   private def checkIncludeElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameInclude, "The element must be an 'include' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -967,7 +967,7 @@ private[schema] object SchemaObjects {
   private def checkImportElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameImport, "The element must be an 'import' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -985,7 +985,7 @@ private[schema] object SchemaObjects {
   private def checkRedefineElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameRedefine, "The element must be a 'redefine' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameSimpleType,
@@ -1007,7 +1007,7 @@ private[schema] object SchemaObjects {
   private def checkUniqueElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameUnique, "The element must be a 'unique' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameSelector,
@@ -1036,7 +1036,7 @@ private[schema] object SchemaObjects {
   private def checkKeyElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameKey, "The element must be a 'key' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameSelector,
@@ -1065,7 +1065,7 @@ private[schema] object SchemaObjects {
   private def checkKeyrefElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameKeyref, "The element must be a 'keyref' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameSelector,
@@ -1096,7 +1096,7 @@ private[schema] object SchemaObjects {
   private def checkAllElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameAll, "The element must be an 'all' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameElement, enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -1122,7 +1122,7 @@ private[schema] object SchemaObjects {
   private def checkSequenceElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameSequence, "The element must be a 'sequence' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1154,7 +1154,7 @@ private[schema] object SchemaObjects {
   private def checkChoiceElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameChoice, "The element must be a 'choice' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1186,7 +1186,7 @@ private[schema] object SchemaObjects {
   private def checkAnyElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameAny, "The element must be an 'any' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -1204,7 +1204,7 @@ private[schema] object SchemaObjects {
   private def checkAnyAttributeElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameAnyAttribute, "The element must be an 'anyAttribute' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(enameAnnotation)
     require(isWithin(childElems, expectedChildENames),
@@ -1222,7 +1222,7 @@ private[schema] object SchemaObjects {
   private def checkComplexContentElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameComplexContent, "The element must be a 'complexContent' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1251,7 +1251,7 @@ private[schema] object SchemaObjects {
   private def checkSimpleContentElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.resolvedName == enameSimpleContent, "The element must be a 'simpleContent' element")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1282,7 +1282,7 @@ private[schema] object SchemaObjects {
 
     require(elem.parentOption.map(_.resolvedName) == Some(enameComplexContent), "Expected 'complexContent' parent")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1347,7 +1347,7 @@ private[schema] object SchemaObjects {
 
     require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent), "Expected 'simpleContent' parent")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1385,7 +1385,7 @@ private[schema] object SchemaObjects {
 
     require(elem.parentOption.map(_.resolvedName) == Some(enameComplexContent), "Expected 'complexContent' parent")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
       enameAnnotation,
@@ -1450,7 +1450,7 @@ private[schema] object SchemaObjects {
 
     require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent), "Expected 'simpleContent' parent")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val facetENames = Set(
       enameMinExclusive,
@@ -1508,7 +1508,7 @@ private[schema] object SchemaObjects {
 
     require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleType), "Expected 'simpleType' parent")
 
-    val childElems = elem.allChildElems
+    val childElems = elem.findAllChildElems
 
     val facetENames = Set(
       enameMinExclusive,
