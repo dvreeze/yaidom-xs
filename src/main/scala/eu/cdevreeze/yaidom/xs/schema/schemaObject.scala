@@ -53,7 +53,7 @@ import SchemaObject._
  */
 sealed abstract class SchemaObject private[schema] (
   val wrappedElem: indexed.Elem,
-  val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasParent[SchemaObject] with HasText with Immutable {
+  val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasText with Immutable {
 
   require(wrappedElem ne null)
   require(allChildElems ne null)
@@ -86,14 +86,6 @@ sealed abstract class SchemaObject private[schema] (
 
   final override def text: String = wrappedElem.text
 
-  /**
-   * Returns the parent SchemaObject, if any, wrapped in an Option.
-   *
-   * The wrapped SchemaObject, if any, `equals` any parent SchemaObject found by querying for it from any ancestor.
-   */
-  final override def parentOption: Option[SchemaObject] =
-    wrappedElem.parentOption map { e => SchemaObject(e) }
-
   final override def toString: String = wrappedElem.elem.toString
 
   /**
@@ -105,16 +97,6 @@ sealed abstract class SchemaObject private[schema] (
    * Returns `wrappedElem.elemPath`
    */
   final def elemPath: ElemPath = wrappedElem.elemPath
-
-  /**
-   * Returns the root element as Schema object.
-   */
-  final def schema: Schema = {
-    val resultOption = this.ancestors collectFirst { case e: Schema => e }
-    assert(resultOption.isDefined)
-    assert(resultOption.get.elemPath.isRoot)
-    resultOption.get
-  }
 
   /**
    * Returns all element declarations inside this SchemaObject (excluding self).
@@ -372,19 +354,13 @@ sealed class ElementDeclaration private[schema] (
    * Returns the "scope", if any, wrapped in an Option.
    *
    * That is, if this element declaration is not a reference, and has a complex type definition as ancestor, that complex
-   * type definition is returned, wrapped in an Option. In all other cases, None is returned.
+   * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
    */
-  final def scopeOption: Option[ComplexTypeDefinition] = {
+  final def scopeOption: Option[indexed.Elem] = {
     if (isTopLevel) None
     else if (isReference) None
     else {
-      val complexTypeOption = this findAncestor {
-        case complexTypeDef: ComplexTypeDefinition => true
-        case _ => false
-      } collect {
-        case complexTypeDef: ComplexTypeDefinition => complexTypeDef
-      }
-
+      val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
       complexTypeOption
     }
   }
@@ -495,19 +471,13 @@ sealed class AttributeDeclaration private[schema] (
    * Returns the "scope", if any, wrapped in an Option.
    *
    * That is, if this attribute declaration is not a reference, and has a complex type definition as ancestor, that complex
-   * type definition is returned, wrapped in an Option. In all other cases, None is returned.
+   * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
    */
-  final def scopeOption: Option[ComplexTypeDefinition] = {
+  final def scopeOption: Option[indexed.Elem] = {
     if (isTopLevel) None
     else if (isReference) None
     else {
-      val complexTypeOption = this findAncestor {
-        case complexTypeDef: ComplexTypeDefinition => true
-        case _ => false
-      } collect {
-        case complexTypeDef: ComplexTypeDefinition => complexTypeDef
-      }
-
+      val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
       complexTypeOption
     }
   }
