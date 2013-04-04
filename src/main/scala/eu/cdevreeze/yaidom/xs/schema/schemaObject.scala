@@ -102,13 +102,15 @@ sealed abstract class SchemaObject private[schema] (
    * Returns all element declarations inside this SchemaObject (excluding self).
    */
   final def findAllElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    this.findAllElems collect { case e: ElementDeclaration => e }
+    this filterElems { e => e.resolvedName == enameElement } collect { case e: ElementDeclaration => e }
 
   /**
    * Returns all element declarations obeying the given predicate (excluding self).
    */
   final def filterElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    this.findAllElems collect { case e: ElementDeclaration if p(e) => e }
+    this filterElems { e =>
+      e.resolvedName == enameElement && p(e.asInstanceOf[ElementDeclaration])
+    } collect { case e: ElementDeclaration => e }
 
   /**
    * Returns all topmost element declarations inside this SchemaObject (excluding self) obeying the given predicate.
@@ -123,13 +125,15 @@ sealed abstract class SchemaObject private[schema] (
    * Returns all attribute declarations inside this SchemaObject (excluding self).
    */
   final def findAllAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    this.findAllElems collect { case e: AttributeDeclaration => e }
+    this filterElems { e => e.resolvedName == enameAttribute } collect { case e: AttributeDeclaration => e }
 
   /**
    * Returns all attribute declarations obeying the given predicate (excluding self).
    */
   final def filterAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
-    this.findAllElems collect { case e: AttributeDeclaration if p(e) => e }
+    this filterElems { e =>
+      e.resolvedName == enameAttribute && p(e.asInstanceOf[AttributeDeclaration])
+    } collect { case e: AttributeDeclaration => e }
 
   /**
    * Returns all topmost attribute declarations inside this SchemaObject (excluding self) obeying the given predicate.
@@ -144,13 +148,17 @@ sealed abstract class SchemaObject private[schema] (
    * Returns all type definitions inside this SchemaObject (excluding self).
    */
   final def findAllTypeDefinitions: immutable.IndexedSeq[TypeDefinition] =
-    this.findAllElems collect { case e: TypeDefinition => e }
+    this filterElems { e =>
+      Set(enameComplexType, enameSimpleType).contains(e.resolvedName)
+    } collect { case e: TypeDefinition => e }
 
   /**
    * Returns all type declarations obeying the given predicate (excluding self).
    */
   final def filterTypeDefinitions(p: TypeDefinition => Boolean): immutable.IndexedSeq[TypeDefinition] =
-    this.findAllElems collect { case e: TypeDefinition if p(e) => e }
+    this filterElems { e =>
+      Set(enameComplexType, enameSimpleType).contains(e.resolvedName) && p(e.asInstanceOf[TypeDefinition])
+    } collect { case e: TypeDefinition => e }
 
   /**
    * Returns all topmost type declarations inside this SchemaObject (excluding self) obeying the given predicate.
@@ -186,7 +194,7 @@ final class Schema private[schema] (
    * Returns all top-level element declarations obeying the given predicate.
    */
   final def filterTopLevelElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    this.findAllElems collect { case e: ElementDeclaration if e.isTopLevel && p(e) => e }
+    this.filterElementDeclarations(p) filter { e => e.isTopLevel }
 
   /**
    * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
@@ -204,7 +212,7 @@ final class Schema private[schema] (
    * Returns all top-level attribute declarations obeying the given predicate.
    */
   final def filterTopLevelAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
-    this.findAllElems collect { case e: AttributeDeclaration if e.isTopLevel && p(e) => e }
+    this.filterAttributeDeclarations(p) filter { e => e.isTopLevel }
 
   /**
    * Returns all top-level element declarations that have precisely the given substitution group.
@@ -226,19 +234,19 @@ final class Schema private[schema] (
    * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =
-    this.findAllElems collect { case e: Import => e }
+    this filterElems { e => e.resolvedName == enameImport } collect { case e: Import => e }
 
   /**
    * Returns all includes.
    */
   final def findAllIncludes: immutable.IndexedSeq[Include] =
-    this.findAllElems collect { case e: Include => e }
+    this filterElems { e => e.resolvedName == enameInclude } collect { case e: Include => e }
 
   /**
    * Returns all redefines.
    */
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
-    this.findAllElems collect { case e: Redefine => e }
+    this filterElems { e => e.resolvedName == enameRedefine } collect { case e: Redefine => e }
 }
 
 // Schema Components
