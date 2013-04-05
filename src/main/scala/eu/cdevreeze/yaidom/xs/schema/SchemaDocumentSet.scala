@@ -52,8 +52,8 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all top-level element declarations in this SchemaDocumentSet.
    */
-  final def findAllTopLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    schemaDocuments flatMap { e => e.schema.findAllTopLevelElementDeclarations }
+  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    schemaDocuments flatMap { e => e.schema.findAllGlobalElementDeclarations }
 
   /**
    * Returns all element declarations in this SchemaDocumentSet obeying the given predicate.
@@ -64,8 +64,8 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all top-level element declarations in this SchemaDocumentSet obeying the given predicate.
    */
-  final def filterTopLevelElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    schemaDocuments flatMap { e => e.schema filterTopLevelElementDeclarations p }
+  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    schemaDocuments flatMap { e => e.schema filterGlobalElementDeclarations p }
 
   /**
    * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
@@ -73,8 +73,8 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * The implementation is inefficient in that the target namespace (at root level) of the schema documents is not
    * taken into account.
    */
-  final def findTopLevelElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
-    filterTopLevelElementDeclarations(_.enameOption == Some(ename)).headOption
+  final def findGlobalElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
+    filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
 
   /**
    * Returns the substitution group "ancestry". The result always starts with the passed substitution group EName.
@@ -82,7 +82,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * This is an expensive method.
    */
   final def findSubstitutionGroupAncestry(substGroup: EName): immutable.IndexedSeq[EName] = {
-    val substGroupDeclOption = findTopLevelElementDeclarationByEName(substGroup)
+    val substGroupDeclOption = findGlobalElementDeclarationByEName(substGroup)
 
     val ancestors: immutable.IndexedSeq[EName] = {
       val nextSubstGroupOption =
@@ -113,7 +113,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    */
   final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOption = Some(substGroup)
-    filterTopLevelElementDeclarations { elemDecl => elemDecl.substitutionGroupOption == substGroupOption }
+    filterGlobalElementDeclarations { elemDecl => elemDecl.substitutionGroupOption == substGroupOption }
   }
 
   /**
@@ -123,6 +123,6 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    */
   final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOptions = substGroups map { sg => Option(sg) }
-    filterTopLevelElementDeclarations { elemDecl => substGroupOptions.contains(elemDecl.substitutionGroupOption) }
+    filterGlobalElementDeclarations { elemDecl => substGroupOptions.contains(elemDecl.substitutionGroupOption) }
   }
 }

@@ -42,7 +42,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.findAllTopLevelElementDeclarations
+    val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElementDeclarations
 
     val globalElemDecls2 = schema \\! EName(ns, "element")
@@ -51,7 +51,7 @@ class CreateSchemaTest extends Suite {
     val globalElemDecls3 = schema.wrappedElem \\! EName(ns, "element")
     val elemDecls3 = schema.wrappedElem \\ EName(ns, "element")
 
-    val globalAttrDecls = schema.findAllTopLevelAttributeDeclarations
+    val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
     val attrDecls = schema.findAllAttributeDeclarations
 
     val tns = "http://shiporder"
@@ -120,7 +120,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.findAllTopLevelElementDeclarations
+    val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElementDeclarations
 
     assert(globalElemDecls.size >= 40)
@@ -207,7 +207,7 @@ class CreateSchemaTest extends Suite {
     val schemaDoc = new SchemaDocument(indexed.Document(doc))
     val schema = schemaDoc.schema
 
-    val globalElemDecls = schema.findAllTopLevelElementDeclarations
+    val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElementDeclarations
 
     assert(globalElemDecls.size >= 4000)
@@ -295,10 +295,10 @@ class CreateSchemaTest extends Suite {
       schema.targetNamespaceOption
     }
 
-    val shipOrderElemDeclOption = schema.findAllTopLevelElementDeclarations find { e => e.nameAttributeOption == Some("shiporder") }
+    val shipOrderElemDeclOption = schema.findAllGlobalElementDeclarations find { e => e.nameAttributeOption == Some("shiporder") }
 
     assert(shipOrderElemDeclOption.isDefined)
-    assert(shipOrderElemDeclOption.get.isTopLevel)
+    assert(shipOrderElemDeclOption.get.isGlobal)
 
     expectResult(Some(expectedTns)) {
       shipOrderElemDeclOption.get.targetNamespaceOption
@@ -313,7 +313,7 @@ class CreateSchemaTest extends Suite {
     val nameElemDeclOption = schema.findAllElementDeclarations find { e => e.nameAttributeOption == Some("name") }
 
     assert(nameElemDeclOption.isDefined)
-    assert(!nameElemDeclOption.get.isTopLevel)
+    assert(!nameElemDeclOption.get.isGlobal)
 
     expectResult(Some(expectedTns)) {
       nameElemDeclOption.get.targetNamespaceOption
@@ -329,7 +329,7 @@ class CreateSchemaTest extends Suite {
       (schema findTopmostAttributeDeclarations { e => e.nameAttributeOption == Some("orderid") }).headOption
 
     assert(orderidAttrDeclOption.isDefined)
-    assert(!orderidAttrDeclOption.get.isTopLevel)
+    assert(!orderidAttrDeclOption.get.isGlobal)
 
     expectResult(None) {
       orderidAttrDeclOption.get.targetNamespaceOption

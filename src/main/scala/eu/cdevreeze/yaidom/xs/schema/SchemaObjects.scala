@@ -39,19 +39,19 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema element declaration, throwing an exception if invalid.
    */
   def checkElementDeclarationElem(elem: indexed.Elem): Unit = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
     def isReference: Boolean = refOption(elem).isDefined
 
     def isAbstract: Boolean = abstractOption(elem) == Some(true)
 
-    if (isTopLevel) {
-      checkTopLevelElementDeclarationElemAgainstSchema(elem)
+    if (isGlobal) {
+      checkGlobalElementDeclarationElemAgainstSchema(elem)
     } else {
       checkLocalElementDeclarationElemAgainstSchema(elem)
     }
 
-    if (!isTopLevel) {
+    if (!isGlobal) {
       require(refOption(elem).isDefined || nameOption(elem).isDefined, "One of 'ref' or 'name' must be present")
       require(refOption(elem).isEmpty || nameOption(elem).isEmpty, "One of 'ref' or 'name' must be absent")
     }
@@ -66,7 +66,7 @@ private[schema] object SchemaObjects {
       "Element declarations can not have both a 'type' attribute and a 'complexType' or 'simpleType' child element")
 
     if (isReference) {
-      assert(!isTopLevel)
+      assert(!isGlobal)
 
       val noNsAttributeNames = elem.resolvedAttributes.toMap.keySet filter { attr => attr.namespaceUriOption.isEmpty }
       require(
@@ -75,7 +75,7 @@ private[schema] object SchemaObjects {
     }
 
     if (isReference) {
-      assert(!isTopLevel)
+      assert(!isGlobal)
 
       val xsdChildElemNames = elem.findAllChildElems collect { case e if e.resolvedName.namespaceUriOption == Some(ns) => e.resolvedName }
       require(
@@ -126,19 +126,19 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema attribute declaration, throwing an exception if invalid.
    */
   def checkAttributeDeclarationElem(elem: indexed.Elem): Unit = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
     def isReference: Boolean = refOption(elem).isDefined
 
-    if (isTopLevel) {
-      checkTopLevelAttributeDeclarationElemAgainstSchema(elem)
+    if (isGlobal) {
+      checkGlobalAttributeDeclarationElemAgainstSchema(elem)
     } else {
       checkLocalAttributeDeclarationElemAgainstSchema(elem)
     }
 
     // TODO
 
-    if (isTopLevel) {
+    if (isGlobal) {
       // TODO Attribute 'use' prohibited
 
       require(!isReference, "Top level attribute declarations can not be references")
@@ -159,13 +159,13 @@ private[schema] object SchemaObjects {
     }
 
     if (isReference) {
-      assert(!isTopLevel)
+      assert(!isGlobal)
       require((elem.resolvedAttributes.toMap.keySet intersect Set(enameForm, enameType)).isEmpty,
         "Attribute declarations that are references must not have attributes 'form', 'type'")
     }
 
     if (isReference) {
-      assert(!isTopLevel)
+      assert(!isGlobal)
       require((elem.findAllChildElems.map(_.resolvedName).toSet intersect Set(enameSimpleType)).isEmpty,
         "Attribute declarations that are references must not have child element 'simpleType'")
     }
@@ -190,10 +190,10 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema simple type definition, throwing an exception if invalid.
    */
   def checkSimpleTypeDefinitionElem(elem: indexed.Elem): Unit = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
-    if (isTopLevel) {
-      checkTopLevelSimpleTypeDefinitionElemAgainstSchema(elem)
+    if (isGlobal) {
+      checkGlobalSimpleTypeDefinitionElemAgainstSchema(elem)
     } else {
       checkLocalSimpleTypeDefinitionElemAgainstSchema(elem)
     }
@@ -203,10 +203,10 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema complex type definition, throwing an exception if invalid.
    */
   def checkComplexTypeDefinitionElem(elem: indexed.Elem): Unit = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
-    if (isTopLevel) {
-      checkTopLevelComplexTypeDefinitionElemAgainstSchema(elem)
+    if (isGlobal) {
+      checkGlobalComplexTypeDefinitionElemAgainstSchema(elem)
     } else {
       checkLocalComplexTypeDefinitionElemAgainstSchema(elem)
     }
@@ -216,11 +216,11 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema attribute group definition, throwing an exception if invalid.
    */
   def checkAttributeGroupDefinitionElem(elem: indexed.Elem): Unit = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
     def isRedefineChild: Boolean = elem.parentOption.map(_.resolvedName) == Some(enameRedefine)
 
-    if (isTopLevel || isRedefineChild) {
+    if (isGlobal || isRedefineChild) {
       checkNamedAttributeGroupElemAgainstSchema(elem)
     } else {
       checkNamedAttributeGroupRefElemAgainstSchema(elem)
@@ -243,11 +243,11 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema model group definition, throwing an exception if invalid.
    */
   def checkModelGroupDefinitionElem(elem: indexed.Elem): Unit = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
     def isRedefineChild: Boolean = elem.parentOption.map(_.resolvedName) == Some(enameRedefine)
 
-    if (isTopLevel || isRedefineChild) {
+    if (isGlobal || isRedefineChild) {
       checkNamedModelGroupElemAgainstSchema(elem)
     } else {
       checkNamedModelGroupRefElemAgainstSchema(elem)
@@ -465,7 +465,7 @@ private[schema] object SchemaObjects {
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_element.html
    */
-  private def checkTopLevelElementDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
+  private def checkGlobalElementDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.elemPath.entries.size == 1)
 
     checkElementDeclarationElemAgainstSchema(elem)
@@ -531,7 +531,7 @@ private[schema] object SchemaObjects {
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_attribute.html
    */
-  private def checkTopLevelAttributeDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
+  private def checkGlobalAttributeDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.elemPath.entries.size == 1)
 
     checkAttributeDeclarationElemAgainstSchema(elem)
@@ -585,7 +585,7 @@ private[schema] object SchemaObjects {
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_complexType.html
    */
-  private def checkTopLevelComplexTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
+  private def checkGlobalComplexTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.elemPath.entries.size == 1)
 
     checkComplexTypeDefinitionElemAgainstSchema(elem)
@@ -689,7 +689,7 @@ private[schema] object SchemaObjects {
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_simpleType.html
    */
-  private def checkTopLevelSimpleTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
+  private def checkGlobalSimpleTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
     require(elem.elemPath.entries.size == 1)
 
     checkSimpleTypeDefinitionElemAgainstSchema(elem)

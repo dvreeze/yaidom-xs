@@ -187,39 +187,39 @@ final class Schema private[schema] (
   /**
    * Returns all top-level element declarations.
    */
-  final def findAllTopLevelElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    findTopmostElementDeclarations { e => e.isTopLevel }
+  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+    findTopmostElementDeclarations { e => e.isGlobal }
 
   /**
    * Returns all top-level element declarations obeying the given predicate.
    */
-  final def filterTopLevelElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    this.filterElementDeclarations(p) filter { e => e.isTopLevel }
+  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+    this.filterElementDeclarations(p) filter { e => e.isGlobal }
 
   /**
    * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
    */
-  final def findTopLevelElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
-    filterTopLevelElementDeclarations(_.enameOption == Some(ename)).headOption
+  final def findGlobalElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
+    filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
 
   /**
    * Returns all top-level attribute declarations.
    */
-  final def findAllTopLevelAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    findTopmostAttributeDeclarations { e => e.isTopLevel }
+  final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
+    findTopmostAttributeDeclarations { e => e.isGlobal }
 
   /**
    * Returns all top-level attribute declarations obeying the given predicate.
    */
-  final def filterTopLevelAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
-    this.filterAttributeDeclarations(p) filter { e => e.isTopLevel }
+  final def filterGlobalAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
+    this.filterAttributeDeclarations(p) filter { e => e.isGlobal }
 
   /**
    * Returns all top-level element declarations that have precisely the given substitution group.
    */
   final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOption = Some(substGroup)
-    filterTopLevelElementDeclarations { e => e.substitutionGroupOption == substGroupOption }
+    filterGlobalElementDeclarations { e => e.substitutionGroupOption == substGroupOption }
   }
 
   /**
@@ -227,7 +227,7 @@ final class Schema private[schema] (
    */
   final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOptions = substGroups map { sg => Option(sg) }
-    filterTopLevelElementDeclarations { e => substGroupOptions.contains(e.substitutionGroupOption) }
+    filterGlobalElementDeclarations { e => substGroupOptions.contains(e.substitutionGroupOption) }
   }
 
   /**
@@ -301,7 +301,7 @@ sealed class ElementDeclaration private[schema] (
 
   SchemaObjects.checkElementDeclarationElem(wrappedElem)
 
-  if (isTopLevel) {
+  if (isGlobal) {
     SchemaObjects.checkNotAParticleElem(wrappedElem)
   } else {
     SchemaObjects.checkParticleElem(wrappedElem)
@@ -310,7 +310,7 @@ sealed class ElementDeclaration private[schema] (
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
    */
-  final def isTopLevel: Boolean = elemPath.entries.size == 1
+  final def isGlobal: Boolean = elemPath.entries.size == 1
 
   /**
    * Returns true if and only if the element declaration is a reference to another (global) element declaration.
@@ -320,7 +320,7 @@ sealed class ElementDeclaration private[schema] (
 
   /**
    * Returns true if and only if the element declaration is abstract.
-   * Only top level element declarations can be abstract.
+   * Only global element declarations can be abstract.
    */
   final def isAbstract: Boolean = abstractOption == Some(true)
 
@@ -331,7 +331,7 @@ sealed class ElementDeclaration private[schema] (
   final override def targetNamespaceOption: Option[String] = {
     val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
 
-    if (isTopLevel) tnsOption
+    if (isGlobal) tnsOption
     else if (isReference) None
     else {
       val formOption = this.wrappedElem.attributeOption(enameForm)
@@ -365,7 +365,7 @@ sealed class ElementDeclaration private[schema] (
    * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
    */
   final def scopeOption: Option[indexed.Elem] = {
-    if (isTopLevel) None
+    if (isGlobal) None
     else if (isReference) None
     else {
       val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
@@ -424,7 +424,7 @@ sealed class AttributeDeclaration private[schema] (
 
   SchemaObjects.checkAttributeDeclarationElem(wrappedElem)
 
-  if (isTopLevel) {
+  if (isGlobal) {
     SchemaObjects.checkNotAnAttributeUseElem(wrappedElem)
   } else {
     SchemaObjects.checkAttributeUseElem(wrappedElem)
@@ -433,7 +433,7 @@ sealed class AttributeDeclaration private[schema] (
   /**
    * Returns true if and only if the attribute declaration has the schema element as its parent.
    */
-  final def isTopLevel: Boolean = elemPath.entries.size == 1
+  final def isGlobal: Boolean = elemPath.entries.size == 1
 
   /**
    * Returns true if and only if the attribute declaration is a reference to another (global) attribute declaration.
@@ -448,7 +448,7 @@ sealed class AttributeDeclaration private[schema] (
   final override def targetNamespaceOption: Option[String] = {
     val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
 
-    if (isTopLevel) tnsOption
+    if (isGlobal) tnsOption
     else if (isReference) None
     else {
       val formOption = this.wrappedElem.attributeOption(enameForm)
@@ -482,7 +482,7 @@ sealed class AttributeDeclaration private[schema] (
    * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
    */
   final def scopeOption: Option[indexed.Elem] = {
-    if (isTopLevel) None
+    if (isGlobal) None
     else if (isReference) None
     else {
       val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
@@ -772,9 +772,9 @@ object ElementDeclaration {
    * Creates an `ElementDeclaration` from an `indexed.Elem`. If not top-level, the result is also a `Particle`.
    */
   def apply(elem: indexed.Elem): ElementDeclaration = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
-    if (isTopLevel) new ElementDeclaration(elem, childSchemaObjects(elem))
+    if (isGlobal) new ElementDeclaration(elem, childSchemaObjects(elem))
     else new ElementDeclaration(elem, childSchemaObjects(elem)) with Particle
   }
 }
@@ -826,9 +826,9 @@ object AttributeDeclaration {
    * Creates an `AttributeDeclaration` from an `indexed.Elem`. If not top-level, the result is also an `AttributeUse`.
    */
   def apply(elem: indexed.Elem): AttributeDeclaration = {
-    def isTopLevel: Boolean = elem.elemPath.entries.size == 1
+    def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
-    if (isTopLevel) new AttributeDeclaration(elem, childSchemaObjects(elem))
+    if (isGlobal) new AttributeDeclaration(elem, childSchemaObjects(elem))
     else new AttributeDeclaration(elem, childSchemaObjects(elem)) with AttributeUse
   }
 }

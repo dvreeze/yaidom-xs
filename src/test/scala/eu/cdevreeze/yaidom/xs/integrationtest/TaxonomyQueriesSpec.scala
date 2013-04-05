@@ -111,7 +111,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
 
       info("In fact, found %d schemas".format(schemaDocs.size))
-      info("Combined these schemas contain %d top-level element declarations".format(schemaDocSet.findAllTopLevelElementDeclarations.size))
+      info("Combined these schemas contain %d top-level element declarations".format(schemaDocSet.findAllGlobalElementDeclarations.size))
     }
 
     scenario("All parsed linkbases are found") {
@@ -133,11 +133,11 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
     scenario("Presentation tuples in kvk-tuples.xsd are found") {
 
-      Given("the first top level element declaration in kvk-tuples.xsd")
+      Given("the first global element declaration in kvk-tuples.xsd")
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
-      val elemDecl = schemaDoc.schema.findAllTopLevelElementDeclarations.find(e =>
+      val elemDecl = schemaDoc.schema.findAllGlobalElementDeclarations.find(e =>
         (e \@ "id") == Some("kvk-t_ContactForDocumentPresentation")).get
 
       When("asking for its substitution group")
@@ -151,11 +151,11 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
     scenario("Only presentation tuples and specification tuples are found at top level in kvk-tuples.xsd") {
 
-      Given("all top level element declarations in kvk-tuples.xsd")
+      Given("all global element declarations in kvk-tuples.xsd")
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
-      val elemDecls = schemaDoc.schema.findAllTopLevelElementDeclarations
+      val elemDecls = schemaDoc.schema.findAllGlobalElementDeclarations
 
       When("asking for their substitution groups")
       val substGroups = elemDecls flatMap { _.substitutionGroupOption }
@@ -184,7 +184,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     scenario("Only top-level element declarations can have substitution groups") {
 
       Given("all local element declarations")
-      val elemDecls = schemaDocSet filterElementDeclarations { e => !e.isTopLevel }
+      val elemDecls = schemaDocSet filterElementDeclarations { e => !e.isGlobal }
 
       When("asking for their substitution groups")
       val substGroups = elemDecls.flatMap(_.substitutionGroupOption).toSet
@@ -202,7 +202,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("xbrl-syntax-extension.xsd")).get
 
       When("asking for its abstract top-level element declarations")
-      val elemDecls = schemaDoc.schema filterTopLevelElementDeclarations { e => e.isAbstract }
+      val elemDecls = schemaDoc.schema filterGlobalElementDeclarations { e => e.isAbstract }
 
       Then("all these element declarations are in the xbrli:item or xbrli:tuple substitution group")
       val expectedSubstGroupOptions = Set(Some(EName(nsXbrli, "item")), Some(EName(nsXbrli, "tuple")))
@@ -217,9 +217,9 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
 
       And("indeed all these element declarations are used as substitution groups")
-      val allTopLevelElemDecls = schemaDocSet.findAllTopLevelElementDeclarations
+      val allGlobalElemDecls = schemaDocSet.findAllGlobalElementDeclarations
 
-      assert(elemDecls forall (elem => allTopLevelElemDecls.find(e => e.substitutionGroupOption == elem.enameOption).isDefined))
+      assert(elemDecls forall (elem => allGlobalElemDecls.find(e => e.substitutionGroupOption == elem.enameOption).isDefined))
 
       val substGroupQNames = elemDecls flatMap { _.enameOption } map { ename => ename.toQName(Some("sbr")) }
       info("In fact, the substitution groups introduced in xbrl-syntax-extension.xsd are: " + substGroupQNames.mkString(", "))
@@ -227,11 +227,11 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
     scenario("When searching for all substitution groups (only) in www.nltaxonomie.nl, some expected ones should be present") {
 
-      Given("all top level element declarations in www.nltaxonomie.nl")
+      Given("all global element declarations in www.nltaxonomie.nl")
       val nltaxSchemaDocs = schemaDocSet.schemaDocuments filter (doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").contains("/www.nltaxonomie.nl/"))
       val nltaxSchemaDocSet = new SchemaDocumentSet(nltaxSchemaDocs)
-      val elemDecls = nltaxSchemaDocSet.findAllTopLevelElementDeclarations
+      val elemDecls = nltaxSchemaDocSet.findAllGlobalElementDeclarations
 
       When("asking for their substitution groups")
       val substGroups = elemDecls.flatMap(_.substitutionGroupOption).toSet
@@ -260,7 +260,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val topLevelConcepts = schemaDoc.schema.findAllDirectSubstitutables(conceptSubstGroups)
 
       Then("all top-level element declarations are found")
-      expectResult(schemaDoc.schema.findAllTopLevelElementDeclarations) {
+      expectResult(schemaDoc.schema.findAllGlobalElementDeclarations) {
         topLevelConcepts
       }
     }
