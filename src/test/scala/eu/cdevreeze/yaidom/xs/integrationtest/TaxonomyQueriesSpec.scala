@@ -111,7 +111,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
 
       info("In fact, found %d schemas".format(schemaDocs.size))
-      info("Combined these schemas contain %d top-level element declarations".format(schemaDocSet.findAllGlobalElementDeclarations.size))
+      info("Combined these schemas contain %d global element declarations".format(schemaDocSet.findAllGlobalElementDeclarations.size))
     }
 
     scenario("All parsed linkbases are found") {
@@ -181,7 +181,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
     }
 
-    scenario("Only top-level element declarations can have substitution groups") {
+    scenario("Only global element declarations can have substitution groups") {
 
       Given("all local element declarations")
       val elemDecls = schemaDocSet filterElementDeclarations { e => !e.isGlobal }
@@ -201,7 +201,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("xbrl-syntax-extension.xsd")).get
 
-      When("asking for its abstract top-level element declarations")
+      When("asking for its abstract global element declarations")
       val elemDecls = schemaDoc.schema filterGlobalElementDeclarations { e => e.isAbstract }
 
       Then("all these element declarations are in the xbrli:item or xbrli:tuple substitution group")
@@ -253,13 +253,13 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
-      When("finding top-level concepts (with some known substitution groups for tuples)")
+      When("finding global concepts (with some known substitution groups for tuples)")
       val conceptSubstGroups =
         Set(EName(nsXbrli, "tuple"), EName(nsSbr, "presentationTuple"), EName(nsSbr, "specificationTuple"))
 
       val topLevelConcepts = schemaDoc.schema.findAllDirectSubstitutables(conceptSubstGroups)
 
-      Then("all top-level element declarations are found")
+      Then("all global element declarations are found")
       expectResult(schemaDoc.schema.findAllGlobalElementDeclarations) {
         topLevelConcepts
       }

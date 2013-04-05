@@ -114,7 +114,7 @@ sealed abstract class SchemaObject private[schema] (
 
   /**
    * Returns all topmost element declarations inside this SchemaObject (excluding self) obeying the given predicate.
-   * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
+   * Note that "topmost" is not the same as "global" (which only makes sense for the Schema object).
    */
   final def findTopmostElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
     this findTopmostElems { e =>
@@ -137,7 +137,7 @@ sealed abstract class SchemaObject private[schema] (
 
   /**
    * Returns all topmost attribute declarations inside this SchemaObject (excluding self) obeying the given predicate.
-   * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
+   * Note that "topmost" is not the same as "global" (which only makes sense for the Schema object).
    */
   final def findTopmostAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
     this findTopmostElems { e =>
@@ -162,7 +162,7 @@ sealed abstract class SchemaObject private[schema] (
 
   /**
    * Returns all topmost type declarations inside this SchemaObject (excluding self) obeying the given predicate.
-   * Note that "topmost" is not the same as "top-level" (which only makes sense for the Schema object).
+   * Note that "topmost" is not the same as "global" (which only makes sense for the Schema object).
    */
   final def findTopmostTypeDefinitions(p: TypeDefinition => Boolean): immutable.IndexedSeq[TypeDefinition] =
     this findTopmostElems { e =>
@@ -185,37 +185,37 @@ final class Schema private[schema] (
   final def targetNamespaceOption: Option[String] = wrappedElem \@ enameTargetNamespace
 
   /**
-   * Returns all top-level element declarations.
+   * Returns all global element declarations.
    */
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
     findTopmostElementDeclarations { e => e.isGlobal }
 
   /**
-   * Returns all top-level element declarations obeying the given predicate.
+   * Returns all global element declarations obeying the given predicate.
    */
   final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
     this.filterElementDeclarations(p) filter { e => e.isGlobal }
 
   /**
-   * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
+   * Finds the global element declaration with the given EName, if any, wrapped in an Option.
    */
   final def findGlobalElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
     filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
 
   /**
-   * Returns all top-level attribute declarations.
+   * Returns all global attribute declarations.
    */
   final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
     findTopmostAttributeDeclarations { e => e.isGlobal }
 
   /**
-   * Returns all top-level attribute declarations obeying the given predicate.
+   * Returns all global attribute declarations obeying the given predicate.
    */
   final def filterGlobalAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
     this.filterAttributeDeclarations(p) filter { e => e.isGlobal }
 
   /**
-   * Returns all top-level element declarations that have precisely the given substitution group.
+   * Returns all global element declarations that have precisely the given substitution group.
    */
   final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOption = Some(substGroup)
@@ -223,7 +223,7 @@ final class Schema private[schema] (
   }
 
   /**
-   * Returns all top-level element declarations that have one of the given substitution groups.
+   * Returns all global element declarations that have one of the given substitution groups.
    */
   final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
     val substGroupOptions = substGroups map { sg => Option(sg) }
@@ -769,7 +769,7 @@ object Schema {
 object ElementDeclaration {
 
   /**
-   * Creates an `ElementDeclaration` from an `indexed.Elem`. If not top-level, the result is also a `Particle`.
+   * Creates an `ElementDeclaration` from an `indexed.Elem`. If not global, the result is also a `Particle`.
    */
   def apply(elem: indexed.Elem): ElementDeclaration = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
@@ -823,7 +823,7 @@ object Wildcard {
 object AttributeDeclaration {
 
   /**
-   * Creates an `AttributeDeclaration` from an `indexed.Elem`. If not top-level, the result is also an `AttributeUse`.
+   * Creates an `AttributeDeclaration` from an `indexed.Elem`. If not global, the result is also an `AttributeUse`.
    */
   def apply(elem: indexed.Elem): AttributeDeclaration = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1

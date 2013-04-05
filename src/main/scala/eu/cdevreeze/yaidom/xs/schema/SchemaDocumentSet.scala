@@ -50,7 +50,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
     schemaDocuments flatMap { e => e.schema.findAllElementDeclarations }
 
   /**
-   * Returns all top-level element declarations in this SchemaDocumentSet.
+   * Returns all global element declarations in this SchemaDocumentSet.
    */
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
     schemaDocuments flatMap { e => e.schema.findAllGlobalElementDeclarations }
@@ -62,13 +62,13 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
     schemaDocuments flatMap { e => e.schema filterElementDeclarations p }
 
   /**
-   * Returns all top-level element declarations in this SchemaDocumentSet obeying the given predicate.
+   * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
    */
   final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
     schemaDocuments flatMap { e => e.schema filterGlobalElementDeclarations p }
 
   /**
-   * Finds the top-level element declaration with the given EName, if any, wrapped in an Option.
+   * Finds the global element declaration with the given EName, if any, wrapped in an Option.
    *
    * The implementation is inefficient in that the target namespace (at root level) of the schema documents is not
    * taken into account.
@@ -107,7 +107,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   }
 
   /**
-   * Returns all top-level element declarations that have precisely the given substitution group.
+   * Returns all global element declarations that have precisely the given substitution group.
    *
    * This is an expensive method.
    */
@@ -117,7 +117,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   }
 
   /**
-   * Returns all top-level element declarations that have one of the given substitution groups.
+   * Returns all global element declarations that have one of the given substitution groups.
    *
    * This is an expensive method.
    */
