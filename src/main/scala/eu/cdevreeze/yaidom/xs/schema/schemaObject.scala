@@ -187,37 +187,37 @@ final class Schema private[schema] (
   /**
    * Returns all global element declarations.
    */
-  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    findTopmostElementDeclarations { e => e.isGlobal }
+  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
+    findTopmostElementDeclarations { e => e.isGlobal } collect { case e: GlobalElementDeclaration => e }
 
   /**
    * Returns all global element declarations obeying the given predicate.
    */
-  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    this.filterElementDeclarations(p) filter { e => e.isGlobal }
+  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
+    this.filterElementDeclarations(p) filter { e => e.isGlobal } collect { case e: GlobalElementDeclaration => e }
 
   /**
    * Finds the global element declaration with the given EName, if any, wrapped in an Option.
    */
-  final def findGlobalElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
+  final def findGlobalElementDeclarationByEName(ename: EName): Option[GlobalElementDeclaration] =
     filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
 
   /**
    * Returns all global attribute declarations.
    */
-  final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    findTopmostAttributeDeclarations { e => e.isGlobal }
+  final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
+    findTopmostAttributeDeclarations { e => e.isGlobal } collect { case e: GlobalAttributeDeclaration => e }
 
   /**
    * Returns all global attribute declarations obeying the given predicate.
    */
-  final def filterGlobalAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
-    this.filterAttributeDeclarations(p) filter { e => e.isGlobal }
+  final def filterGlobalAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
+    this.filterAttributeDeclarations(p) filter { e => e.isGlobal } collect { case e: GlobalAttributeDeclaration => e }
 
   /**
    * Returns all global element declarations that have precisely the given substitution group.
    */
-  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
+  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[GlobalElementDeclaration] = {
     val substGroupOption = Some(substGroup)
     filterGlobalElementDeclarations { e => e.substitutionGroupOption == substGroupOption }
   }
@@ -225,7 +225,7 @@ final class Schema private[schema] (
   /**
    * Returns all global element declarations that have one of the given substitution groups.
    */
-  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
+  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[GlobalElementDeclaration] = {
     val substGroupOptions = substGroups map { sg => Option(sg) }
     filterGlobalElementDeclarations { e => substGroupOptions.contains(e.substitutionGroupOption) }
   }
@@ -266,6 +266,7 @@ abstract class SchemaComponent private[schema] (
 
   /**
    * Returns the target namespace of the schema component, if any, wrapped in an Option.
+   *
    * Some types of schema component do not have the notion of a target namespace (in which case None is returned), but most do
    * (whether it is defined or not).
    */
@@ -295,7 +296,7 @@ trait Particle extends SchemaComponent {
 /**
  * Element declaration. That is, the "xs:element" XML element.
  */
-sealed class ElementDeclaration private[schema] (
+abstract class ElementDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -325,25 +326,6 @@ sealed class ElementDeclaration private[schema] (
   final def isAbstract: Boolean = abstractOption == Some(true)
 
   /**
-   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
-   * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
-   */
-  final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
-
-    if (isGlobal) tnsOption
-    else if (isReference) None
-    else {
-      val formOption = this.wrappedElem.attributeOption(enameForm)
-      val elementFormDefaultOption = this.rootElem.attributeOption(enameElementFormDefault)
-
-      if (formOption == Some("qualified")) tnsOption
-      else if (formOption.isEmpty && (elementFormDefaultOption == Some("qualified"))) tnsOption
-      else None
-    }
-  }
-
-  /**
    * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
    * if any, wrapped in an Option.
    */
@@ -364,14 +346,7 @@ sealed class ElementDeclaration private[schema] (
    * That is, if this element declaration is not a reference, and has a complex type definition as ancestor, that complex
    * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
    */
-  final def scopeOption: Option[indexed.Elem] = {
-    if (isGlobal) None
-    else if (isReference) None
-    else {
-      val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
-      complexTypeOption
-    }
-  }
+  def scopeOption: Option[indexed.Elem]
 
   /**
    * Returns the value of the 'id' attribute, if any, wrapped in an Option.
@@ -405,6 +380,82 @@ sealed class ElementDeclaration private[schema] (
 }
 
 /**
+ * Global element declaration.
+ */
+final class GlobalElementDeclaration private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) {
+
+  require(isGlobal, "Must be global")
+
+  /**
+   * Returns the target namespace, if any, wrapped in an Option. The target namespace of a global component is the target namespace
+   * of the schema root element, if any.
+   */
+  final override def targetNamespaceOption: Option[String] = this.rootElem.attributeOption(enameTargetNamespace)
+
+  /**
+   * Returns None as the non-existent scope, wrapped in an Option.
+   */
+  final override def scopeOption: Option[indexed.Elem] = None
+}
+
+/**
+ * Local element declaration.
+ */
+final class LocalElementDeclaration private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) with Particle {
+
+  require(!isGlobal, "Must be local")
+
+  /**
+   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
+   * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
+   */
+  final override def targetNamespaceOption: Option[String] = {
+    val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
+
+    val formOption = this.wrappedElem.attributeOption(enameForm)
+    val elementFormDefaultOption = this.rootElem.attributeOption(enameElementFormDefault)
+
+    if (formOption == Some("qualified")) tnsOption
+    else if (formOption.isEmpty && (elementFormDefaultOption == Some("qualified"))) tnsOption
+    else None
+  }
+
+  /**
+   * Returns the "scope", as a complex type definition, wrapped in an Option.
+   */
+  final override def scopeOption: Option[indexed.Elem] = {
+    val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
+    complexTypeOption
+  }
+}
+
+/**
+ * Element reference. Strictly it is not an element declaration, but it can be considered an element declaration in that
+ * it is represented by the same xs:element XML element.
+ */
+final class ElementReference private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) with Particle {
+
+  require(isReference, "Must be a reference")
+  require(!isGlobal, "Must not be global")
+
+  /**
+   * Returns None as the optional target namespace of the (unresolved) element reference.
+   */
+  final override def targetNamespaceOption: Option[String] = None
+
+  /**
+   * Returns None as the optional scope of the (unresolved) element reference.
+   */
+  final override def scopeOption: Option[indexed.Elem] = None
+}
+
+/**
  * Attribute use. The correspondence between attribute use and attribute declarations is analogous to the one between
  * particles and (for example) element declarations.
  */
@@ -418,7 +469,7 @@ trait AttributeUse extends SchemaComponent {
 /**
  * Attribute declaration. That is, the "xs:attribute" XML element.
  */
-sealed class AttributeDeclaration private[schema] (
+abstract class AttributeDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -442,25 +493,6 @@ sealed class AttributeDeclaration private[schema] (
   final def isReference: Boolean = refOption.isDefined
 
   /**
-   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
-   * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
-   */
-  final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
-
-    if (isGlobal) tnsOption
-    else if (isReference) None
-    else {
-      val formOption = this.wrappedElem.attributeOption(enameForm)
-      val attributeFormDefaultOption = this.rootElem.attributeOption(enameAttributeFormDefault)
-
-      if (formOption == Some("qualified")) tnsOption
-      else if (formOption.isEmpty && (attributeFormDefaultOption == Some("qualified"))) tnsOption
-      else None
-    }
-  }
-
-  /**
    * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
    * if any, wrapped in an Option.
    */
@@ -481,14 +513,7 @@ sealed class AttributeDeclaration private[schema] (
    * That is, if this attribute declaration is not a reference, and has a complex type definition as ancestor, that complex
    * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
    */
-  final def scopeOption: Option[indexed.Elem] = {
-    if (isGlobal) None
-    else if (isReference) None
-    else {
-      val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
-      complexTypeOption
-    }
-  }
+  def scopeOption: Option[indexed.Elem]
 
   /**
    * Returns the value of the 'id' attribute, if any, wrapped in an Option.
@@ -504,6 +529,82 @@ sealed class AttributeDeclaration private[schema] (
    * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
    */
   final def refOption: Option[EName] = SchemaObjects.refOption(wrappedElem)
+}
+
+/**
+ * Global attribute declaration.
+ */
+final class GlobalAttributeDeclaration private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) {
+
+  require(isGlobal, "Must be global")
+
+  /**
+   * Returns the target namespace, if any, wrapped in an Option. The target namespace of a global component is the target namespace
+   * of the schema root element, if any.
+   */
+  final override def targetNamespaceOption: Option[String] = this.rootElem.attributeOption(enameTargetNamespace)
+
+  /**
+   * Returns None as the non-existent scope, wrapped in an Option.
+   */
+  final override def scopeOption: Option[indexed.Elem] = None
+}
+
+/**
+ * Local attribute declaration.
+ */
+final class LocalAttributeDeclaration private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) with AttributeUse {
+
+  require(!isGlobal, "Must be local")
+
+  /**
+   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
+   * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
+   */
+  final override def targetNamespaceOption: Option[String] = {
+    val tnsOption = this.rootElem.attributeOption(enameTargetNamespace)
+
+    val formOption = this.wrappedElem.attributeOption(enameForm)
+    val attributeFormDefaultOption = this.rootElem.attributeOption(enameAttributeFormDefault)
+
+    if (formOption == Some("qualified")) tnsOption
+    else if (formOption.isEmpty && (attributeFormDefaultOption == Some("qualified"))) tnsOption
+    else None
+  }
+
+  /**
+   * Returns the "scope", as a complex type definition, wrapped in an Option.
+   */
+  final override def scopeOption: Option[indexed.Elem] = {
+    val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
+    complexTypeOption
+  }
+}
+
+/**
+ * Attribute reference. Strictly it is not an attribute declaration, but it can be considered an attribute declaration in that
+ * it is represented by the same xs:attribute XML element.
+ */
+final class AttributeReference private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) with AttributeUse {
+
+  require(isReference, "Must be a reference")
+  require(!isGlobal, "Must not be global")
+
+  /**
+   * Returns None as the optional target namespace of the (unresolved) attribute reference.
+   */
+  final override def targetNamespaceOption: Option[String] = None
+
+  /**
+   * Returns None as the optional scope of the (unresolved) attribute reference.
+   */
+  final override def scopeOption: Option[indexed.Elem] = None
 }
 
 /**
@@ -572,7 +673,7 @@ final class IdentityConstraintDefinition private[schema] (
 /**
  * Model group definition. That is, the "xs:group" XML element.
  */
-sealed class ModelGroupDefinition private[schema] (
+class ModelGroupDefinition private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -611,7 +712,7 @@ final class NotationDeclaration private[schema] (
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-sealed class ModelGroup private[schema] (
+class ModelGroup private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -636,7 +737,7 @@ sealed class ModelGroup private[schema] (
 /**
  * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
  */
-sealed class Wildcard private[schema] (
+class Wildcard private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -773,9 +874,11 @@ object ElementDeclaration {
    */
   def apply(elem: indexed.Elem): ElementDeclaration = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
+    def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
-    if (isGlobal) new ElementDeclaration(elem, childSchemaObjects(elem))
-    else new ElementDeclaration(elem, childSchemaObjects(elem)) with Particle
+    if (isGlobal) new GlobalElementDeclaration(elem, childSchemaObjects(elem))
+    else if (isReference) new ElementReference(elem, childSchemaObjects(elem))
+    else new LocalElementDeclaration(elem, childSchemaObjects(elem))
   }
 }
 
@@ -827,9 +930,11 @@ object AttributeDeclaration {
    */
   def apply(elem: indexed.Elem): AttributeDeclaration = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
+    def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
-    if (isGlobal) new AttributeDeclaration(elem, childSchemaObjects(elem))
-    else new AttributeDeclaration(elem, childSchemaObjects(elem)) with AttributeUse
+    if (isGlobal) new GlobalAttributeDeclaration(elem, childSchemaObjects(elem))
+    else if (isReference) new AttributeReference(elem, childSchemaObjects(elem))
+    else new LocalAttributeDeclaration(elem, childSchemaObjects(elem))
   }
 }
 

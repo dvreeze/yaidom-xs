@@ -52,7 +52,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all global element declarations in this SchemaDocumentSet.
    */
-  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
+  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
     schemaDocuments flatMap { e => e.schema.findAllGlobalElementDeclarations }
 
   /**
@@ -64,7 +64,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
    */
-  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
     schemaDocuments flatMap { e => e.schema filterGlobalElementDeclarations p }
 
   /**
@@ -73,7 +73,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * The implementation is inefficient in that the target namespace (at root level) of the schema documents is not
    * taken into account.
    */
-  final def findGlobalElementDeclarationByEName(ename: EName): Option[ElementDeclaration] =
+  final def findGlobalElementDeclarationByEName(ename: EName): Option[GlobalElementDeclaration] =
     filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
 
   /**
@@ -111,7 +111,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    *
    * This is an expensive method.
    */
-  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[ElementDeclaration] = {
+  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[GlobalElementDeclaration] = {
     val substGroupOption = Some(substGroup)
     filterGlobalElementDeclarations { elemDecl => elemDecl.substitutionGroupOption == substGroupOption }
   }
@@ -121,7 +121,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    *
    * This is an expensive method.
    */
-  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[ElementDeclaration] = {
+  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[GlobalElementDeclaration] = {
     val substGroupOptions = substGroups map { sg => Option(sg) }
     filterGlobalElementDeclarations { elemDecl => substGroupOptions.contains(elemDecl.substitutionGroupOption) }
   }
