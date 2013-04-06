@@ -295,6 +295,10 @@ trait Particle extends SchemaComponent {
 
 /**
  * Element declaration. That is, the "xs:element" XML element.
+ *
+ * An element declaration is either a global or local element declaration. Element references are also considered
+ * element declarations (in a syntactic sense, because of the same xs:element element), although from a more semantic
+ * perspective they should not be considered element declarations.
  */
 abstract class ElementDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
@@ -310,6 +314,9 @@ abstract class ElementDeclaration private[schema] (
 
   /**
    * Returns true if and only if the element declaration has the schema element as its parent.
+   *
+   * Element references are not considered global, because their parent is not the schema element, but they do always
+   * refer to global element declarations.
    */
   final def isGlobal: Boolean = elemPath.entries.size == 1
 
@@ -484,6 +491,10 @@ trait AttributeUse extends SchemaComponent {
 
 /**
  * Attribute declaration. That is, the "xs:attribute" XML element.
+ *
+ * An attribute declaration is either a global or local attribute declaration. Attribute references are also considered
+ * attribute declarations (in a syntactic sense, because of the same xs:attribute element), although from a more semantic
+ * perspective they should not be considered attribute declarations.
  */
 abstract class AttributeDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
@@ -499,6 +510,9 @@ abstract class AttributeDeclaration private[schema] (
 
   /**
    * Returns true if and only if the attribute declaration has the schema element as its parent.
+   *
+   * Attribute references are not considered global, because their parent is not the schema element, but they do always
+   * refer to global attribute declarations.
    */
   final def isGlobal: Boolean = elemPath.entries.size == 1
 
@@ -908,8 +922,8 @@ object ElementDeclaration {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
     def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
-    if (isGlobal) new GlobalElementDeclaration(elem, childSchemaObjects(elem))
-    else if (isReference) new ElementReference(elem, childSchemaObjects(elem))
+    if (isReference) new ElementReference(elem, childSchemaObjects(elem))
+    else if (isGlobal) new GlobalElementDeclaration(elem, childSchemaObjects(elem))
     else new LocalElementDeclaration(elem, childSchemaObjects(elem))
   }
 }
@@ -964,8 +978,8 @@ object AttributeDeclaration {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
     def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
-    if (isGlobal) new GlobalAttributeDeclaration(elem, childSchemaObjects(elem))
-    else if (isReference) new AttributeReference(elem, childSchemaObjects(elem))
+    if (isReference) new AttributeReference(elem, childSchemaObjects(elem))
+    else if (isGlobal) new GlobalAttributeDeclaration(elem, childSchemaObjects(elem))
     else new LocalAttributeDeclaration(elem, childSchemaObjects(elem))
   }
 }

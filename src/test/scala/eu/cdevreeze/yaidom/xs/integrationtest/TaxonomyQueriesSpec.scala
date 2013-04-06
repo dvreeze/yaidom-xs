@@ -265,4 +265,38 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
     }
   }
+
+  feature("The API user can query for types of element and attribute declarations") {
+
+    scenario("All xbrli:item concepts in kvk-data.xsd are of an 'expected' type") {
+
+      Given("all concept declarations in kvk-data.xsd with substitution group xbrli:item")
+      val schemaDoc = schemaDocs.values.find(doc =>
+        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-data.xsd")).get
+
+      val xbrliItemEName = EName(nsXbrli, "item")
+      val itemDecls = schemaDoc.schema filterGlobalElementDeclarations { e => e.substitutionGroupOption == Some(xbrliItemEName) }
+
+      When("asking for their type attributes")
+      val itemTypes = itemDecls flatMap { e => e.typeAttributeOption }
+
+      Then("only 'expected' types are found")
+      expectResult(Set(
+        nsXbrli,
+        "http://www.nltaxonomie.nl/iso/iso4217",
+        "http://www.nltaxonomie.nl/7.0/basis/sbr/types/nl-types",
+        "http://www.nltaxonomie.nl/7.0/basis/sbr/types/nl-codes",
+        "http://www.nltaxonomie.nl/sbi/sbi2008",
+        "http://www.nltaxonomie.nl/7.0/basis/kvk/types/kvk-codes",
+        "http://www.xbrl.org/dtr/type/numeric",
+        "http://www.nltaxonomie.nl/7.0/basis/kvk/types/kvk-types")) {
+        val result = itemTypes flatMap (_.namespaceUriOption)
+        result.toSet
+      }
+
+      info("In fact, found %d xbrli:item concepts".format(itemDecls.size))
+      info("%d of them contain type attributes".format(itemTypes.size))
+      info("Found item type namespace URIs %s".format(itemTypes.flatMap(_.namespaceUriOption).distinct.mkString(", ")))
+    }
+  }
 }
