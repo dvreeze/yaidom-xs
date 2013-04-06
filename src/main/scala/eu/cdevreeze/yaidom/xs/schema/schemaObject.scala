@@ -398,6 +398,11 @@ final class GlobalElementDeclaration private[schema] (
    * Returns None as the non-existent scope, wrapped in an Option.
    */
   final override def scopeOption: Option[indexed.Elem] = None
+
+  /**
+   * Returns `enameOption.get`.
+   */
+  final def ename: EName = enameOption.getOrElse(sys.error("Global element declarations must have a name"))
 }
 
 /**
@@ -407,6 +412,7 @@ final class LocalElementDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) with Particle {
 
+  require(!isReference, "Must not be a reference")
   require(!isGlobal, "Must be local")
 
   /**
@@ -431,6 +437,16 @@ final class LocalElementDeclaration private[schema] (
     val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
     complexTypeOption
   }
+
+  /**
+   * Returns `scopeOption.get`.
+   */
+  final def scope: indexed.Elem = scopeOption.getOrElse(sys.error("Local element declarations must have a scope"))
+
+  /**
+   * Returns `enameOption.get`.
+   */
+  final def ename: EName = enameOption.getOrElse(sys.error("Local element declarations must have a name"))
 }
 
 /**
@@ -550,6 +566,11 @@ final class GlobalAttributeDeclaration private[schema] (
    * Returns None as the non-existent scope, wrapped in an Option.
    */
   final override def scopeOption: Option[indexed.Elem] = None
+
+  /**
+   * Returns `enameOption.get`.
+   */
+  final def ename: EName = enameOption.getOrElse(sys.error("Global attribute declarations must have a name"))
 }
 
 /**
@@ -559,6 +580,7 @@ final class LocalAttributeDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) with AttributeUse {
 
+  require(!isReference, "Must not be a reference")
   require(!isGlobal, "Must be local")
 
   /**
@@ -583,6 +605,16 @@ final class LocalAttributeDeclaration private[schema] (
     val complexTypeOption = this.wrappedElem findAncestor { e => e.resolvedName == enameComplexType }
     complexTypeOption
   }
+
+  /**
+   * Returns `scopeOption.get`.
+   */
+  final def scope: indexed.Elem = scopeOption.getOrElse(sys.error("Local attribute declarations must have a scope"))
+
+  /**
+   * Returns `enameOption.get`.
+   */
+  final def ename: EName = enameOption.getOrElse(sys.error("Local attribute declarations must have a name"))
 }
 
 /**

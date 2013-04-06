@@ -221,7 +221,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       assert(elemDecls forall (elem => allGlobalElemDecls.find(e => e.substitutionGroupOption == elem.enameOption).isDefined))
 
-      val substGroupQNames = elemDecls flatMap { _.enameOption } map { ename => ename.toQName(Some("sbr")) }
+      val substGroupQNames = elemDecls map { _.ename } map { ename => ename.toQName(Some("sbr")) }
       info("In fact, the substitution groups introduced in xbrl-syntax-extension.xsd are: " + substGroupQNames.mkString(", "))
     }
 

@@ -57,10 +57,10 @@ class CreateSchemaTest extends Suite {
     val tns = "http://shiporder"
 
     expectResult(Seq(EName(tns, "shiporder"))) {
-      globalElemDecls flatMap { elemDecl => elemDecl.enameOption }
+      globalElemDecls map { elemDecl => elemDecl.ename }
     }
     expectResult(Seq(EName(tns, "shiporder"))) {
-      globalElemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } flatMap { elemDecl => elemDecl.enameOption }
+      globalElemDecls2 collect { case elemDecl: GlobalElementDeclaration => elemDecl } map { elemDecl => elemDecl.ename }
     }
     expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
@@ -216,7 +216,7 @@ class CreateSchemaTest extends Suite {
 
     expectResult(22) {
       val filteredElemDecls = globalElemDecls filter { elemDecl =>
-        elemDecl.enameOption.map(_.localPart).getOrElse("").startsWith("Accumulated")
+        elemDecl.ename.localPart.startsWith("Accumulated")
       }
       filteredElemDecls.size
     }
