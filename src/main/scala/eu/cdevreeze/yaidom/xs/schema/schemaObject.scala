@@ -193,8 +193,8 @@ final class Schema private[schema] (
   /**
    * Returns all global element declarations obeying the given predicate.
    */
-  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
-    this.filterElementDeclarations(p) filter { e => e.isGlobal } collect { case e: GlobalElementDeclaration => e }
+  final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
+    this filterElementDeclarations { e => e.isGlobal && p(e.asInstanceOf[GlobalElementDeclaration]) } collect { case e: GlobalElementDeclaration => e }
 
   /**
    * Finds the global element declaration with the given EName, if any, wrapped in an Option.
@@ -211,8 +211,8 @@ final class Schema private[schema] (
   /**
    * Returns all global attribute declarations obeying the given predicate.
    */
-  final def filterGlobalAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    this.filterAttributeDeclarations(p) filter { e => e.isGlobal } collect { case e: GlobalAttributeDeclaration => e }
+  final def filterGlobalAttributeDeclarations(p: GlobalAttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
+    this filterAttributeDeclarations { e => e.isGlobal && p(e.asInstanceOf[GlobalAttributeDeclaration]) } collect { case e: GlobalAttributeDeclaration => e }
 
   /**
    * Returns all global element declarations that have precisely the given substitution group.

@@ -28,6 +28,9 @@ import scala.collection.immutable
  * This class contains methods for obtaining type definitions, substitution group heads, etc. Such methods often require
  * the traversal of multiple schema documents, and are therefore part of this class.
  *
+ * Per component type (element declaration, attribute declaration, type definition etc.) their ENames (in combination with scope)
+ * must be unique in the SchemaDocumentSet. This is indeed required for "schemas" (as combination of schema documents).
+ *
  * TODO Make this a trait, and make different subclasses/traits for "raw" schema document sets, schema document sets that
  * cache all found substitution groups, etc.
  *
@@ -64,7 +67,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
    */
-  final def filterGlobalElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
+  final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
     schemaDocuments flatMap { e => e.schema filterGlobalElementDeclarations p }
 
   /**
