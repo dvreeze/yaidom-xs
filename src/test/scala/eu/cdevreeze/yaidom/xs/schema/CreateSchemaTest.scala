@@ -43,7 +43,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElementDeclarations
+    val elemDecls = schema.findAllElementDeclarationOrReferences
 
     val globalElemDecls2 = schema \\! EName(ns, "element")
     val elemDecls2 = schema \\ EName(ns, "element")
@@ -52,7 +52,7 @@ class CreateSchemaTest extends Suite {
     val elemDecls3 = schema.wrappedElem \\ EName(ns, "element")
 
     val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
-    val attrDecls = schema.findAllAttributeDeclarations
+    val attrDecls = schema.findAllAttributeDeclarationOrReferences
 
     val tns = "http://shiporder"
 
@@ -88,7 +88,7 @@ class CreateSchemaTest extends Suite {
       elemDecls flatMap { elemDecl => elemDecl.enameOption }
     }
     expectResult(expectedElemNames) {
-      elemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } flatMap { elemDecl => elemDecl.enameOption }
+      elemDecls2 collect { case elemDecl: ElementDeclarationOrReference => elemDecl } flatMap { elemDecl => elemDecl.enameOption }
     }
     expectResult(expectedElemNames) {
       elemDecls3 map { e =>
@@ -121,7 +121,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElementDeclarations
+    val elemDecls = schema.findAllElementDeclarationOrReferences
 
     assert(globalElemDecls.size >= 40)
     assert(globalElemDecls.size <= 50)
@@ -135,7 +135,7 @@ class CreateSchemaTest extends Suite {
     val minOccursAttrOption =
       occursAttrGroupOption.get findElem { e =>
         e match {
-          case e: AttributeDeclaration if (e \@ "name") == Some("minOccurs") => true
+          case e: AttributeDeclarationOrReference if (e \@ "name") == Some("minOccurs") => true
           case _ => false
         }
       }
@@ -208,7 +208,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElementDeclarations
+    val elemDecls = schema.findAllElementDeclarationOrReferences
 
     assert(globalElemDecls.size >= 4000)
     assert(globalElemDecls.size <= 5000)
@@ -232,13 +232,13 @@ class CreateSchemaTest extends Suite {
       result.toSet
     }
 
-    val topmostElemDecls = schema.findTopmostElementDeclarations(e => true)
+    val topmostElemDecls = schema.findTopmostElementDeclarationOrReferences(e => true)
 
     expectResult(globalElemDecls) {
       topmostElemDecls
     }
     expectResult(elemDecls) {
-      topmostElemDecls flatMap { e => e +: e.findAllElementDeclarations }
+      topmostElemDecls flatMap { e => e +: e.findAllElementDeclarationOrReferences }
     }
 
     expectResult(4) {
@@ -310,7 +310,7 @@ class CreateSchemaTest extends Suite {
       shipOrderElemDeclOption.get.scopeOption
     }
 
-    val nameElemDeclOption = schema.findAllElementDeclarations find { e => e.nameAttributeOption == Some("name") }
+    val nameElemDeclOption = schema.findAllElementDeclarationOrReferences find { e => e.nameAttributeOption == Some("name") }
 
     assert(nameElemDeclOption.isDefined)
     assert(!nameElemDeclOption.get.isGlobal)
@@ -326,7 +326,7 @@ class CreateSchemaTest extends Suite {
     }
 
     val orderidAttrDeclOption =
-      (schema findTopmostAttributeDeclarations { e => e.nameAttributeOption == Some("orderid") }).headOption
+      (schema findTopmostAttributeDeclarationOrReferences { e => e.nameAttributeOption == Some("orderid") }).headOption
 
     assert(orderidAttrDeclOption.isDefined)
     assert(!orderidAttrDeclOption.get.isGlobal)

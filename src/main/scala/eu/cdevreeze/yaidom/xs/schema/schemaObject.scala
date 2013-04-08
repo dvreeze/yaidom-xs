@@ -101,48 +101,48 @@ sealed abstract class SchemaObject private[schema] (
   /**
    * Returns all element declarations inside this SchemaObject (excluding self).
    */
-  final def findAllElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    this filterElems { e => e.resolvedName == enameElement } collect { case e: ElementDeclaration => e }
+  final def findAllElementDeclarationOrReferences: immutable.IndexedSeq[ElementDeclarationOrReference] =
+    this filterElems { e => e.resolvedName == enameElement } collect { case e: ElementDeclarationOrReference => e }
 
   /**
    * Returns all element declarations obeying the given predicate (excluding self).
    */
-  final def filterElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+  final def filterElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
     this filterElems { e =>
-      e.resolvedName == enameElement && p(e.asInstanceOf[ElementDeclaration])
-    } collect { case e: ElementDeclaration => e }
+      e.resolvedName == enameElement && p(e.asInstanceOf[ElementDeclarationOrReference])
+    } collect { case e: ElementDeclarationOrReference => e }
 
   /**
    * Returns all topmost element declarations inside this SchemaObject (excluding self) obeying the given predicate.
    * Note that "topmost" is not the same as "global" (which only makes sense for the Schema object).
    */
-  final def findTopmostElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
+  final def findTopmostElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
     this findTopmostElems { e =>
-      e.resolvedName == enameElement && p(e.asInstanceOf[ElementDeclaration])
-    } collect { case e: ElementDeclaration => e }
+      e.resolvedName == enameElement && p(e.asInstanceOf[ElementDeclarationOrReference])
+    } collect { case e: ElementDeclarationOrReference => e }
 
   /**
    * Returns all attribute declarations inside this SchemaObject (excluding self).
    */
-  final def findAllAttributeDeclarations: immutable.IndexedSeq[AttributeDeclaration] =
-    this filterElems { e => e.resolvedName == enameAttribute } collect { case e: AttributeDeclaration => e }
+  final def findAllAttributeDeclarationOrReferences: immutable.IndexedSeq[AttributeDeclarationOrReference] =
+    this filterElems { e => e.resolvedName == enameAttribute } collect { case e: AttributeDeclarationOrReference => e }
 
   /**
    * Returns all attribute declarations obeying the given predicate (excluding self).
    */
-  final def filterAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
+  final def filterAttributeDeclarationOrReferences(p: AttributeDeclarationOrReference => Boolean): immutable.IndexedSeq[AttributeDeclarationOrReference] =
     this filterElems { e =>
-      e.resolvedName == enameAttribute && p(e.asInstanceOf[AttributeDeclaration])
-    } collect { case e: AttributeDeclaration => e }
+      e.resolvedName == enameAttribute && p(e.asInstanceOf[AttributeDeclarationOrReference])
+    } collect { case e: AttributeDeclarationOrReference => e }
 
   /**
    * Returns all topmost attribute declarations inside this SchemaObject (excluding self) obeying the given predicate.
    * Note that "topmost" is not the same as "global" (which only makes sense for the Schema object).
    */
-  final def findTopmostAttributeDeclarations(p: AttributeDeclaration => Boolean): immutable.IndexedSeq[AttributeDeclaration] =
+  final def findTopmostAttributeDeclarationOrReferences(p: AttributeDeclarationOrReference => Boolean): immutable.IndexedSeq[AttributeDeclarationOrReference] =
     this findTopmostElems { e =>
-      e.resolvedName == enameAttribute && p(e.asInstanceOf[AttributeDeclaration])
-    } collect { case e: AttributeDeclaration => e }
+      e.resolvedName == enameAttribute && p(e.asInstanceOf[AttributeDeclarationOrReference])
+    } collect { case e: AttributeDeclarationOrReference => e }
 
   /**
    * Returns all type definitions inside this SchemaObject (excluding self).
@@ -188,13 +188,13 @@ final class Schema private[schema] (
    * Returns all global element declarations.
    */
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
-    findTopmostElementDeclarations { e => e.isGlobal } collect { case e: GlobalElementDeclaration => e }
+    findTopmostElementDeclarationOrReferences { e => e.isGlobal } collect { case e: GlobalElementDeclaration => e }
 
   /**
    * Returns all global element declarations obeying the given predicate.
    */
   final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
-    this filterElementDeclarations { e => e.isGlobal && p(e.asInstanceOf[GlobalElementDeclaration]) } collect { case e: GlobalElementDeclaration => e }
+    this filterElementDeclarationOrReferences { e => e.isGlobal && p(e.asInstanceOf[GlobalElementDeclaration]) } collect { case e: GlobalElementDeclaration => e }
 
   /**
    * Finds the global element declaration with the given EName, if any, wrapped in an Option.
@@ -206,13 +206,13 @@ final class Schema private[schema] (
    * Returns all global attribute declarations.
    */
   final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    findTopmostAttributeDeclarations { e => e.isGlobal } collect { case e: GlobalAttributeDeclaration => e }
+    findTopmostAttributeDeclarationOrReferences { e => e.isGlobal } collect { case e: GlobalAttributeDeclaration => e }
 
   /**
    * Returns all global attribute declarations obeying the given predicate.
    */
   final def filterGlobalAttributeDeclarations(p: GlobalAttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    this filterAttributeDeclarations { e => e.isGlobal && p(e.asInstanceOf[GlobalAttributeDeclaration]) } collect { case e: GlobalAttributeDeclaration => e }
+    this filterAttributeDeclarationOrReferences { e => e.isGlobal && p(e.asInstanceOf[GlobalAttributeDeclaration]) } collect { case e: GlobalAttributeDeclaration => e }
 
   /**
    * Returns all global element declarations that have precisely the given substitution group.
@@ -294,13 +294,9 @@ trait Particle extends SchemaComponent {
 }
 
 /**
- * Element declaration. That is, the "xs:element" XML element.
- *
- * An element declaration is either a global or local element declaration. Element references are also considered
- * element declarations (in a syntactic sense, because of the same xs:element element), although from a more semantic
- * perspective they should not be considered element declarations.
+ * Element declaration or element reference. That is, the "xs:element" XML element.
  */
-abstract class ElementDeclaration private[schema] (
+abstract class ElementDeclarationOrReference private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -387,6 +383,16 @@ abstract class ElementDeclaration private[schema] (
 }
 
 /**
+ * Element declaration. An element declaration is either a global or local element declaration.
+ */
+abstract class ElementDeclaration private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclarationOrReference(wrappedElem, allChildElems) {
+
+  require(!isReference, "Must not be a reference")
+}
+
+/**
  * Global element declaration.
  */
 final class GlobalElementDeclaration private[schema] (
@@ -419,7 +425,6 @@ final class LocalElementDeclaration private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) with Particle {
 
-  require(!isReference, "Must not be a reference")
   require(!isGlobal, "Must be local")
 
   /**
@@ -462,7 +467,7 @@ final class LocalElementDeclaration private[schema] (
  */
 final class ElementReference private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) with Particle {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclarationOrReference(wrappedElem, allChildElems) with Particle {
 
   require(isReference, "Must be a reference")
   require(!isGlobal, "Must not be global")
@@ -490,13 +495,9 @@ trait AttributeUse extends SchemaComponent {
 }
 
 /**
- * Attribute declaration. That is, the "xs:attribute" XML element.
- *
- * An attribute declaration is either a global or local attribute declaration. Attribute references are also considered
- * attribute declarations (in a syntactic sense, because of the same xs:attribute element), although from a more semantic
- * perspective they should not be considered attribute declarations.
+ * Attribute declaration or attribute reference. That is, the "xs:attribute" XML element.
  */
-abstract class AttributeDeclaration private[schema] (
+abstract class AttributeDeclarationOrReference private[schema] (
   override val wrappedElem: indexed.Elem,
   override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
 
@@ -559,6 +560,16 @@ abstract class AttributeDeclaration private[schema] (
    * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
    */
   final def refOption: Option[EName] = SchemaObjects.refOption(wrappedElem)
+}
+
+/**
+ * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
+ */
+abstract class AttributeDeclaration private[schema] (
+  override val wrappedElem: indexed.Elem,
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclarationOrReference(wrappedElem, allChildElems) {
+
+  require(!isReference, "Must not be a reference")
 }
 
 /**
@@ -637,7 +648,7 @@ final class LocalAttributeDeclaration private[schema] (
  */
 final class AttributeReference private[schema] (
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) with AttributeUse {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclarationOrReference(wrappedElem, allChildElems) with AttributeUse {
 
   require(isReference, "Must be a reference")
   require(!isGlobal, "Must not be global")
@@ -913,12 +924,12 @@ object Schema {
     new Schema(elem, SchemaObject.childSchemaObjects(elem))
 }
 
-object ElementDeclaration {
+object ElementDeclarationOrReference {
 
   /**
-   * Creates an `ElementDeclaration` from an `indexed.Elem`. If not global, the result is also a `Particle`.
+   * Creates an `ElementDeclarationOrReference` from an `indexed.Elem`. If not global, the result is also a `Particle`.
    */
-  def apply(elem: indexed.Elem): ElementDeclaration = {
+  def apply(elem: indexed.Elem): ElementDeclarationOrReference = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
     def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
@@ -969,12 +980,12 @@ object Wildcard {
   }
 }
 
-object AttributeDeclaration {
+object AttributeDeclarationOrReference {
 
   /**
-   * Creates an `AttributeDeclaration` from an `indexed.Elem`. If not global, the result is also an `AttributeUse`.
+   * Creates an `AttributeDeclarationOrReference` from an `indexed.Elem`. If not global, the result is also an `AttributeUse`.
    */
-  def apply(elem: indexed.Elem): AttributeDeclaration = {
+  def apply(elem: indexed.Elem): AttributeDeclarationOrReference = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
     def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
@@ -994,8 +1005,8 @@ object SchemaComponent {
     import SchemaObject._
 
     elem match {
-      case e if e.resolvedName == enameElement => Some(ElementDeclaration(e))
-      case e if e.resolvedName == enameAttribute => Some(AttributeDeclaration(e))
+      case e if e.resolvedName == enameElement => Some(ElementDeclarationOrReference(e))
+      case e if e.resolvedName == enameAttribute => Some(AttributeDeclarationOrReference(e))
       case e if e.resolvedName == enameSimpleType => Some(new SimpleTypeDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameComplexType => Some(new ComplexTypeDefinition(e, childSchemaObjects(e)))
       case e if e.resolvedName == enameAttributeGroup => Some(new AttributeGroupDefinition(e, childSchemaObjects(e)))

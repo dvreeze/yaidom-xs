@@ -184,7 +184,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     scenario("Only global element declarations can have substitution groups") {
 
       Given("all local element declarations")
-      val elemDecls = schemaDocSet filterElementDeclarations { e => !e.isGlobal }
+      val elemDecls = schemaDocSet filterElementDeclarationOrReferences { e => !e.isGlobal }
 
       When("asking for their substitution groups")
       val substGroups = elemDecls.flatMap(_.substitutionGroupOption).toSet

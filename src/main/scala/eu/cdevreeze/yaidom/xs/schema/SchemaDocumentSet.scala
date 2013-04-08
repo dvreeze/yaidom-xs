@@ -49,8 +49,8 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all element declarations in this SchemaDocumentSet.
    */
-  final def findAllElementDeclarations: immutable.IndexedSeq[ElementDeclaration] =
-    schemaDocuments flatMap { e => e.schema.findAllElementDeclarations }
+  final def findAllElementDeclarationOrReferences: immutable.IndexedSeq[ElementDeclarationOrReference] =
+    schemaDocuments flatMap { e => e.schema.findAllElementDeclarationOrReferences }
 
   /**
    * Returns all global element declarations in this SchemaDocumentSet.
@@ -61,8 +61,8 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   /**
    * Returns all element declarations in this SchemaDocumentSet obeying the given predicate.
    */
-  final def filterElementDeclarations(p: ElementDeclaration => Boolean): immutable.IndexedSeq[ElementDeclaration] =
-    schemaDocuments flatMap { e => e.schema filterElementDeclarations p }
+  final def filterElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
+    schemaDocuments flatMap { e => e.schema filterElementDeclarationOrReferences p }
 
   /**
    * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
