@@ -52,13 +52,17 @@ import SchemaObject._
  * @author Chris de Vreeze
  */
 sealed abstract class SchemaObject private[schema] (
+  val docUri: URI,
   val wrappedElem: indexed.Elem,
   val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElemLike[SchemaObject] with HasText with Immutable {
 
+  require(docUri ne null)
   require(wrappedElem ne null)
   require(allChildElems ne null)
 
   require(wrappedElem.findAllChildElems == allChildElems.map(_.wrappedElem), "Inconsistent SchemaObject")
+
+  require(allChildElems forall (e => e.docUri == this.docUri), s"All child elements must have the same document URI $docUri")
 
   require(wrappedElem.rootElem.resolvedName == enameSchema, "The root of the element tree must be a 'schema' element")
   require(
@@ -177,8 +181,9 @@ sealed abstract class SchemaObject private[schema] (
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
 final class Schema private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkSchemaElem(wrappedElem)
 
@@ -261,8 +266,9 @@ final class Schema private[schema] (
  * XML document that is leading, and not the abstract schema model that has no knowledge about its XML representation.
  */
 abstract class SchemaComponent private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   /**
    * Returns the target namespace of the schema component, if any, wrapped in an Option.
@@ -297,8 +303,9 @@ trait Particle extends SchemaComponent {
  * Element declaration or element reference. That is, the "xs:element" XML element.
  */
 abstract class ElementDeclarationOrReference private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkElementDeclarationElem(wrappedElem)
 
@@ -386,8 +393,9 @@ abstract class ElementDeclarationOrReference private[schema] (
  * Element declaration. An element declaration is either a global or local element declaration.
  */
 abstract class ElementDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclarationOrReference(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclarationOrReference(docUri, wrappedElem, allChildElems) {
 
   require(!isReference, "Must not be a reference")
 }
@@ -396,8 +404,9 @@ abstract class ElementDeclaration private[schema] (
  * Global element declaration.
  */
 final class GlobalElementDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(docUri, wrappedElem, allChildElems) {
 
   require(isGlobal, "Must be global")
 
@@ -422,8 +431,9 @@ final class GlobalElementDeclaration private[schema] (
  * Local element declaration.
  */
 final class LocalElementDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(wrappedElem, allChildElems) with Particle {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclaration(docUri, wrappedElem, allChildElems) with Particle {
 
   require(!isGlobal, "Must be local")
 
@@ -466,8 +476,9 @@ final class LocalElementDeclaration private[schema] (
  * it is represented by the same xs:element XML element.
  */
 final class ElementReference private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclarationOrReference(wrappedElem, allChildElems) with Particle {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends ElementDeclarationOrReference(docUri, wrappedElem, allChildElems) with Particle {
 
   require(isReference, "Must be a reference")
   require(!isGlobal, "Must not be global")
@@ -498,8 +509,9 @@ trait AttributeUse extends SchemaComponent {
  * Attribute declaration or attribute reference. That is, the "xs:attribute" XML element.
  */
 abstract class AttributeDeclarationOrReference private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkAttributeDeclarationElem(wrappedElem)
 
@@ -566,8 +578,9 @@ abstract class AttributeDeclarationOrReference private[schema] (
  * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
  */
 abstract class AttributeDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclarationOrReference(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclarationOrReference(docUri, wrappedElem, allChildElems) {
 
   require(!isReference, "Must not be a reference")
 }
@@ -576,8 +589,9 @@ abstract class AttributeDeclaration private[schema] (
  * Global attribute declaration.
  */
 final class GlobalAttributeDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(docUri, wrappedElem, allChildElems) {
 
   require(isGlobal, "Must be global")
 
@@ -602,8 +616,9 @@ final class GlobalAttributeDeclaration private[schema] (
  * Local attribute declaration.
  */
 final class LocalAttributeDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(wrappedElem, allChildElems) with AttributeUse {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclaration(docUri, wrappedElem, allChildElems) with AttributeUse {
 
   require(!isReference, "Must not be a reference")
   require(!isGlobal, "Must be local")
@@ -647,8 +662,9 @@ final class LocalAttributeDeclaration private[schema] (
  * it is represented by the same xs:attribute XML element.
  */
 final class AttributeReference private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclarationOrReference(wrappedElem, allChildElems) with AttributeUse {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends AttributeDeclarationOrReference(docUri, wrappedElem, allChildElems) with AttributeUse {
 
   require(isReference, "Must be a reference")
   require(!isGlobal, "Must not be global")
@@ -668,15 +684,17 @@ final class AttributeReference private[schema] (
  * Schema type definition, which is either a simple type or a complex type.
  */
 abstract class TypeDefinition private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems)
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems)
 
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
  */
 final class SimpleTypeDefinition private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkSimpleTypeDefinitionElem(wrappedElem)
 
@@ -689,8 +707,9 @@ final class SimpleTypeDefinition private[schema] (
  * Complex type definition. That is, the "xs:complexType" XML element.
  */
 final class ComplexTypeDefinition private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends TypeDefinition(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkComplexTypeDefinitionElem(wrappedElem)
 
@@ -703,8 +722,9 @@ final class ComplexTypeDefinition private[schema] (
  * Attribute group definition. That is, the "xs:attributeGroup" XML element.
  */
 final class AttributeGroupDefinition private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkAttributeGroupDefinitionElem(wrappedElem)
 
@@ -717,8 +737,9 @@ final class AttributeGroupDefinition private[schema] (
  * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
 final class IdentityConstraintDefinition private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkIdentityConstraintDefinitionElem(wrappedElem)
 
@@ -731,8 +752,9 @@ final class IdentityConstraintDefinition private[schema] (
  * Model group definition. That is, the "xs:group" XML element.
  */
 class ModelGroupDefinition private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkModelGroupDefinitionElem(wrappedElem)
 
@@ -756,8 +778,9 @@ class ModelGroupDefinition private[schema] (
  * Notation declaration. That is, the "xs:notation" XML element.
  */
 final class NotationDeclaration private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkNotationDeclarationElem(wrappedElem)
 
@@ -770,8 +793,9 @@ final class NotationDeclaration private[schema] (
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
 class ModelGroup private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkModelGroupElem(wrappedElem)
 
@@ -795,8 +819,9 @@ class ModelGroup private[schema] (
  * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
  */
 class Wildcard private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkWildcardElem(wrappedElem)
 
@@ -814,8 +839,9 @@ class Wildcard private[schema] (
  * Annotation schema component. That is, the "xs:annotation" XML element.
  */
 final class Annotation private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkAnnotationElem(wrappedElem)
 
@@ -828,8 +854,9 @@ final class Annotation private[schema] (
  * The "xs:import" XML element.
  */
 final class Import private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkImportElem(wrappedElem)
 }
@@ -838,8 +865,9 @@ final class Import private[schema] (
  * The "xs:include" XML element.
  */
 final class Include private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkIncludeElem(wrappedElem)
 }
@@ -848,8 +876,9 @@ final class Include private[schema] (
  * The "xs:redefine" XML element.
  */
 final class Redefine private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkRedefineElem(wrappedElem)
 }
@@ -860,8 +889,9 @@ final class Redefine private[schema] (
  * The "xs:complexContent" XML element.
  */
 final class ComplexContent private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkComplexContentElem(wrappedElem)
 }
@@ -870,8 +900,9 @@ final class ComplexContent private[schema] (
  * The "xs:simpleContent" XML element.
  */
 final class SimpleContent private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkSimpleContentElem(wrappedElem)
 }
@@ -880,8 +911,9 @@ final class SimpleContent private[schema] (
  * The "xs:extension" XML element.
  */
 final class Extension private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkExtensionElem(wrappedElem)
 }
@@ -890,8 +922,9 @@ final class Extension private[schema] (
  * The "xs:restriction" XML element.
  */
 final class Restriction private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   SchemaObjects.checkRestrictionElem(wrappedElem)
 }
@@ -900,8 +933,9 @@ final class Restriction private[schema] (
  * The "xs:appinfo" XML element.
  */
 final class Appinfo private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   require(wrappedElem.resolvedName == enameAppinfo, "The element must be an 'appinfo' element")
 }
@@ -910,8 +944,9 @@ final class Appinfo private[schema] (
  * The "xs:documentation" XML element.
  */
 final class Documentation private[schema] (
+  override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(wrappedElem, allChildElems) {
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaObject(docUri, wrappedElem, allChildElems) {
 
   require(wrappedElem.resolvedName == enameDocumentation, "The element must be a 'documentation' element")
 }
@@ -920,45 +955,45 @@ final class Documentation private[schema] (
 
 object Schema {
 
-  def apply(elem: indexed.Elem): Schema =
-    new Schema(elem, SchemaObject.childSchemaObjects(elem))
+  def apply(docUri: URI, elem: indexed.Elem): Schema =
+    new Schema(docUri, elem, SchemaObject.childSchemaObjects(docUri, elem))
 }
 
 object ElementDeclarationOrReference {
 
   /**
-   * Creates an `ElementDeclarationOrReference` from an `indexed.Elem`. If not global, the result is also a `Particle`.
+   * Creates an `ElementDeclarationOrReference` from a URI and an `indexed.Elem`. If not global, the result is also a `Particle`.
    */
-  def apply(elem: indexed.Elem): ElementDeclarationOrReference = {
+  def apply(docUri: URI, elem: indexed.Elem): ElementDeclarationOrReference = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
     def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
-    if (isReference) new ElementReference(elem, childSchemaObjects(elem))
-    else if (isGlobal) new GlobalElementDeclaration(elem, childSchemaObjects(elem))
-    else new LocalElementDeclaration(elem, childSchemaObjects(elem))
+    if (isReference) new ElementReference(docUri, elem, childSchemaObjects(docUri, elem))
+    else if (isGlobal) new GlobalElementDeclaration(docUri, elem, childSchemaObjects(docUri, elem))
+    else new LocalElementDeclaration(docUri, elem, childSchemaObjects(docUri, elem))
   }
 }
 
 object ModelGroupDefinition {
 
   /**
-   * Creates a `ModelGroupDefinition` from an `indexed.Elem`. If it has a "ref" attribute, the result is also a `Particle`.
+   * Creates a `ModelGroupDefinition` from a URI and an `indexed.Elem`. If it has a "ref" attribute, the result is also a `Particle`.
    */
-  def apply(elem: indexed.Elem): ModelGroupDefinition = {
-    if ((elem \@ enameRef).isEmpty) new ModelGroupDefinition(elem, childSchemaObjects(elem))
-    else new ModelGroupDefinition(elem, childSchemaObjects(elem)) with Particle
+  def apply(docUri: URI, elem: indexed.Elem): ModelGroupDefinition = {
+    if ((elem \@ enameRef).isEmpty) new ModelGroupDefinition(docUri, elem, childSchemaObjects(docUri, elem))
+    else new ModelGroupDefinition(docUri, elem, childSchemaObjects(docUri, elem)) with Particle
   }
 }
 
 object ModelGroup {
 
   /**
-   * Creates a `ModelGroup` from an `indexed.Elem`. If not inside a named group (xs:group with "name" attribute),
+   * Creates a `ModelGroup` from a URI and an `indexed.Elem`. If not inside a named group (xs:group with "name" attribute),
    * the result is also a `Particle`.
    */
-  def apply(elem: indexed.Elem): ModelGroup = {
-    if (inNamedGroup(elem)) new ModelGroup(elem, childSchemaObjects(elem))
-    else new ModelGroup(elem, childSchemaObjects(elem)) with Particle
+  def apply(docUri: URI, elem: indexed.Elem): ModelGroup = {
+    if (inNamedGroup(elem)) new ModelGroup(docUri, elem, childSchemaObjects(docUri, elem))
+    else new ModelGroup(docUri, elem, childSchemaObjects(docUri, elem)) with Particle
   }
 
   private def inNamedGroup(elem: indexed.Elem): Boolean = {
@@ -972,55 +1007,55 @@ object ModelGroup {
 object Wildcard {
 
   /**
-   * Creates a `Wildcard` from an `indexed.Elem`. If it is an xs:any, the result is also a `Particle`.
+   * Creates a `Wildcard` from a URI and an `indexed.Elem`. If it is an xs:any, the result is also a `Particle`.
    */
-  def apply(elem: indexed.Elem): Wildcard = {
-    if (elem.resolvedName == enameAnyAttribute) new Wildcard(elem, childSchemaObjects(elem))
-    else new Wildcard(elem, childSchemaObjects(elem)) with Particle
+  def apply(docUri: URI, elem: indexed.Elem): Wildcard = {
+    if (elem.resolvedName == enameAnyAttribute) new Wildcard(docUri, elem, childSchemaObjects(docUri, elem))
+    else new Wildcard(docUri, elem, childSchemaObjects(docUri, elem)) with Particle
   }
 }
 
 object AttributeDeclarationOrReference {
 
   /**
-   * Creates an `AttributeDeclarationOrReference` from an `indexed.Elem`. If not global, the result is also an `AttributeUse`.
+   * Creates an `AttributeDeclarationOrReference` from a URI and an `indexed.Elem`. If not global, the result is also an `AttributeUse`.
    */
-  def apply(elem: indexed.Elem): AttributeDeclarationOrReference = {
+  def apply(docUri: URI, elem: indexed.Elem): AttributeDeclarationOrReference = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
     def isReference: Boolean = SchemaObjects.refOption(elem).isDefined
 
-    if (isReference) new AttributeReference(elem, childSchemaObjects(elem))
-    else if (isGlobal) new GlobalAttributeDeclaration(elem, childSchemaObjects(elem))
-    else new LocalAttributeDeclaration(elem, childSchemaObjects(elem))
+    if (isReference) new AttributeReference(docUri, elem, childSchemaObjects(docUri, elem))
+    else if (isGlobal) new GlobalAttributeDeclaration(docUri, elem, childSchemaObjects(docUri, elem))
+    else new LocalAttributeDeclaration(docUri, elem, childSchemaObjects(docUri, elem))
   }
 }
 
 object SchemaComponent {
 
-  def apply(elem: indexed.Elem): SchemaComponent = {
-    wrapOption(elem).getOrElse(sys.error("%s is not a schema component".format(elem.resolvedName)))
+  def apply(docUri: URI, elem: indexed.Elem): SchemaComponent = {
+    wrapOption(docUri, elem).getOrElse(sys.error("%s is not a schema component".format(elem.resolvedName)))
   }
 
-  def wrapOption(elem: indexed.Elem): Option[SchemaComponent] = {
+  def wrapOption(docUri: URI, elem: indexed.Elem): Option[SchemaComponent] = {
     import SchemaObject._
 
     elem match {
-      case e if e.resolvedName == enameElement => Some(ElementDeclarationOrReference(e))
-      case e if e.resolvedName == enameAttribute => Some(AttributeDeclarationOrReference(e))
-      case e if e.resolvedName == enameSimpleType => Some(new SimpleTypeDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameComplexType => Some(new ComplexTypeDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameAttributeGroup => Some(new AttributeGroupDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameKey => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameKeyref => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameUnique => Some(new IdentityConstraintDefinition(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameGroup => Some(ModelGroupDefinition(e))
-      case e if e.resolvedName == enameNotation => Some(new NotationDeclaration(e, childSchemaObjects(e)))
-      case e if e.resolvedName == enameAll => Some(ModelGroup(e))
-      case e if e.resolvedName == enameSequence => Some(ModelGroup(e))
-      case e if e.resolvedName == enameChoice => Some(ModelGroup(e))
-      case e if e.resolvedName == enameAny => Some(Wildcard(e))
-      case e if e.resolvedName == enameAnyAttribute => Some(Wildcard(e))
-      case e if e.resolvedName == enameAnnotation => Some(new Annotation(e, childSchemaObjects(e)))
+      case e if e.resolvedName == enameElement => Some(ElementDeclarationOrReference(docUri, e))
+      case e if e.resolvedName == enameAttribute => Some(AttributeDeclarationOrReference(docUri, e))
+      case e if e.resolvedName == enameSimpleType => Some(new SimpleTypeDefinition(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameComplexType => Some(new ComplexTypeDefinition(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameAttributeGroup => Some(new AttributeGroupDefinition(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameKey => Some(new IdentityConstraintDefinition(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameKeyref => Some(new IdentityConstraintDefinition(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameUnique => Some(new IdentityConstraintDefinition(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameGroup => Some(ModelGroupDefinition(docUri, e))
+      case e if e.resolvedName == enameNotation => Some(new NotationDeclaration(docUri, e, childSchemaObjects(docUri, e)))
+      case e if e.resolvedName == enameAll => Some(ModelGroup(docUri, e))
+      case e if e.resolvedName == enameSequence => Some(ModelGroup(docUri, e))
+      case e if e.resolvedName == enameChoice => Some(ModelGroup(docUri, e))
+      case e if e.resolvedName == enameAny => Some(Wildcard(docUri, e))
+      case e if e.resolvedName == enameAnyAttribute => Some(Wildcard(docUri, e))
+      case e if e.resolvedName == enameAnnotation => Some(new Annotation(docUri, e, childSchemaObjects(docUri, e)))
       case e => None
     }
   }
@@ -1028,9 +1063,9 @@ object SchemaComponent {
 
 object SchemaObject {
 
-  def apply(wrappedElem: indexed.Elem): SchemaObject = wrappedElem match {
+  def apply(docUri: URI, wrappedElem: indexed.Elem): SchemaObject = wrappedElem match {
     // TODO
-    case e if e.resolvedName == enameSchema => new Schema(wrappedElem, childSchemaObjects(wrappedElem))
+    case e if e.resolvedName == enameSchema => new Schema(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
     case e if Set(
       enameElement,
       enameAttribute,
@@ -1047,21 +1082,21 @@ object SchemaObject {
       enameChoice,
       enameAny,
       enameAnyAttribute,
-      enameAnnotation).contains(e.resolvedName) => SchemaComponent(wrappedElem)
-    case e if e.resolvedName == enameImport => new Import(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameInclude => new Include(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameRedefine => new Redefine(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameComplexContent => new ComplexContent(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameSimpleContent => new SimpleContent(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameAppinfo => new Appinfo(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameDocumentation => new Documentation(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameExtension => new Extension(wrappedElem, childSchemaObjects(wrappedElem))
-    case e if e.resolvedName == enameRestriction => new Restriction(wrappedElem, childSchemaObjects(wrappedElem))
-    case _ => new SchemaObject(wrappedElem, childSchemaObjects(wrappedElem)) {}
+      enameAnnotation).contains(e.resolvedName) => SchemaComponent(docUri, wrappedElem)
+    case e if e.resolvedName == enameImport => new Import(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameInclude => new Include(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameRedefine => new Redefine(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameComplexContent => new ComplexContent(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameSimpleContent => new SimpleContent(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameAppinfo => new Appinfo(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameDocumentation => new Documentation(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameExtension => new Extension(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case e if e.resolvedName == enameRestriction => new Restriction(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem))
+    case _ => new SchemaObject(docUri, wrappedElem, childSchemaObjects(docUri, wrappedElem)) {}
   }
 
-  private[schema] def childSchemaObjects(e: indexed.Elem): immutable.IndexedSeq[SchemaObject] =
-    e.findAllChildElems.map(e => SchemaObject(e))
+  private[schema] def childSchemaObjects(docUri: URI, e: indexed.Elem): immutable.IndexedSeq[SchemaObject] =
+    e.findAllChildElems.map(e => SchemaObject(docUri, e))
 }
 
 object Particle {

@@ -39,7 +39,9 @@ class CreateSchemaTest extends Suite {
     val docParser = parse.DocumentParserUsingSax.newInstance
     val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc))
+    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
+
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -104,6 +106,10 @@ class CreateSchemaTest extends Suite {
     expectResult(Seq("orderid")) {
       attrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
+
+    expectResult(Set(docUri)) {
+      schema.findAllElemsOrSelf.map(_.docUri).toSet
+    }
   }
 
   @Test def testCreateValidSchemaOfXmlSchema() {
@@ -117,7 +123,9 @@ class CreateSchemaTest extends Suite {
 
     val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("XMLSchema.xsd"))
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc))
+    val docUri = classOf[CreateSchemaTest].getResource("XMLSchema.xsd").toURI
+
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -191,6 +199,10 @@ class CreateSchemaTest extends Suite {
     expectResult(0) {
       schema.findAllRedefines.size
     }
+
+    expectResult(Set(docUri)) {
+      schema.findAllElemsOrSelf.map(_.docUri).toSet
+    }
   }
 
   @Test def testCreateValidLargeSchema() {
@@ -204,7 +216,9 @@ class CreateSchemaTest extends Suite {
 
     val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("ifrs-gp-2006-08-15.xsd"))
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc))
+    val docUri = classOf[CreateSchemaTest].getResource("ifrs-gp-2006-08-15.xsd").toURI
+
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -260,10 +274,12 @@ class CreateSchemaTest extends Suite {
     val invalidChild =
       textElem(QName("xyz"), "invalid").build(doc.documentElement.scope.withoutDefaultNamespace)
 
+    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
+
     val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
 
     intercept[Exception] {
-      new SchemaDocument(indexed.Document(invalidDoc))
+      new SchemaDocument(indexed.Document(invalidDoc).withBaseUriOption(Some(docUri)))
     }
   }
 
@@ -275,10 +291,12 @@ class CreateSchemaTest extends Suite {
     val invalidChild =
       textElem(QName("xs:complexContent"), "invalid").build(doc.documentElement.scope ++ Scope.from("xs" -> ns))
 
+    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
+
     val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
 
     intercept[Exception] {
-      new SchemaDocument(indexed.Document(invalidDoc))
+      new SchemaDocument(indexed.Document(invalidDoc).withBaseUriOption(Some(docUri)))
     }
   }
 
@@ -286,7 +304,9 @@ class CreateSchemaTest extends Suite {
     val docParser = parse.DocumentParserUsingSax.newInstance
     val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc))
+    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
+
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val expectedTns = "http://shiporder"
