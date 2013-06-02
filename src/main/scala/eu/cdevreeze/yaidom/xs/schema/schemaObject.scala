@@ -103,6 +103,15 @@ sealed abstract class SchemaObject private[schema] (
   final def elemPath: ElemPath = wrappedElem.elemPath
 
   /**
+   * Returns the optional URI of this element, containing the id attribute value as URI fragment, if any.
+   * If the id attribute is absent, None is returned.
+   */
+  final def uriOption: Option[URI] = {
+    val idOption = wrappedElem.attributeOption(EName("id"))
+    idOption map { id => new URI(docUri.getScheme, docUri.getSchemeSpecificPart, id) }
+  }
+
+  /**
    * Returns all element declarations inside this SchemaObject (excluding self).
    */
   final def findAllElementDeclarationOrReferences: immutable.IndexedSeq[ElementDeclarationOrReference] =

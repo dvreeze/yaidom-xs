@@ -73,7 +73,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
     val docs = files map { f =>
       val doc = docParser.parse(new FileInputStream(f))
-      indexed.Document(doc.withBaseUriOption(Some(f.toURI)))
+      indexed.Document(doc.withUriOption(Some(f.toURI)))
     }
 
     docs
@@ -82,8 +82,8 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
   val schemaDocs: Map[URI, SchemaDocument] = {
     val result =
       docs filter { doc =>
-        doc.document.baseUriOption.getOrElse("").toString.endsWith(".xsd")
-      } map { doc => (doc.baseUriOption.getOrElse(sys.error("Missing URI")) -> new SchemaDocument(doc)) }
+        doc.document.uriOption.getOrElse("").toString.endsWith(".xsd")
+      } map { doc => (doc.uriOption.getOrElse(sys.error("Missing URI")) -> new SchemaDocument(doc)) }
     result.toMap
   }
 
@@ -91,7 +91,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     val result =
       docs filter { doc =>
         doc.documentElement.resolvedName == EName(nsLink, "linkbase")
-      } map { doc => (doc.baseUriOption.getOrElse(sys.error("Missing URI")) -> doc) }
+      } map { doc => (doc.uriOption.getOrElse(sys.error("Missing URI")) -> doc) }
     result.toMap
   }
 
@@ -135,10 +135,10 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("the first global element declaration in kvk-tuples.xsd")
       val schemaDoc = schemaDocs.values.find(doc =>
-        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
+        doc.wrappedDocument.uriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
       val elemDecl = schemaDoc.schema.findAllGlobalElementDeclarations.find(e =>
-        (e \@ "id") == Some("kvk-t_ContactForDocumentPresentation")).get
+        (e \@ EName("id")) == Some("kvk-t_ContactForDocumentPresentation")).get
 
       When("asking for its substitution group")
       val substGroupOption = elemDecl.substitutionGroupOption
@@ -153,7 +153,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("all global element declarations in kvk-tuples.xsd")
       val schemaDoc = schemaDocs.values.find(doc =>
-        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
+        doc.wrappedDocument.uriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
       val elemDecls = schemaDoc.schema.findAllGlobalElementDeclarations
 
@@ -199,7 +199,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("the xbrl-syntax-extension.xsd schema")
       val schemaDoc = schemaDocs.values.find(doc =>
-        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("xbrl-syntax-extension.xsd")).get
+        doc.wrappedDocument.uriOption.map(_.toString).getOrElse("").endsWith("xbrl-syntax-extension.xsd")).get
 
       When("asking for its abstract global element declarations")
       val elemDecls = schemaDoc.schema filterGlobalElementDeclarations { e => e.isAbstract }
@@ -229,7 +229,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("all global element declarations in www.nltaxonomie.nl")
       val nltaxSchemaDocs = schemaDocSet.schemaDocuments filter (doc =>
-        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").contains("/www.nltaxonomie.nl/"))
+        doc.wrappedDocument.uriOption.map(_.toString).getOrElse("").contains("/www.nltaxonomie.nl/"))
       val nltaxSchemaDocSet = new SchemaDocumentSet(nltaxSchemaDocs)
       val elemDecls = nltaxSchemaDocSet.findAllGlobalElementDeclarations
 
@@ -251,7 +251,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("schema kvk-tuples.xsd")
       val schemaDoc = schemaDocs.values.find(doc =>
-        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
+        doc.wrappedDocument.uriOption.map(_.toString).getOrElse("").endsWith("kvk-tuples.xsd")).get
 
       When("finding global concepts (with some known substitution groups for tuples)")
       val conceptSubstGroups =
@@ -272,7 +272,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("all concept declarations in kvk-data.xsd with substitution group xbrli:item")
       val schemaDoc = schemaDocs.values.find(doc =>
-        doc.wrappedDocument.baseUriOption.map(_.toString).getOrElse("").endsWith("kvk-data.xsd")).get
+        doc.wrappedDocument.uriOption.map(_.toString).getOrElse("").endsWith("kvk-data.xsd")).get
 
       val xbrliItemEName = EName(nsXbrli, "item")
       val itemDecls = schemaDoc.schema filterGlobalElementDeclarations { e => e.substitutionGroupOption == Some(xbrliItemEName) }

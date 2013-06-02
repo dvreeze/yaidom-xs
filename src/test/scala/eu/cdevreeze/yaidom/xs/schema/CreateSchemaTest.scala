@@ -41,7 +41,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -66,8 +66,8 @@ class CreateSchemaTest extends Suite {
     }
     expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
-        val tnsOption = e.rootElem \@ "targetNamespace"
-        val name = (e \@ "name").get
+        val tnsOption = e.rootElem \@ EName("targetNamespace")
+        val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
     }
@@ -94,8 +94,8 @@ class CreateSchemaTest extends Suite {
     }
     expectResult(expectedElemNames) {
       elemDecls3 map { e =>
-        val tnsOption = e.rootElem \@ "targetNamespace"
-        val name = (e \@ "name").get
+        val tnsOption = e.rootElem \@ EName("targetNamespace")
+        val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
     }
@@ -125,7 +125,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("XMLSchema.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -136,14 +136,14 @@ class CreateSchemaTest extends Suite {
     assert(elemDecls.size > globalElemDecls.size)
 
     val occursAttrGroupOption =
-      schema.findAllElemsOrSelf collect { case e: AttributeGroupDefinition => e } find { e => (e \@ "name") == Some("occurs") }
+      schema.findAllElemsOrSelf collect { case e: AttributeGroupDefinition => e } find { e => (e \@ EName("name")) == Some("occurs") }
 
     assert(occursAttrGroupOption.isDefined)
 
     val minOccursAttrOption =
       occursAttrGroupOption.get findElem { e =>
         e match {
-          case e: AttributeDeclarationOrReference if (e \@ "name") == Some("minOccurs") => true
+          case e: AttributeDeclarationOrReference if (e \@ EName("name")) == Some("minOccurs") => true
           case _ => false
         }
       }
@@ -153,7 +153,7 @@ class CreateSchemaTest extends Suite {
     val openAttrsComplexTypeOption =
       schema findElem { e =>
         e match {
-          case e: ComplexTypeDefinition if (e \@ "name") == Some("openAttrs") => true
+          case e: ComplexTypeDefinition if (e \@ EName("name")) == Some("openAttrs") => true
           case _ => false
         }
       }
@@ -218,7 +218,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("ifrs-gp-2006-08-15.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -279,7 +279,7 @@ class CreateSchemaTest extends Suite {
     val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
 
     intercept[Exception] {
-      new SchemaDocument(indexed.Document(invalidDoc).withBaseUriOption(Some(docUri)))
+      new SchemaDocument(indexed.Document(invalidDoc).withUriOption(Some(docUri)))
     }
   }
 
@@ -296,7 +296,7 @@ class CreateSchemaTest extends Suite {
     val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
 
     intercept[Exception] {
-      new SchemaDocument(indexed.Document(invalidDoc).withBaseUriOption(Some(docUri)))
+      new SchemaDocument(indexed.Document(invalidDoc).withUriOption(Some(docUri)))
     }
   }
 
@@ -306,7 +306,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withBaseUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
     val schema = schemaDoc.schema
 
     val expectedTns = "http://shiporder"

@@ -37,10 +37,10 @@ import scala.collection.immutable
  * @author Chris de Vreeze
  */
 final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDocument]) extends Immutable {
-  require(schemaDocuments forall (doc => doc.wrappedDocument.baseUriOption.isDefined), "All schema documents must have a base URI")
+  require(schemaDocuments forall (doc => doc.wrappedDocument.uriOption.isDefined), "All schema documents must have a base URI")
 
   val schemaDocumentsByUri: Map[URI, SchemaDocument] = {
-    val result = schemaDocuments map { doc => (doc.wrappedDocument.baseUriOption.get -> doc) }
+    val result = schemaDocuments map { doc => (doc.wrappedDocument.uriOption.get -> doc) }
     result.toMap
   }
 

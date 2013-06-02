@@ -29,10 +29,10 @@ import eu.cdevreeze.yaidom._
  */
 final class SchemaDocument(val wrappedDocument: indexed.Document) extends Immutable {
 
-  require(wrappedDocument.baseUriOption.isDefined, "Missing URI of document")
+  require(wrappedDocument.uriOption.isDefined, "Missing URI of document")
 
   final val schema: Schema = Schema(
-    wrappedDocument.baseUriOption.get,
+    wrappedDocument.uriOption.get,
     wrappedDocument.documentElement)
 
   final override def toString: String = wrappedDocument.document.toString
