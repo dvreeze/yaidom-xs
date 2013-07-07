@@ -47,11 +47,11 @@ class CreateSchemaTest extends Suite {
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElementDeclarationOrReferences
 
-    val globalElemDecls2 = schema \\! EName(ns, "element")
-    val elemDecls2 = schema \\ EName(ns, "element")
+    val globalElemDecls2 = schema \\! EName(NS, "element")
+    val elemDecls2 = schema \\ EName(NS, "element")
 
-    val globalElemDecls3 = schema.wrappedElem \\! EName(ns, "element")
-    val elemDecls3 = schema.wrappedElem \\ EName(ns, "element")
+    val globalElemDecls3 = schema.wrappedElem \\! EName(NS, "element")
+    val elemDecls3 = schema.wrappedElem \\ EName(NS, "element")
 
     val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
     val attrDecls = schema.findAllAttributeDeclarationOrReferences
@@ -174,7 +174,7 @@ class CreateSchemaTest extends Suite {
     val expectedElemBuilder =
       elem(
         qname = QName("xs:complexContent"),
-        namespaces = Declarations.from("xs" -> ns),
+        namespaces = Declarations.from("xs" -> NS),
         children =
           Vector(
             elem(
@@ -289,7 +289,7 @@ class CreateSchemaTest extends Suite {
 
     import NodeBuilder._
     val invalidChild =
-      textElem(QName("xs:complexContent"), "invalid").build(doc.documentElement.scope ++ Scope.from("xs" -> ns))
+      textElem(QName("xs:complexContent"), "invalid").build(doc.documentElement.scope ++ Scope.from("xs" -> NS))
 
     val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
 

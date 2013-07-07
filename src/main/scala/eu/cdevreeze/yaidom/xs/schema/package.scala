@@ -29,5 +29,5 @@ package xs
  */
 package object schema {
 
-  val ns = "http://www.w3.org/2001/XMLSchema"
+  val NS = "http://www.w3.org/2001/XMLSchema"
 }

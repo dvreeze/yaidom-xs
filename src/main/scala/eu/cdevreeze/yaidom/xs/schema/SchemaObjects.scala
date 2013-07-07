@@ -57,12 +57,12 @@ private[schema] object SchemaObjects {
     }
 
     require(
-      (elem \@ enameDefault).isEmpty || (elem \@ enameFixed).isEmpty,
+      (elem \@ ENameDefault).isEmpty || (elem \@ ENameFixed).isEmpty,
       "Element declarations can not have both 'default' and 'fixed'")
 
     require(
-      ((elem \@ enameType).isEmpty) ||
-        ((elem \ enameSimpleType).isEmpty && (elem \ enameComplexType).isEmpty),
+      ((elem \@ ENameType).isEmpty) ||
+        ((elem \ ENameSimpleType).isEmpty && (elem \ ENameComplexType).isEmpty),
       "Element declarations can not have both a 'type' attribute and a 'complexType' or 'simpleType' child element")
 
     if (isReference) {
@@ -70,36 +70,36 @@ private[schema] object SchemaObjects {
 
       val noNsAttributeNames = elem.resolvedAttributes.toMap.keySet filter { attr => attr.namespaceUriOption.isEmpty }
       require(
-        noNsAttributeNames.subsetOf(Set(enameRef, enameMinOccurs, enameMaxOccurs, enameId)),
+        noNsAttributeNames.subsetOf(Set(ENameRef, ENameMinOccurs, ENameMaxOccurs, ENameId)),
         "Expected only 'ref', 'minOccurs', 'maxOccurs' and 'id' attributes, but got %s".format(noNsAttributeNames.mkString(", ")))
     }
 
     if (isReference) {
       assert(!isGlobal)
 
-      val xsdChildElemNames = elem.findAllChildElems collect { case e if e.resolvedName.namespaceUriOption == Some(ns) => e.resolvedName }
+      val xsdChildElemNames = elem.findAllChildElems collect { case e if e.resolvedName.namespaceUriOption == Some(NS) => e.resolvedName }
       require(
-        xsdChildElemNames.toSet.subsetOf(Set(enameAnnotation)),
+        xsdChildElemNames.toSet.subsetOf(Set(ENameAnnotation)),
         "Element declarations that are references must only have 'annotation' child elements")
     }
 
-    if (elem.attributeOption(enameTargetNamespace).isDefined) {
-      require((elem \@ enameName).isDefined, "Element declarations with targetNamespace must have a 'name' attribute")
-      require((elem \@ enameForm).isEmpty, "Element declarations with targetNamespace must have no 'form' attribute")
+    if (elem.attributeOption(ENameTargetNamespace).isDefined) {
+      require((elem \@ ENameName).isDefined, "Element declarations with targetNamespace must have a 'name' attribute")
+      require((elem \@ ENameForm).isEmpty, "Element declarations with targetNamespace must have no 'form' attribute")
 
-      if (elem.rootElem.attributeOption(enameTargetNamespace) != elem.attributeOption(enameTargetNamespace)) {
-        val complexTypeOption = elem findAncestor { e => e.resolvedName == enameComplexType }
+      if (elem.rootElem.attributeOption(ENameTargetNamespace) != elem.attributeOption(ENameTargetNamespace)) {
+        val complexTypeOption = elem findAncestor { e => e.resolvedName == ENameComplexType }
         require(complexTypeOption.isDefined, "Expected complexType ancestor")
 
         val restrictionOption = elem findAncestor { e =>
-          e.resolvedName == enameRestriction &&
+          e.resolvedName == ENameRestriction &&
             e.elemPath.ancestorPaths.contains(complexTypeOption.get.elemPath)
         }
         require(restrictionOption.isDefined, "Expected restriction between this element and the nearest complexType ancestor")
 
-        val base = restrictionOption.get.attribute(enameBase)
+        val base = restrictionOption.get.attribute(ENameBase)
         val baseENameOption = restrictionOption.get.elem.scope.resolveQNameOption(QName(base))
-        require(baseENameOption != Some(enameAnyType), "Expected restriction base other than xs:anyType")
+        require(baseENameOption != Some(ENameAnyType), "Expected restriction base other than xs:anyType")
       }
     }
   }
@@ -142,7 +142,7 @@ private[schema] object SchemaObjects {
       // TODO Attribute 'use' prohibited
 
       require(!isReference, "Top level attribute declarations can not be references")
-      require(elem.attributeOption(enameForm).isEmpty, "Top level attribute declarations can not have a 'form' attribute")
+      require(elem.attributeOption(ENameForm).isEmpty, "Top level attribute declarations can not have a 'form' attribute")
 
       require(nameOption(elem).isDefined, "Top level attribute declarations must have a name attribute")
     } else {
@@ -151,22 +151,22 @@ private[schema] object SchemaObjects {
     }
 
     require(
-      (elem \@ enameDefault).isEmpty || (elem \@ enameFixed).isEmpty,
+      (elem \@ ENameDefault).isEmpty || (elem \@ ENameFixed).isEmpty,
       "Attribute declarations can not have both 'default' and 'fixed'")
 
-    if ((elem \@ enameDefault).isDefined && (elem \@ enameUse).isDefined) {
-      require(elem.attribute(enameUse) == "optional", "If attributes 'default' and 'use' are both present, 'use' must have value 'optional'")
+    if ((elem \@ ENameDefault).isDefined && (elem \@ ENameUse).isDefined) {
+      require(elem.attribute(ENameUse) == "optional", "If attributes 'default' and 'use' are both present, 'use' must have value 'optional'")
     }
 
     if (isReference) {
       assert(!isGlobal)
-      require((elem.resolvedAttributes.toMap.keySet intersect Set(enameForm, enameType)).isEmpty,
+      require((elem.resolvedAttributes.toMap.keySet intersect Set(ENameForm, ENameType)).isEmpty,
         "Attribute declarations that are references must not have attributes 'form', 'type'")
     }
 
     if (isReference) {
       assert(!isGlobal)
-      require((elem.findAllChildElems.map(_.resolvedName).toSet intersect Set(enameSimpleType)).isEmpty,
+      require((elem.findAllChildElems.map(_.resolvedName).toSet intersect Set(ENameSimpleType)).isEmpty,
         "Attribute declarations that are references must not have child element 'simpleType'")
     }
   }
@@ -183,7 +183,7 @@ private[schema] object SchemaObjects {
    */
   def checkNotAnAttributeUseElem(elem: indexed.Elem): Unit = {
     // TODO
-    require((elem \@ enameUse).isEmpty, "Expected no attribute 'use'")
+    require((elem \@ ENameUse).isEmpty, "Expected no attribute 'use'")
   }
 
   /**
@@ -218,7 +218,7 @@ private[schema] object SchemaObjects {
   def checkAttributeGroupDefinitionElem(elem: indexed.Elem): Unit = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
-    def isRedefineChild: Boolean = elem.parentOption.map(_.resolvedName) == Some(enameRedefine)
+    def isRedefineChild: Boolean = elem.parentOption.map(_.resolvedName) == Some(ENameRedefine)
 
     if (isGlobal || isRedefineChild) {
       checkNamedAttributeGroupElemAgainstSchema(elem)
@@ -231,11 +231,11 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema identity constraint definition, throwing an exception if invalid.
    */
   def checkIdentityConstraintDefinitionElem(elem: indexed.Elem): Unit = {
-    val expectedENames = Set(enameKey, enameKeyref, enameUnique)
+    val expectedENames = Set(ENameKey, ENameKeyref, ENameUnique)
     require(expectedENames.contains(elem.resolvedName), "The element must be a 'key', 'keyref' or 'unique' element")
 
-    if (elem.resolvedName == enameUnique) checkUniqueElemAgainstSchema(elem)
-    else if (elem.resolvedName == enameKey) checkKeyElemAgainstSchema(elem)
+    if (elem.resolvedName == ENameUnique) checkUniqueElemAgainstSchema(elem)
+    else if (elem.resolvedName == ENameKey) checkKeyElemAgainstSchema(elem)
     else checkKeyrefElemAgainstSchema(elem)
   }
 
@@ -245,7 +245,7 @@ private[schema] object SchemaObjects {
   def checkModelGroupDefinitionElem(elem: indexed.Elem): Unit = {
     def isGlobal: Boolean = elem.elemPath.entries.size == 1
 
-    def isRedefineChild: Boolean = elem.parentOption.map(_.resolvedName) == Some(enameRedefine)
+    def isRedefineChild: Boolean = elem.parentOption.map(_.resolvedName) == Some(ENameRedefine)
 
     if (isGlobal || isRedefineChild) {
       checkNamedModelGroupElemAgainstSchema(elem)
@@ -265,11 +265,11 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema model group, throwing an exception if invalid.
    */
   def checkModelGroupElem(elem: indexed.Elem): Unit = {
-    val expectedENames = Set(enameAll, enameSequence, enameChoice)
+    val expectedENames = Set(ENameAll, ENameSequence, ENameChoice)
     require(expectedENames.contains(elem.resolvedName), "The element must be a 'all', 'sequence' or 'choice' element")
 
-    if (elem.resolvedName == enameAll) checkAllElemAgainstSchema(elem)
-    else if (elem.resolvedName == enameSequence) checkSequenceElemAgainstSchema(elem)
+    if (elem.resolvedName == ENameAll) checkAllElemAgainstSchema(elem)
+    else if (elem.resolvedName == ENameSequence) checkSequenceElemAgainstSchema(elem)
     else checkChoiceElemAgainstSchema(elem)
   }
 
@@ -277,10 +277,10 @@ private[schema] object SchemaObjects {
    * Checks the XML element as XML Schema wildcard, throwing an exception if invalid.
    */
   def checkWildcardElem(elem: indexed.Elem): Unit = {
-    val expectedENames = Set(enameAny, enameAnyAttribute)
+    val expectedENames = Set(ENameAny, ENameAnyAttribute)
     require(expectedENames.contains(elem.resolvedName), "The element must be a 'any' or 'anyAttribute' element")
 
-    if (elem.resolvedName == enameAny) checkAnyElemAgainstSchema(elem)
+    if (elem.resolvedName == ENameAny) checkAnyElemAgainstSchema(elem)
     else checkAnyAttributeElemAgainstSchema(elem)
   }
 
@@ -330,7 +330,7 @@ private[schema] object SchemaObjects {
    * Checks the XML element as "xs:extension", throwing an exception if invalid.
    */
   def checkExtensionElem(elem: indexed.Elem): Unit = {
-    if (elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent)) checkSimpleExtensionElemAgainstSchema(elem)
+    if (elem.parentOption.map(_.resolvedName) == Some(ENameSimpleContent)) checkSimpleExtensionElemAgainstSchema(elem)
     else checkExtensionElemAgainstSchema(elem)
   }
 
@@ -338,8 +338,8 @@ private[schema] object SchemaObjects {
    * Checks the XML element as "xs:restriction", throwing an exception if invalid.
    */
   def checkRestrictionElem(elem: indexed.Elem): Unit = {
-    if (elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent)) checkSimpleRestrictionElemAgainstSchema(elem)
-    else if (elem.parentOption.map(_.resolvedName) == Some(enameComplexContent)) checkComplexRestrictionElemAgainstSchema(elem)
+    if (elem.parentOption.map(_.resolvedName) == Some(ENameSimpleContent)) checkSimpleRestrictionElemAgainstSchema(elem)
+    else if (elem.parentOption.map(_.resolvedName) == Some(ENameComplexContent)) checkComplexRestrictionElemAgainstSchema(elem)
     else checkDerivationRestrictionElemAgainstSchema(elem)
   }
 
@@ -348,18 +348,18 @@ private[schema] object SchemaObjects {
   /**
    * Returns the value of the 'name' attribute, if any, wrapped in an Option.
    */
-  def nameOption(elem: indexed.Elem): Option[String] = elem \@ enameName
+  def nameOption(elem: indexed.Elem): Option[String] = elem \@ ENameName
 
   /**
    * Returns the value of the 'id' attribute, if any, wrapped in an Option.
    */
-  def idOption(elem: indexed.Elem): Option[String] = elem \@ enameId
+  def idOption(elem: indexed.Elem): Option[String] = elem \@ ENameId
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
    */
   def typeAttributeOption(elem: indexed.Elem): Option[EName] = {
-    val typeAttrAttrOption = elem \@ enameType
+    val typeAttrAttrOption = elem \@ ENameType
     typeAttrAttrOption map { tpe =>
       elem.elem.scope.resolveQNameOption(QName(tpe)).getOrElse(
         sys.error("Could not resolve type '%s' as expanded name".format(tpe)))
@@ -370,7 +370,7 @@ private[schema] object SchemaObjects {
    * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
    */
   def substitutionGroupOption(elem: indexed.Elem): Option[EName] = {
-    val substGroupAttrOption = elem \@ enameSubstitutionGroup
+    val substGroupAttrOption = elem \@ ENameSubstitutionGroup
     substGroupAttrOption map { substGroup =>
       elem.elem.scope.resolveQNameOption(QName(substGroup)).getOrElse(
         sys.error("Could not resolve substitution group '%s' as expanded name".format(substGroup)))
@@ -382,7 +382,7 @@ private[schema] object SchemaObjects {
    */
   def abstractOption(elem: indexed.Elem): Option[Boolean] = {
     try {
-      (elem \@ enameAbstract) map (_.toBoolean)
+      (elem \@ ENameAbstract) map (_.toBoolean)
     } catch {
       case e: Exception => None
     }
@@ -393,7 +393,7 @@ private[schema] object SchemaObjects {
    */
   def nillableOption(elem: indexed.Elem): Option[Boolean] = {
     try {
-      (elem \@ enameNillable) map (_.toBoolean)
+      (elem \@ ENameNillable) map (_.toBoolean)
     } catch {
       case e: Exception => None
     }
@@ -403,7 +403,7 @@ private[schema] object SchemaObjects {
    * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
    */
   def refOption(elem: indexed.Elem): Option[EName] = {
-    val refOption = elem \@ enameRef
+    val refOption = elem \@ ENameRef
     refOption map { ref =>
       elem.elem.scope.resolveQNameOption(QName(ref)).getOrElse(
         sys.error("Could not resolve ref '%s' as expanded name".format(ref)))
@@ -413,12 +413,12 @@ private[schema] object SchemaObjects {
   /**
    * Returns the value of the 'minOccurs' attribute, if any, wrapped in an Option.
    */
-  def minOccursAttrOption(elem: indexed.Elem): Option[String] = (elem \@ enameMinOccurs)
+  def minOccursAttrOption(elem: indexed.Elem): Option[String] = (elem \@ ENameMinOccurs)
 
   /**
    * Returns the value of the 'maxOccurs' attribute, if any, wrapped in an Option.
    */
-  def maxOccursAttrOption(elem: indexed.Elem): Option[String] = (elem \@ enameMaxOccurs)
+  def maxOccursAttrOption(elem: indexed.Elem): Option[String] = (elem \@ ENameMaxOccurs)
 
   // Validations against only the Schema of XML Schema itself, rewritten in Scala
 
@@ -426,30 +426,30 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_schema.html
    */
   private def checkSchemaElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameSchema, "The element must be a 'schema' element")
+    require(elem.resolvedName == ENameSchema, "The element must be a 'schema' element")
     require(elem.elemPath.isRoot, "The element must be the root of the element tree")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameInclude,
-      enameImport,
-      enameRedefine,
-      enameAnnotation,
-      enameElement,
-      enameAttribute,
-      enameNotation,
-      enameSimpleType,
-      enameComplexType,
-      enameGroup,
-      enameAttributeGroup)
+      ENameInclude,
+      ENameImport,
+      ENameRedefine,
+      ENameAnnotation,
+      ENameElement,
+      ENameAttribute,
+      ENameNotation,
+      ENameSimpleType,
+      ENameComplexType,
+      ENameGroup,
+      ENameAttributeGroup)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'schema' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    val expectedFirstChildNames = Set(enameInclude, enameImport, enameRedefine)
-    val expectedRemainingChildNames = (expectedChildENames - enameAnnotation) diff expectedFirstChildNames
+    val expectedFirstChildNames = Set(ENameInclude, ENameImport, ENameRedefine)
+    val expectedRemainingChildNames = (expectedChildENames - ENameAnnotation) diff expectedFirstChildNames
 
-    val childElemsWithoutAnnotations = childElems filterNot { e => e.resolvedName == enameAnnotation }
+    val childElemsWithoutAnnotations = childElems filterNot { e => e.resolvedName == ENameAnnotation }
 
     require(
       isCorrectlyOrdered(
@@ -472,12 +472,12 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
 
-    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
-    require(elem.attributeOption(enameForm).isEmpty, "Attribute 'form' prohibited")
-    require(elem.attributeOption(enameMinOccurs).isEmpty, "Attribute 'minOccurs' prohibited")
-    require(elem.attributeOption(enameMaxOccurs).isEmpty, "Attribute 'maxOccurs' prohibited")
+    require(elem.attributeOption(ENameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(ENameForm).isEmpty, "Attribute 'form' prohibited")
+    require(elem.attributeOption(ENameMinOccurs).isEmpty, "Attribute 'minOccurs' prohibited")
+    require(elem.attributeOption(ENameMaxOccurs).isEmpty, "Attribute 'maxOccurs' prohibited")
   }
 
   /**
@@ -490,39 +490,39 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameSubstitutionGroup).isEmpty, "Attribute 'substitutionGroup' prohibited")
-    require(elem.attributeOption(enameFinal).isEmpty, "Attribute 'final' prohibited")
-    require(elem.attributeOption(enameAbstract).isEmpty, "Attribute 'abstract' prohibited")
+    require(elem.attributeOption(ENameSubstitutionGroup).isEmpty, "Attribute 'substitutionGroup' prohibited")
+    require(elem.attributeOption(ENameFinal).isEmpty, "Attribute 'final' prohibited")
+    require(elem.attributeOption(ENameAbstract).isEmpty, "Attribute 'abstract' prohibited")
   }
 
   private def checkElementDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameElement, "The element must be an 'element' element")
+    require(elem.resolvedName == ENameElement, "The element must be an 'element' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameSimpleType,
-      enameComplexType,
-      enameAnnotation,
-      enameUnique,
-      enameKey,
-      enameKeyref)
+      ENameSimpleType,
+      ENameComplexType,
+      ENameAnnotation,
+      ENameUnique,
+      ENameKey,
+      ENameKeyref)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'element' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameSimpleType, enameComplexType).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSimpleType, ENameComplexType).contains(e.resolvedName)) <= 1,
       "At most one complex/simple type definition child allowed")
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameSimpleType, enameComplexType),
-          Set(enameUnique, enameKey, enameKeyref))),
+          Set(ENameAnnotation),
+          Set(ENameSimpleType, ENameComplexType),
+          Set(ENameUnique, ENameKey, ENameKeyref))),
       "Expected 'simpleType' and 'complexType' child elements to come before the others (ignoring annotations)")
 
     // TODO Validate attributes and their types
@@ -538,11 +538,11 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
 
-    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
-    require(elem.attributeOption(enameForm).isEmpty, "Attribute 'form' prohibited")
-    require(elem.attributeOption(enameUse).isEmpty, "Attribute 'use' prohibited")
+    require(elem.attributeOption(ENameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(ENameForm).isEmpty, "Attribute 'form' prohibited")
+    require(elem.attributeOption(ENameUse).isEmpty, "Attribute 'use' prohibited")
   }
 
   /**
@@ -557,26 +557,26 @@ private[schema] object SchemaObjects {
   }
 
   private def checkAttributeDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameAttribute, "The element must be an 'attribute' element")
+    require(elem.resolvedName == ENameAttribute, "The element must be an 'attribute' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameSimpleType, enameAnnotation)
+    val expectedChildENames = Set(ENameSimpleType, ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'attribute' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameSimpleType).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSimpleType).contains(e.resolvedName)) <= 1,
       "At most one complex/simple type definition child allowed")
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameSimpleType))),
+          Set(ENameAnnotation),
+          Set(ENameSimpleType))),
       "Expected 'simpleType' child element to come after the annotation, if any")
 
     // TODO Validate attributes and their types
@@ -592,7 +592,7 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
   }
 
   /**
@@ -605,82 +605,82 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
-    require(elem.attributeOption(enameAbstract).isEmpty, "Attribute 'abstract' prohibited")
-    require(elem.attributeOption(enameFinal).isEmpty, "Attribute 'final' prohibited")
-    require(elem.attributeOption(enameBlock).isEmpty, "Attribute 'block' prohibited")
+    require(elem.attributeOption(ENameName).isEmpty, "Attribute 'name' prohibited")
+    require(elem.attributeOption(ENameAbstract).isEmpty, "Attribute 'abstract' prohibited")
+    require(elem.attributeOption(ENameFinal).isEmpty, "Attribute 'final' prohibited")
+    require(elem.attributeOption(ENameBlock).isEmpty, "Attribute 'block' prohibited")
   }
 
   private def checkComplexTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameComplexType, "The element must be a 'complexType' element")
+    require(elem.resolvedName == ENameComplexType, "The element must be a 'complexType' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameSimpleContent,
-      enameComplexContent,
-      enameGroup,
-      enameAll,
-      enameChoice,
-      enameSequence,
-      enameAttribute,
-      enameAttributeGroup,
-      enameAnyAttribute)
+      ENameAnnotation,
+      ENameSimpleContent,
+      ENameComplexContent,
+      ENameGroup,
+      ENameAll,
+      ENameChoice,
+      ENameSequence,
+      ENameAttribute,
+      ENameAttributeGroup,
+      ENameAnyAttribute)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'complexType' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameSimpleContent, enameComplexContent).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSimpleContent, ENameComplexContent).contains(e.resolvedName)) <= 1,
       "At most one complex/simple content child allowed")
 
-    require(childElems.count(e => Set(enameGroup).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameGroup).contains(e.resolvedName)) <= 1,
       "At most one group child allowed")
 
-    require(childElems.count(e => Set(enameAll).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAll).contains(e.resolvedName)) <= 1,
       "At most one all child allowed")
 
-    require(childElems.count(e => Set(enameChoice).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameChoice).contains(e.resolvedName)) <= 1,
       "At most one choice child allowed")
 
-    require(childElems.count(e => Set(enameSequence).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSequence).contains(e.resolvedName)) <= 1,
       "At most one sequence child allowed")
 
-    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnyAttribute).contains(e.resolvedName)) <= 1,
       "At most one anyAttribute child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          (expectedChildENames - enameAnnotation))),
+          Set(ENameAnnotation),
+          (expectedChildENames - ENameAnnotation))),
       "Expected 'annotation' child element, if any, to come before the others")
 
-    val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == enameAnnotation)
+    val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == ENameAnnotation)
 
     require(
       isOptionalChoice(
         childElemsButAnnotation,
         Set(
-          Set(enameSimpleContent),
-          Set(enameComplexContent),
-          (expectedChildENames diff Set(enameAnnotation, enameSimpleContent, enameComplexContent)))),
+          Set(ENameSimpleContent),
+          Set(ENameComplexContent),
+          (expectedChildENames diff Set(ENameAnnotation, ENameSimpleContent, ENameComplexContent)))),
       "Expected choice between 'simpleContent', 'complexContent' and a sequence starting with a model group (definition)")
 
     val childElemsButAnnotationAndContent = childElems filterNot { e =>
-      Set(enameAnnotation, enameSimpleContent, enameComplexContent).contains(e.resolvedName)
+      Set(ENameAnnotation, ENameSimpleContent, ENameComplexContent).contains(e.resolvedName)
     }
 
     require(
       isCorrectlyOrdered(
         childElemsButAnnotationAndContent,
         Seq(
-          Set(enameGroup, enameAll, enameChoice, enameSequence),
-          Set(enameAttribute, enameAttributeGroup),
-          Set(enameAnyAttribute))),
+          Set(ENameGroup, ENameAll, ENameChoice, ENameSequence),
+          Set(ENameAttribute, ENameAttributeGroup),
+          Set(ENameAnyAttribute))),
       "Expected 'attribute' and 'attributeGroup' child elements, if any, to come after 'group', 'all', 'choice' and 'sequence'")
 
     // TODO Validate attributes and their types
@@ -696,7 +696,7 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
   }
 
   /**
@@ -709,52 +709,52 @@ private[schema] object SchemaObjects {
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
-    require(elem.attributeOption(enameFinal).isEmpty, "Attribute 'final' prohibited")
+    require(elem.attributeOption(ENameName).isEmpty, "Attribute 'name' prohibited")
+    require(elem.attributeOption(ENameFinal).isEmpty, "Attribute 'final' prohibited")
   }
 
   private def checkSimpleTypeDefinitionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameSimpleType, "The element must be a 'simpleType' element")
+    require(elem.resolvedName == ENameSimpleType, "The element must be a 'simpleType' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameRestriction,
-      enameList,
-      enameUnion)
+      ENameAnnotation,
+      ENameRestriction,
+      ENameList,
+      ENameUnion)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'simpleType' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameRestriction).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameRestriction).contains(e.resolvedName)) <= 1,
       "At most one restriction child allowed")
 
-    require(childElems.count(e => Set(enameList).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameList).contains(e.resolvedName)) <= 1,
       "At most one list child allowed")
 
-    require(childElems.count(e => Set(enameUnion).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameUnion).contains(e.resolvedName)) <= 1,
       "At most one union child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          (expectedChildENames - enameAnnotation))),
+          Set(ENameAnnotation),
+          (expectedChildENames - ENameAnnotation))),
       "Expected 'annotation' child element, if any, to come before the others")
 
-    val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == enameAnnotation)
+    val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == ENameAnnotation)
 
     require(
       isChoice(
         childElemsButAnnotation,
         Set(
-          Set(enameRestriction),
-          Set(enameList),
-          Set(enameUnion))),
+          Set(ENameRestriction),
+          Set(ENameList),
+          Set(ENameUnion))),
       "Expected choice between 'restriction', 'list' and 'union'")
 
     // TODO Validate attributes and their types
@@ -764,177 +764,177 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_group.html
    */
   private def checkNamedModelGroupElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require((elem.elemPath.entries.size == 1) || (elem.parentOption.map(_.resolvedName) == Some(enameRedefine)))
+    require((elem.elemPath.entries.size == 1) || (elem.parentOption.map(_.resolvedName) == Some(ENameRedefine)))
 
-    require(elem.resolvedName == enameGroup, "The element must be a 'group' element")
+    require(elem.resolvedName == ENameGroup, "The element must be a 'group' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameAll,
-      enameChoice,
-      enameSequence)
+      ENameAnnotation,
+      ENameAll,
+      ENameChoice,
+      ENameSequence)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'group' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameAll).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAll).contains(e.resolvedName)) <= 1,
       "At most one all child allowed")
 
-    require(childElems.count(e => Set(enameChoice).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameChoice).contains(e.resolvedName)) <= 1,
       "At most one choice child allowed")
 
-    require(childElems.count(e => Set(enameSequence).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSequence).contains(e.resolvedName)) <= 1,
       "At most one sequence child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          (expectedChildENames - enameAnnotation))),
+          Set(ENameAnnotation),
+          (expectedChildENames - ENameAnnotation))),
       "Expected 'annotation' child element, if any, to come before the others")
 
-    val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == enameAnnotation)
+    val childElemsButAnnotation = childElems filterNot (e => e.resolvedName == ENameAnnotation)
 
     require(
       isChoice(
         childElemsButAnnotation,
         Set(
-          Set(enameAll),
-          Set(enameChoice),
-          Set(enameSequence))),
+          Set(ENameAll),
+          Set(ENameChoice),
+          Set(ENameSequence))),
       "Expected choice between 'all', 'choice' and 'sequence'")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
 
-    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
-    require(elem.attributeOption(enameMinOccurs).isEmpty, "Attribute 'minOccurs' prohibited")
-    require(elem.attributeOption(enameMaxOccurs).isEmpty, "Attribute 'maxOccurs' prohibited")
+    require(elem.attributeOption(ENameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(ENameMinOccurs).isEmpty, "Attribute 'minOccurs' prohibited")
+    require(elem.attributeOption(ENameMaxOccurs).isEmpty, "Attribute 'maxOccurs' prohibited")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_group-1.html
    */
   private def checkNamedModelGroupRefElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require((elem.elemPath.entries.size >= 2) && (elem.parent.resolvedName != enameRedefine))
+    require((elem.elemPath.entries.size >= 2) && (elem.parent.resolvedName != ENameRedefine))
 
-    require(elem.resolvedName == enameGroup, "The element must be a 'group' element")
+    require(elem.resolvedName == ENameGroup, "The element must be a 'group' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'group' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameRef).isDefined, "Missing attribute 'ref'")
+    require(elem.attributeOption(ENameRef).isDefined, "Missing attribute 'ref'")
 
-    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
+    require(elem.attributeOption(ENameName).isEmpty, "Attribute 'name' prohibited")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_attributeGroup.html
    */
   private def checkNamedAttributeGroupElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require((elem.elemPath.entries.size == 1) || (elem.parentOption.map(_.resolvedName) == Some(enameRedefine)))
+    require((elem.elemPath.entries.size == 1) || (elem.parentOption.map(_.resolvedName) == Some(ENameRedefine)))
 
-    require(elem.resolvedName == enameAttributeGroup, "The element must be an 'attributeGroup' element")
+    require(elem.resolvedName == ENameAttributeGroup, "The element must be an 'attributeGroup' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameAttribute,
-      enameAttributeGroup,
-      enameAnyAttribute)
+      ENameAnnotation,
+      ENameAttribute,
+      ENameAttributeGroup,
+      ENameAnyAttribute)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'attributeGroup' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnyAttribute).contains(e.resolvedName)) <= 1,
       "At most one anyAttribute child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameAttribute, enameAttributeGroup),
-          Set(enameAnyAttribute))),
+          Set(ENameAnnotation),
+          Set(ENameAttribute, ENameAttributeGroup),
+          Set(ENameAnyAttribute))),
       "Expected 'attribute' and 'attributeGroup' child elements, if any, to come after 'annotation' and before 'anyAttribute'")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
 
-    require(elem.attributeOption(enameRef).isEmpty, "Attribute 'ref' prohibited")
+    require(elem.attributeOption(ENameRef).isEmpty, "Attribute 'ref' prohibited")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_attributeGroup-1.html
    */
   private def checkNamedAttributeGroupRefElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require((elem.elemPath.entries.size >= 2) && (elem.parent.resolvedName != enameRedefine))
+    require((elem.elemPath.entries.size >= 2) && (elem.parent.resolvedName != ENameRedefine))
 
-    require(elem.resolvedName == enameAttributeGroup, "The element must be an 'attributeGroup' element")
+    require(elem.resolvedName == ENameAttributeGroup, "The element must be an 'attributeGroup' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'attributeGroup' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameRef).isDefined, "Missing attribute 'ref'")
+    require(elem.attributeOption(ENameRef).isDefined, "Missing attribute 'ref'")
 
-    require(elem.attributeOption(enameName).isEmpty, "Attribute 'name' prohibited")
+    require(elem.attributeOption(ENameName).isEmpty, "Attribute 'name' prohibited")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_notation.html
    */
   private def checkNotationDeclarationElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameNotation, "The element must be a 'notation' element")
+    require(elem.resolvedName == ENameNotation, "The element must be a 'notation' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'notation' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_annotation.html
    */
   private def checkAnnotationElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameAnnotation, "The element must be an 'annotation' element")
+    require(elem.resolvedName == ENameAnnotation, "The element must be an 'annotation' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAppinfo, enameDocumentation)
+    val expectedChildENames = Set(ENameAppinfo, ENameDocumentation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'annotation' child elements: %s".format(expectedChildENames.mkString(", ")))
 
@@ -945,35 +945,35 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_include.html
    */
   private def checkIncludeElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameInclude, "The element must be an 'include' element")
+    require(elem.resolvedName == ENameInclude, "The element must be an 'include' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'include' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameSchemaLocation).isDefined, "Missing attribute 'schemaLocation'")
+    require(elem.attributeOption(ENameSchemaLocation).isDefined, "Missing attribute 'schemaLocation'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_import.html
    */
   private def checkImportElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameImport, "The element must be an 'import' element")
+    require(elem.resolvedName == ENameImport, "The element must be an 'import' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'import' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
@@ -983,134 +983,134 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_redefine.html
    */
   private def checkRedefineElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameRedefine, "The element must be a 'redefine' element")
+    require(elem.resolvedName == ENameRedefine, "The element must be a 'redefine' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameSimpleType,
-      enameComplexType,
-      enameGroup,
-      enameAttributeGroup,
-      enameAnnotation)
+      ENameSimpleType,
+      ENameComplexType,
+      ENameGroup,
+      ENameAttributeGroup,
+      ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'redefine' child elements: %s".format(expectedChildENames.mkString(", ")))
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameSchemaLocation).isDefined, "Missing attribute 'schemaLocation'")
+    require(elem.attributeOption(ENameSchemaLocation).isDefined, "Missing attribute 'schemaLocation'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_unique.html
    */
   private def checkUniqueElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameUnique, "The element must be a 'unique' element")
+    require(elem.resolvedName == ENameUnique, "The element must be a 'unique' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameSelector,
-      enameField,
-      enameAnnotation)
+      ENameSelector,
+      ENameField,
+      ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'unique' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameSelector).contains(e.resolvedName)) == 1,
+    require(childElems.count(e => Set(ENameSelector).contains(e.resolvedName)) == 1,
       "Precisely one selector child expected")
 
-    require(childElems.count(e => Set(enameField).contains(e.resolvedName)) >= 1,
+    require(childElems.count(e => Set(ENameField).contains(e.resolvedName)) >= 1,
       "At least one field child expected")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_key.html
    */
   private def checkKeyElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameKey, "The element must be a 'key' element")
+    require(elem.resolvedName == ENameKey, "The element must be a 'key' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameSelector,
-      enameField,
-      enameAnnotation)
+      ENameSelector,
+      ENameField,
+      ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'key' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameSelector).contains(e.resolvedName)) == 1,
+    require(childElems.count(e => Set(ENameSelector).contains(e.resolvedName)) == 1,
       "Precisely one selector child expected")
 
-    require(childElems.count(e => Set(enameField).contains(e.resolvedName)) >= 1,
+    require(childElems.count(e => Set(ENameField).contains(e.resolvedName)) >= 1,
       "At least one field child expected")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_keyref.html
    */
   private def checkKeyrefElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameKeyref, "The element must be a 'keyref' element")
+    require(elem.resolvedName == ENameKeyref, "The element must be a 'keyref' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameSelector,
-      enameField,
-      enameAnnotation)
+      ENameSelector,
+      ENameField,
+      ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'keyref' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameSelector).contains(e.resolvedName)) == 1,
+    require(childElems.count(e => Set(ENameSelector).contains(e.resolvedName)) == 1,
       "Precisely one selector child expected")
 
-    require(childElems.count(e => Set(enameField).contains(e.resolvedName)) >= 1,
+    require(childElems.count(e => Set(ENameField).contains(e.resolvedName)) >= 1,
       "At least one field child expected")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameName).isDefined, "Missing attribute 'name'")
+    require(elem.attributeOption(ENameName).isDefined, "Missing attribute 'name'")
 
-    require(elem.attributeOption(enameRefer).isDefined, "Missing attribute 'refer'")
+    require(elem.attributeOption(ENameRefer).isDefined, "Missing attribute 'refer'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_all.html
    */
   private def checkAllElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameAll, "The element must be an 'all' element")
+    require(elem.resolvedName == ENameAll, "The element must be an 'all' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameElement, enameAnnotation)
+    val expectedChildENames = Set(ENameElement, ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'all' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameElement))),
+          Set(ENameAnnotation),
+          Set(ENameElement))),
       "Expected 'element' child elements to come after 'annotation', if any")
 
     // TODO Validate attributes and their types
@@ -1120,29 +1120,29 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_sequence.html
    */
   private def checkSequenceElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameSequence, "The element must be a 'sequence' element")
+    require(elem.resolvedName == ENameSequence, "The element must be a 'sequence' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameElement,
-      enameGroup,
-      enameChoice,
-      enameSequence,
-      enameAny)
+      ENameAnnotation,
+      ENameElement,
+      ENameGroup,
+      ENameChoice,
+      ENameSequence,
+      ENameAny)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'sequence' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameElement, enameGroup, enameChoice, enameSequence, enameAny))),
+          Set(ENameAnnotation),
+          Set(ENameElement, ENameGroup, ENameChoice, ENameSequence, ENameAny))),
       "Expected 'annotation' child element, if any, to come before the other elements")
 
     // TODO Validate attributes and their types
@@ -1152,29 +1152,29 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_choice.html
    */
   private def checkChoiceElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameChoice, "The element must be a 'choice' element")
+    require(elem.resolvedName == ENameChoice, "The element must be a 'choice' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameElement,
-      enameGroup,
-      enameChoice,
-      enameSequence,
-      enameAny)
+      ENameAnnotation,
+      ENameElement,
+      ENameGroup,
+      ENameChoice,
+      ENameSequence,
+      ENameAny)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'choice' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameElement, enameGroup, enameChoice, enameSequence, enameAny))),
+          Set(ENameAnnotation),
+          Set(ENameElement, ENameGroup, ENameChoice, ENameSequence, ENameAny))),
       "Expected 'annotation' child element, if any, to come before the other elements")
 
     // TODO Validate attributes and their types
@@ -1184,15 +1184,15 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_any.html
    */
   private def checkAnyElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameAny, "The element must be an 'any' element")
+    require(elem.resolvedName == ENameAny, "The element must be an 'any' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'any' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
@@ -1202,15 +1202,15 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_anyAttribute.html
    */
   private def checkAnyAttributeElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameAnyAttribute, "The element must be an 'anyAttribute' element")
+    require(elem.resolvedName == ENameAnyAttribute, "The element must be an 'anyAttribute' element")
 
     val childElems = elem.findAllChildElems
 
-    val expectedChildENames = Set(enameAnnotation)
+    val expectedChildENames = Set(ENameAnnotation)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'anyAttribute' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     // TODO Validate attributes and their types
@@ -1220,26 +1220,26 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_complexContent.html
    */
   private def checkComplexContentElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameComplexContent, "The element must be a 'complexContent' element")
+    require(elem.resolvedName == ENameComplexContent, "The element must be a 'complexContent' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameRestriction,
-      enameExtension)
+      ENameAnnotation,
+      ENameRestriction,
+      ENameExtension)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'complexContent' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameRestriction, enameExtension))),
+          Set(ENameAnnotation),
+          Set(ENameRestriction, ENameExtension))),
       "Expected 'annotation' child element, if any, to come before the other elements")
 
     // TODO Validate attributes and their types
@@ -1249,26 +1249,26 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_simpleContent.html
    */
   private def checkSimpleContentElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameSimpleContent, "The element must be a 'simpleContent' element")
+    require(elem.resolvedName == ENameSimpleContent, "The element must be a 'simpleContent' element")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameRestriction,
-      enameExtension)
+      ENameAnnotation,
+      ENameRestriction,
+      ENameExtension)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'simpleContent' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameRestriction, enameExtension))),
+          Set(ENameAnnotation),
+          Set(ENameRestriction, ENameExtension))),
       "Expected 'annotation' child element, if any, to come before the other elements")
 
     // TODO Validate attributes and their types
@@ -1278,270 +1278,270 @@ private[schema] object SchemaObjects {
    * See http://www.schemacentral.com/sc/xsd/e-xsd_extension-1.html
    */
   private def checkExtensionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameExtension, "The element must be an 'extension' element")
+    require(elem.resolvedName == ENameExtension, "The element must be an 'extension' element")
 
-    require(elem.parentOption.map(_.resolvedName) == Some(enameComplexContent), "Expected 'complexContent' parent")
+    require(elem.parentOption.map(_.resolvedName) == Some(ENameComplexContent), "Expected 'complexContent' parent")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameGroup,
-      enameAll,
-      enameChoice,
-      enameSequence,
-      enameAttribute,
-      enameAttributeGroup,
-      enameAnyAttribute)
+      ENameAnnotation,
+      ENameGroup,
+      ENameAll,
+      ENameChoice,
+      ENameSequence,
+      ENameAttribute,
+      ENameAttributeGroup,
+      ENameAnyAttribute)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'extension' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameGroup).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameGroup).contains(e.resolvedName)) <= 1,
       "At most one group child allowed")
 
-    require(childElems.count(e => Set(enameAll).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAll).contains(e.resolvedName)) <= 1,
       "At most one all child allowed")
 
-    require(childElems.count(e => Set(enameChoice).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameChoice).contains(e.resolvedName)) <= 1,
       "At most one choice child allowed")
 
-    require(childElems.count(e => Set(enameSequence).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSequence).contains(e.resolvedName)) <= 1,
       "At most one sequence child allowed")
 
-    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnyAttribute).contains(e.resolvedName)) <= 1,
       "At most one anyAttribute child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameGroup, enameAll, enameChoice, enameSequence),
-          Set(enameAttribute, enameAttributeGroup),
-          Set(enameAnyAttribute))),
+          Set(ENameAnnotation),
+          Set(ENameGroup, ENameAll, ENameChoice, ENameSequence),
+          Set(ENameAttribute, ENameAttributeGroup),
+          Set(ENameAnyAttribute))),
       "Expected specific order of child elements for an extension")
 
     require(
       isOptionalChoice(
-        childElems filter (e => Set(enameGroup, enameAll, enameChoice, enameSequence).contains(e.resolvedName)),
+        childElems filter (e => Set(ENameGroup, ENameAll, ENameChoice, ENameSequence).contains(e.resolvedName)),
         Set(
-          Set(enameGroup),
-          Set(enameAll),
-          Set(enameChoice),
-          Set(enameSequence))),
+          Set(ENameGroup),
+          Set(ENameAll),
+          Set(ENameChoice),
+          Set(ENameSequence))),
       "Expected optional choice between 'group', 'all', 'choice' and 'sequence'")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+    require(elem.attributeOption(ENameBase).isDefined, "Missing attribute 'base'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_extension-2.html
    */
   private def checkSimpleExtensionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameExtension, "The element must be an 'extension' element")
+    require(elem.resolvedName == ENameExtension, "The element must be an 'extension' element")
 
-    require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent), "Expected 'simpleContent' parent")
+    require(elem.parentOption.map(_.resolvedName) == Some(ENameSimpleContent), "Expected 'simpleContent' parent")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameAttribute,
-      enameAttributeGroup,
-      enameAnyAttribute)
+      ENameAnnotation,
+      ENameAttribute,
+      ENameAttributeGroup,
+      ENameAnyAttribute)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'extension' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnyAttribute).contains(e.resolvedName)) <= 1,
       "At most one anyAttribute child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameAttribute, enameAttributeGroup),
-          Set(enameAnyAttribute))),
+          Set(ENameAnnotation),
+          Set(ENameAttribute, ENameAttributeGroup),
+          Set(ENameAnyAttribute))),
       "Expected 'attribute' and 'attributeGroup' child elements, if any, to come after 'annotation' and before 'anyAttribute'")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+    require(elem.attributeOption(ENameBase).isDefined, "Missing attribute 'base'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_restriction-1.html
    */
   private def checkComplexRestrictionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+    require(elem.resolvedName == ENameRestriction, "The element must be a 'restriction' element")
 
-    require(elem.parentOption.map(_.resolvedName) == Some(enameComplexContent), "Expected 'complexContent' parent")
+    require(elem.parentOption.map(_.resolvedName) == Some(ENameComplexContent), "Expected 'complexContent' parent")
 
     val childElems = elem.findAllChildElems
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameGroup,
-      enameAll,
-      enameChoice,
-      enameSequence,
-      enameAttribute,
-      enameAttributeGroup,
-      enameAnyAttribute)
+      ENameAnnotation,
+      ENameGroup,
+      ENameAll,
+      ENameChoice,
+      ENameSequence,
+      ENameAttribute,
+      ENameAttributeGroup,
+      ENameAnyAttribute)
     require(isWithin(childElems, expectedChildENames),
       "Expected 'restriction' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameGroup).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameGroup).contains(e.resolvedName)) <= 1,
       "At most one group child allowed")
 
-    require(childElems.count(e => Set(enameAll).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAll).contains(e.resolvedName)) <= 1,
       "At most one all child allowed")
 
-    require(childElems.count(e => Set(enameChoice).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameChoice).contains(e.resolvedName)) <= 1,
       "At most one choice child allowed")
 
-    require(childElems.count(e => Set(enameSequence).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSequence).contains(e.resolvedName)) <= 1,
       "At most one sequence child allowed")
 
-    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnyAttribute).contains(e.resolvedName)) <= 1,
       "At most one anyAttribute child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameGroup, enameAll, enameChoice, enameSequence),
-          Set(enameAttribute, enameAttributeGroup),
-          Set(enameAnyAttribute))),
+          Set(ENameAnnotation),
+          Set(ENameGroup, ENameAll, ENameChoice, ENameSequence),
+          Set(ENameAttribute, ENameAttributeGroup),
+          Set(ENameAnyAttribute))),
       "Expected specific order of child elements for a restriction")
 
     require(
       isOptionalChoice(
-        childElems filter (e => Set(enameGroup, enameAll, enameChoice, enameSequence).contains(e.resolvedName)),
+        childElems filter (e => Set(ENameGroup, ENameAll, ENameChoice, ENameSequence).contains(e.resolvedName)),
         Set(
-          Set(enameGroup),
-          Set(enameAll),
-          Set(enameChoice),
-          Set(enameSequence))),
+          Set(ENameGroup),
+          Set(ENameAll),
+          Set(ENameChoice),
+          Set(ENameSequence))),
       "Expected optional choice between 'group', 'all', 'choice' and 'sequence'")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+    require(elem.attributeOption(ENameBase).isDefined, "Missing attribute 'base'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_restriction-2.html
    */
   private def checkSimpleRestrictionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+    require(elem.resolvedName == ENameRestriction, "The element must be a 'restriction' element")
 
-    require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleContent), "Expected 'simpleContent' parent")
+    require(elem.parentOption.map(_.resolvedName) == Some(ENameSimpleContent), "Expected 'simpleContent' parent")
 
     val childElems = elem.findAllChildElems
 
     val facetENames = Set(
-      enameMinExclusive,
-      enameMinInclusive,
-      enameMaxExclusive,
-      enameMaxInclusive,
-      enameTotalDigits,
-      enameFractionDigits,
-      enameLength,
-      enameMinLength,
-      enameMaxLength,
-      enameEnumeration,
-      enameWhiteSpace,
-      enamePattern)
+      ENameMinExclusive,
+      ENameMinInclusive,
+      ENameMaxExclusive,
+      ENameMaxInclusive,
+      ENameTotalDigits,
+      ENameFractionDigits,
+      ENameLength,
+      ENameMinLength,
+      ENameMaxLength,
+      ENameEnumeration,
+      ENameWhiteSpace,
+      ENamePattern)
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameSimpleType,
-      enameAttribute,
-      enameAttributeGroup,
-      enameAnyAttribute) ++ facetENames
+      ENameAnnotation,
+      ENameSimpleType,
+      ENameAttribute,
+      ENameAttributeGroup,
+      ENameAnyAttribute) ++ facetENames
     require(isWithin(childElems, expectedChildENames),
       "Expected 'restriction' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameSimpleType).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSimpleType).contains(e.resolvedName)) <= 1,
       "At most one simpleType child allowed")
 
-    require(childElems.count(e => Set(enameAnyAttribute).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnyAttribute).contains(e.resolvedName)) <= 1,
       "At most one anyAttribute child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameSimpleType),
+          Set(ENameAnnotation),
+          Set(ENameSimpleType),
           facetENames,
-          Set(enameAttribute, enameAttributeGroup),
-          Set(enameAnyAttribute))),
+          Set(ENameAttribute, ENameAttributeGroup),
+          Set(ENameAnyAttribute))),
       "Expected specific order of child elements for a restriction")
 
     // TODO Validate attributes and their types
 
-    require(elem.attributeOption(enameBase).isDefined, "Missing attribute 'base'")
+    require(elem.attributeOption(ENameBase).isDefined, "Missing attribute 'base'")
   }
 
   /**
    * See http://www.schemacentral.com/sc/xsd/e-xsd_restriction.html
    */
   private def checkDerivationRestrictionElemAgainstSchema(elem: indexed.Elem): Unit = {
-    require(elem.resolvedName == enameRestriction, "The element must be a 'restriction' element")
+    require(elem.resolvedName == ENameRestriction, "The element must be a 'restriction' element")
 
-    require(elem.parentOption.map(_.resolvedName) == Some(enameSimpleType), "Expected 'simpleType' parent")
+    require(elem.parentOption.map(_.resolvedName) == Some(ENameSimpleType), "Expected 'simpleType' parent")
 
     val childElems = elem.findAllChildElems
 
     val facetENames = Set(
-      enameMinExclusive,
-      enameMinInclusive,
-      enameMaxExclusive,
-      enameMaxInclusive,
-      enameTotalDigits,
-      enameFractionDigits,
-      enameLength,
-      enameMinLength,
-      enameMaxLength,
-      enameEnumeration,
-      enameWhiteSpace,
-      enamePattern)
+      ENameMinExclusive,
+      ENameMinInclusive,
+      ENameMaxExclusive,
+      ENameMaxInclusive,
+      ENameTotalDigits,
+      ENameFractionDigits,
+      ENameLength,
+      ENameMinLength,
+      ENameMaxLength,
+      ENameEnumeration,
+      ENameWhiteSpace,
+      ENamePattern)
 
     val expectedChildENames = Set(
-      enameAnnotation,
-      enameSimpleType) ++ facetENames
+      ENameAnnotation,
+      ENameSimpleType) ++ facetENames
     require(isWithin(childElems, expectedChildENames),
       "Expected 'restriction' child elements: %s".format(expectedChildENames.mkString(", ")))
 
-    require(childElems.count(e => Set(enameAnnotation).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameAnnotation).contains(e.resolvedName)) <= 1,
       "At most one annotation child allowed")
 
-    require(childElems.count(e => Set(enameSimpleType).contains(e.resolvedName)) <= 1,
+    require(childElems.count(e => Set(ENameSimpleType).contains(e.resolvedName)) <= 1,
       "At most one simpleType child allowed")
 
     require(
       isCorrectlyOrdered(
         childElems,
         Seq(
-          Set(enameAnnotation),
-          Set(enameSimpleType),
+          Set(ENameAnnotation),
+          Set(ENameSimpleType),
           facetENames)),
       "Expected specific order of child elements for a restriction")
 
@@ -1597,70 +1597,70 @@ private[schema] object SchemaObjects {
 
   // ENames
 
-  val enameSchema = EName(ns, "schema")
-  val enameElement = EName(ns, "element")
-  val enameAttribute = EName(ns, "attribute")
-  val enameComplexType = EName(ns, "complexType")
-  val enameSimpleType = EName(ns, "simpleType")
-  val enameAnnotation = EName(ns, "annotation")
-  val enameComplexContent = EName(ns, "complexContent")
-  val enameSimpleContent = EName(ns, "simpleContent")
-  val enameGroup = EName(ns, "group")
-  val enameAll = EName(ns, "all")
-  val enameChoice = EName(ns, "choice")
-  val enameSequence = EName(ns, "sequence")
-  val enameAttributeGroup = EName(ns, "attributeGroup")
-  val enameAnyAttribute = EName(ns, "anyAttribute")
-  val enameUnique = EName(ns, "unique")
-  val enameKey = EName(ns, "key")
-  val enameKeyref = EName(ns, "keyref")
-  val enameNotation = EName(ns, "notation")
-  val enameImport = EName(ns, "import")
-  val enameInclude = EName(ns, "include")
-  val enameRedefine = EName(ns, "redefine")
-  val enameRestriction = EName(ns, "restriction")
-  val enameExtension = EName(ns, "extension")
-  val enameList = EName(ns, "list")
-  val enameUnion = EName(ns, "union")
-  val enameAppinfo = EName(ns, "appinfo")
-  val enameDocumentation = EName(ns, "documentation")
-  val enameSelector = EName(ns, "selector")
-  val enameField = EName(ns, "field")
-  val enameAny = EName(ns, "any")
-  val enameAnyType = EName(ns, "anyType")
+  val ENameSchema = EName(NS, "schema")
+  val ENameElement = EName(NS, "element")
+  val ENameAttribute = EName(NS, "attribute")
+  val ENameComplexType = EName(NS, "complexType")
+  val ENameSimpleType = EName(NS, "simpleType")
+  val ENameAnnotation = EName(NS, "annotation")
+  val ENameComplexContent = EName(NS, "complexContent")
+  val ENameSimpleContent = EName(NS, "simpleContent")
+  val ENameGroup = EName(NS, "group")
+  val ENameAll = EName(NS, "all")
+  val ENameChoice = EName(NS, "choice")
+  val ENameSequence = EName(NS, "sequence")
+  val ENameAttributeGroup = EName(NS, "attributeGroup")
+  val ENameAnyAttribute = EName(NS, "anyAttribute")
+  val ENameUnique = EName(NS, "unique")
+  val ENameKey = EName(NS, "key")
+  val ENameKeyref = EName(NS, "keyref")
+  val ENameNotation = EName(NS, "notation")
+  val ENameImport = EName(NS, "import")
+  val ENameInclude = EName(NS, "include")
+  val ENameRedefine = EName(NS, "redefine")
+  val ENameRestriction = EName(NS, "restriction")
+  val ENameExtension = EName(NS, "extension")
+  val ENameList = EName(NS, "list")
+  val ENameUnion = EName(NS, "union")
+  val ENameAppinfo = EName(NS, "appinfo")
+  val ENameDocumentation = EName(NS, "documentation")
+  val ENameSelector = EName(NS, "selector")
+  val ENameField = EName(NS, "field")
+  val ENameAny = EName(NS, "any")
+  val ENameAnyType = EName(NS, "anyType")
 
-  val enameMinExclusive = EName(ns, "minExclusive")
-  val enameMinInclusive = EName(ns, "minInclusive")
-  val enameMaxExclusive = EName(ns, "maxExclusive")
-  val enameMaxInclusive = EName(ns, "maxInclusive")
-  val enameTotalDigits = EName(ns, "totalDigits")
-  val enameFractionDigits = EName(ns, "fractionDigits")
-  val enameLength = EName(ns, "length")
-  val enameMinLength = EName(ns, "minLength")
-  val enameMaxLength = EName(ns, "maxLength")
-  val enameEnumeration = EName(ns, "enumeration")
-  val enameWhiteSpace = EName(ns, "whiteSpace")
-  val enamePattern = EName(ns, "pattern")
+  val ENameMinExclusive = EName(NS, "minExclusive")
+  val ENameMinInclusive = EName(NS, "minInclusive")
+  val ENameMaxExclusive = EName(NS, "maxExclusive")
+  val ENameMaxInclusive = EName(NS, "maxInclusive")
+  val ENameTotalDigits = EName(NS, "totalDigits")
+  val ENameFractionDigits = EName(NS, "fractionDigits")
+  val ENameLength = EName(NS, "length")
+  val ENameMinLength = EName(NS, "minLength")
+  val ENameMaxLength = EName(NS, "maxLength")
+  val ENameEnumeration = EName(NS, "enumeration")
+  val ENameWhiteSpace = EName(NS, "whiteSpace")
+  val ENamePattern = EName(NS, "pattern")
 
-  val enameName = EName("name")
-  val enameId = EName("id")
-  val enameForm = EName("form")
-  val enameAbstract = EName("abstract")
-  val enameFinal = EName("final")
-  val enameDefault = EName("default")
-  val enameFixed = EName("fixed")
-  val enameType = EName("type")
-  val enameNillable = EName("nillable")
-  val enameBlock = EName("block")
-  val enameUse = EName("use")
-  val enameSubstitutionGroup = EName("substitutionGroup")
-  val enameRef = EName("ref")
-  val enameRefer = EName("refer")
-  val enameSchemaLocation = EName("schemaLocation")
-  val enameMinOccurs = EName("minOccurs")
-  val enameMaxOccurs = EName("maxOccurs")
-  val enameBase = EName("base")
-  val enameTargetNamespace = EName("targetNamespace")
-  val enameElementFormDefault = EName("elementFormDefault")
-  val enameAttributeFormDefault = EName("attributeFormDefault")
+  val ENameName = EName("name")
+  val ENameId = EName("id")
+  val ENameForm = EName("form")
+  val ENameAbstract = EName("abstract")
+  val ENameFinal = EName("final")
+  val ENameDefault = EName("default")
+  val ENameFixed = EName("fixed")
+  val ENameType = EName("type")
+  val ENameNillable = EName("nillable")
+  val ENameBlock = EName("block")
+  val ENameUse = EName("use")
+  val ENameSubstitutionGroup = EName("substitutionGroup")
+  val ENameRef = EName("ref")
+  val ENameRefer = EName("refer")
+  val ENameSchemaLocation = EName("schemaLocation")
+  val ENameMinOccurs = EName("minOccurs")
+  val ENameMaxOccurs = EName("maxOccurs")
+  val ENameBase = EName("base")
+  val ENameTargetNamespace = EName("targetNamespace")
+  val ENameElementFormDefault = EName("elementFormDefault")
+  val ENameAttributeFormDefault = EName("attributeFormDefault")
 }
