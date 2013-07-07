@@ -299,4 +299,41 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       info("Found item type namespace URIs %s".format(itemTypes.flatMap(_.namespaceUriOption).distinct.mkString(", ")))
     }
   }
+
+  feature("The API user can check for duplicate global element declarations") {
+
+    scenario("All schema document XML elements (that have an ID) have unique URIs (with ID as fragment)") {
+
+      Given("all XML elements in schema documents that have an ID")
+      val allElemsWithUri =
+        schemaDocSet.schemaDocuments flatMap { doc => doc.schema.findAllElemsOrSelf } filter { e => e.uriOption.isDefined }
+
+      When("asking for their URIs (with IDs as fragments)")
+      val elemUris = allElemsWithUri map { e => e.uriOption.get }
+
+      Then("no duplicate URIs are found")
+      expectResult(allElemsWithUri.size) {
+        elemUris.size
+      }
+
+      info("In fact, found %d XML element URIs".format(elemUris.size))
+    }
+
+    scenario("All global element declarations have unique target ENames") {
+
+      Given("all global element declarations")
+      val allGlobalElemDecls =
+        schemaDocSet.findAllGlobalElementDeclarations
+
+      When("asking for their target ENames")
+      val targetENames = allGlobalElemDecls map { e => e.ename }
+
+      Then("no duplicate ENames are found")
+      expectResult(allGlobalElemDecls.size) {
+        targetENames.size
+      }
+
+      info("In fact, found %d target ENames".format(targetENames.size))
+    }
+  }
 }
