@@ -107,7 +107,7 @@ sealed abstract class SchemaObject private[schema] (
    * If the id attribute is absent, None is returned.
    */
   final def uriOption: Option[URI] = {
-    val idOption = wrappedElem.attributeOption(EName("id"))
+    val idOption = wrappedElem.attributeOption(ENameId)
     idOption map { id => new URI(docUri.getScheme, docUri.getSchemeSpecificPart, id) }
   }
 
@@ -705,7 +705,23 @@ final class AttributeReference private[schema] (
 abstract class TypeDefinition private[schema] (
   override val docUri: URI,
   override val wrappedElem: indexed.Elem,
-  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems)
+  override val allChildElems: immutable.IndexedSeq[SchemaObject]) extends SchemaComponent(docUri, wrappedElem, allChildElems) {
+
+  /**
+   * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
+   * if any, wrapped in an Option.
+   */
+  final def enameOption: Option[EName] = {
+    val tnsOption = targetNamespaceOption
+    val localNameOption = nameAttributeOption
+    localNameOption map { nm => EName(tnsOption, nm) }
+  }
+
+  /**
+   * Returns the value of the "name" attribute, if any, wrapped in an Option.
+   */
+  final def nameAttributeOption: Option[String] = this.wrappedElem \@ ENameName
+}
 
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
