@@ -501,6 +501,11 @@ final class ElementReference private[schema] (
    * Returns None as the optional scope of the (unresolved) element reference.
    */
   final override def scopeOption: Option[indexed.Elem] = None
+
+  /**
+   * Returns the value of the 'ref' attribute as expanded name.
+   */
+  final def ref: EName = refOption.getOrElse(sys.error("Element references must have a ref attribute"))
 }
 
 /**
@@ -687,6 +692,11 @@ final class AttributeReference private[schema] (
    * Returns None as the optional scope of the (unresolved) attribute reference.
    */
   final override def scopeOption: Option[indexed.Elem] = None
+
+  /**
+   * Returns the value of the 'ref' attribute as expanded name.
+   */
+  final def ref: EName = refOption.getOrElse(sys.error("Attribute references must have a ref attribute"))
 }
 
 /**
