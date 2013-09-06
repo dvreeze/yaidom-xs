@@ -50,7 +50,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * Returns all element declarations in this SchemaDocumentSet.
    */
   final def findAllElementDeclarationOrReferences: immutable.IndexedSeq[ElementDeclarationOrReference] =
-    schemaDocuments flatMap { e => e.schema.findAllElementDeclarationOrReferences }
+    schemaDocuments flatMap { e => e.schema.filterElems(_.resolvedName == ENameElement) } collect { case e: ElementDeclarationOrReference => e }
 
   /**
    * Returns all global element declarations in this SchemaDocumentSet.
@@ -62,7 +62,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * Returns all element declarations in this SchemaDocumentSet obeying the given predicate.
    */
   final def filterElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
-    schemaDocuments flatMap { e => e.schema filterElementDeclarationOrReferences p }
+    schemaDocuments flatMap { e => e.schema.filterElems(_.resolvedName == ENameElement) } collect { case e: ElementDeclarationOrReference if p(e) => e }
 
   /**
    * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
@@ -93,7 +93,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
           substGroupDecl <- substGroupDeclOption
           attrValue <- substGroupDeclOption.get \@ EName("substitutionGroup")
           qname = QName(attrValue)
-          ename <- substGroupDeclOption.get.wrappedElem.elem.scope.resolveQNameOption(qname)
+          ename <- substGroupDeclOption.get.elem.scope.resolveQNameOption(qname)
         } yield ename
 
       if (nextSubstGroupOption.isEmpty) Vector()
@@ -110,22 +110,12 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
   }
 
   /**
-   * Returns all global element declarations that have precisely the given substitution group.
+   * Returns all global element declarations that have a substitution group matching the given predicate on the
+   * substitution group.
    *
    * This is an expensive method.
    */
-  final def findAllDirectSubstitutables(substGroup: EName): immutable.IndexedSeq[GlobalElementDeclaration] = {
-    val substGroupOption = Some(substGroup)
-    filterGlobalElementDeclarations { elemDecl => elemDecl.substitutionGroupOption == substGroupOption }
-  }
-
-  /**
-   * Returns all global element declarations that have one of the given substitution groups.
-   *
-   * This is an expensive method.
-   */
-  final def findAllDirectSubstitutables(substGroups: Set[EName]): immutable.IndexedSeq[GlobalElementDeclaration] = {
-    val substGroupOptions = substGroups map { sg => Option(sg) }
-    filterGlobalElementDeclarations { elemDecl => substGroupOptions.contains(elemDecl.substitutionGroupOption) }
+  final def findAllDirectSubstitutables(p: EName => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] = {
+    filterGlobalElementDeclarations { elemDecl => elemDecl.substitutionGroupOption.isDefined && p(elemDecl.substitutionGroupOption.get) }
   }
 }

@@ -31,9 +31,9 @@ final class SchemaDocument(val wrappedDocument: indexed.Document) extends Immuta
 
   require(wrappedDocument.uriOption.isDefined, "Missing URI of document")
 
-  final val schema: Schema = Schema(
-    wrappedDocument.uriOption.get,
-    wrappedDocument.documentElement)
+  final val schema: SchemaRootElem = new SchemaRootElem(
+    wrappedDocument.documentElement,
+    wrappedDocument.uriOption.get)
 
   final override def toString: String = wrappedDocument.document.toString
 }

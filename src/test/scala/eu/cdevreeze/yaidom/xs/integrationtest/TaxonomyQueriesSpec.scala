@@ -336,4 +336,49 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       info("In fact, found %d target ENames".format(targetENames.size))
     }
   }
+
+  feature("The API user can check for broken links") {
+
+    scenario("All imports in www.nltaxonomie.nl XSD files to www.nltaxonomie.nl XSD files have no broken links") {
+
+      Given("all imports (from www.nltaxonomie.nl to www.nltaxonomie.nl)")
+      val allImports: immutable.IndexedSeq[Import] =
+        schemaDocSet.schemaDocuments filter { doc =>
+          doc.wrappedDocument.uriOption.get.toString.contains("/www.nltaxonomie.nl/")
+        } flatMap { doc =>
+          doc.schema.findAllImports filter { importElem =>
+            val schemaLocation = (importElem \@ EName("schemaLocation")).getOrElse(sys.error("Missing schemaLocation"))
+
+            importElem.docUri.resolve(new URI(schemaLocation)).toString.contains("/www.nltaxonomie.nl/")
+          }
+        }
+
+      When("trying to resolve the schemaLocations")
+      val schemaLocations =
+        allImports map { importElem =>
+          val schemaLocation = (importElem \@ EName("schemaLocation")).getOrElse(sys.error("Missing schemaLocation"))
+          importElem.docUri.resolve(new URI(schemaLocation))
+        }
+
+      val foundSchemaDocs =
+        schemaLocations flatMap { uri =>
+          val docOption = schemaDocSet.schemaDocumentsByUri.get(uri)
+          if (docOption.isEmpty) info(s"Missing schema location $uri")
+          docOption
+        }
+
+      Then("no broken imports are found")
+      expectResult(allImports.size) {
+        schemaLocations.size
+      }
+      /*
+      expectResult(allImports.size) {
+        foundSchemaDocs.size
+      }
+      */
+    }
+  }
+
+  private def removeFragment(uri: URI): URI =
+    new URI(uri.getScheme, uri.getSchemeSpecificPart, null)
 }

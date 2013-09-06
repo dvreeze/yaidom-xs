@@ -45,16 +45,16 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElementDeclarationOrReferences
+    val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
 
     val globalElemDecls2 = schema \\! EName(NS, "element")
     val elemDecls2 = schema \\ EName(NS, "element")
 
-    val globalElemDecls3 = schema.wrappedElem \\! EName(NS, "element")
-    val elemDecls3 = schema.wrappedElem \\ EName(NS, "element")
+    val globalElemDecls3 = schema \\! EName(NS, "element")
+    val elemDecls3 = schema \\ EName(NS, "element")
 
     val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
-    val attrDecls = schema.findAllAttributeDeclarationOrReferences
+    val attrDecls = schema.findAllElems collect { case e: AttributeDeclarationOrReference => e }
 
     val tns = "http://shiporder"
 
@@ -66,7 +66,7 @@ class CreateSchemaTest extends Suite {
     }
     expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
-        val tnsOption = e.rootElem \@ EName("targetNamespace")
+        val tnsOption = e.indexedElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
@@ -94,7 +94,7 @@ class CreateSchemaTest extends Suite {
     }
     expectResult(expectedElemNames) {
       elemDecls3 map { e =>
-        val tnsOption = e.rootElem \@ EName("targetNamespace")
+        val tnsOption = e.indexedElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
@@ -129,7 +129,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElementDeclarationOrReferences
+    val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
 
     assert(globalElemDecls.size >= 40)
     assert(globalElemDecls.size <= 50)
@@ -160,10 +160,10 @@ class CreateSchemaTest extends Suite {
 
     assert(openAttrsComplexTypeOption.isDefined)
     expectResult(2) {
-      openAttrsComplexTypeOption.get.allChildElems.size
+      openAttrsComplexTypeOption.get.findAllChildElems.size
     }
 
-    val secondChildElem = openAttrsComplexTypeOption.get.allChildElems(1)
+    val secondChildElem = openAttrsComplexTypeOption.get.findAllChildElems(1)
 
     expectResult("complexContent") {
       secondChildElem.localName
@@ -184,10 +184,10 @@ class CreateSchemaTest extends Suite {
                 elem(
                   qname = QName("xs:anyAttribute"),
                   attributes = Vector(QName("namespace") -> "##other", QName("processContents") -> "lax"))))))
-    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.wrappedElem.elem.scope)
+    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.elem.scope)
 
     expectResult(resolved.Elem(expectedElem)) {
-      resolved.Elem(secondChildElem.wrappedElem.elem).removeAllInterElementWhitespace
+      resolved.Elem(secondChildElem.elem).removeAllInterElementWhitespace
     }
 
     expectResult(1) {
@@ -222,7 +222,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElementDeclarationOrReferences
+    val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
 
     assert(globalElemDecls.size >= 4000)
     assert(globalElemDecls.size <= 5000)
@@ -246,13 +246,13 @@ class CreateSchemaTest extends Suite {
       result.toSet
     }
 
-    val topmostElemDecls = schema.findTopmostElementDeclarationOrReferences(e => true)
+    val topmostElemDecls = schema.findTopmostElems(e => e.resolvedName == ENameElement) collect { case e: ElementDeclarationOrReference => e }
 
     expectResult(globalElemDecls) {
       topmostElemDecls
     }
     expectResult(elemDecls) {
-      topmostElemDecls flatMap { e => e +: e.findAllElementDeclarationOrReferences }
+      topmostElemDecls flatMap { e => e +: (e.filterElems(_.resolvedName == ENameElement) collect { case e: ElementDeclarationOrReference => e }) }
     }
 
     expectResult(4) {
@@ -263,40 +263,6 @@ class CreateSchemaTest extends Suite {
     }
     expectResult(0) {
       schema.findAllRedefines.size
-    }
-  }
-
-  @Test def testCreateInvalidSchema() {
-    val docParser = parse.DocumentParserUsingSax.newInstance
-    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
-
-    import NodeBuilder._
-    val invalidChild =
-      textElem(QName("xyz"), "invalid").build(doc.documentElement.scope.withoutDefaultNamespace)
-
-    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
-
-    val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
-
-    intercept[Exception] {
-      new SchemaDocument(indexed.Document(invalidDoc).withUriOption(Some(docUri)))
-    }
-  }
-
-  @Test def testCreateAnotherInvalidSchema() {
-    val docParser = parse.DocumentParserUsingSax.newInstance
-    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
-
-    import NodeBuilder._
-    val invalidChild =
-      textElem(QName("xs:complexContent"), "invalid").build(doc.documentElement.scope ++ Scope.from("xs" -> NS))
-
-    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
-
-    val invalidDoc = Document(doc.documentElement.plusChild(invalidChild))
-
-    intercept[Exception] {
-      new SchemaDocument(indexed.Document(invalidDoc).withUriOption(Some(docUri)))
     }
   }
 
@@ -330,7 +296,9 @@ class CreateSchemaTest extends Suite {
       shipOrderElemDeclOption.get.scopeOption
     }
 
-    val nameElemDeclOption = schema.findAllElementDeclarationOrReferences find { e => e.nameAttributeOption == Some("name") }
+    val nameElemDeclOption = schema.filterElems(_.resolvedName == ENameElement) collect { case e: ElementDeclarationOrReference => e } find { e =>
+      e.nameAttributeOption == Some("name")
+    }
 
     assert(nameElemDeclOption.isDefined)
     assert(!nameElemDeclOption.get.isGlobal)
@@ -346,7 +314,9 @@ class CreateSchemaTest extends Suite {
     }
 
     val orderidAttrDeclOption =
-      (schema findTopmostAttributeDeclarationOrReferences { e => e.nameAttributeOption == Some("orderid") }).headOption
+      (schema.findTopmostElems(_.resolvedName == ENameAttribute) collect { case e: AttributeDeclarationOrReference => e } find { e =>
+        e.nameAttributeOption == Some("orderid")
+      }).headOption
 
     assert(orderidAttrDeclOption.isDefined)
     assert(!orderidAttrDeclOption.get.isGlobal)
