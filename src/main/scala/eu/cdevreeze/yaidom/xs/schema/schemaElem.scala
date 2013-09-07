@@ -34,12 +34,20 @@ import SchemaElem._
  *
  * In XML schema content the ancestry is typically important. For example, a global element declaration is very different
  * from a local element declaration. By keeping the ancestry in queried elements, many of these differences can be modeled
- * correctly. The ancestry of an element is kept in much the same way as an `indexed.Elem` does in yaidom.
+ * correctly.
+ *
+ * The ancestry of an element is kept by keeping an `indexed.Elem` as state. Redundantly, the `childElems` are also kept as
+ * state, to make `ElemLike` API querying very fast, with little object creation overhead. The `SchemaElem` implementation
+ * makes sure that the following indeed holds:
+ * {{{
+ * childElems.map(_.indexedElem) == indexedElem.findAllChildElems
+ * }}}
  *
  * @author Chris de Vreeze
  */
 sealed class SchemaElem private[schema] (
   val indexedElem: indexed.Elem,
+  val childElems: immutable.IndexedSeq[SchemaElem],
   val docUri: URI) extends ElemLike[SchemaElem] with HasText with Immutable {
 
   /**
@@ -47,22 +55,24 @@ sealed class SchemaElem private[schema] (
    */
   final val elem: Elem = indexedElem.elem
 
+  require(
+    childElems.map(_.indexedElem) == indexedElem.findAllChildElems,
+    "Corrupt element!")
+
   require(indexedElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
   require(
     (elem.resolvedName == XsSchemaEName) || (!indexedElem.elemPath.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
 
   /**
-   * Returns all child elements, in the correct order.
+   * Returns all child elements, in the correct order. That is, returns `childElems`.
    *
    * These child elements share the same rootElem (and doc URI) with this element, but differ in the element paths, which have
    * one more "path entry".
+   *
+   * The implementation is extremely fast, which is needed for fast querying through SchemaApi query methods.
    */
-  final override def findAllChildElems: immutable.IndexedSeq[SchemaElem] = {
-    // Remember: this function must be as fast as possible!
-    val childElems = indexedElem.findAllChildElems
-    childElems map { e => SchemaElem(e, docUri) }
-  }
+  final override def findAllChildElems: immutable.IndexedSeq[SchemaElem] = childElems
 
   final override def resolvedName: EName = elem.resolvedName
 
@@ -109,7 +119,11 @@ sealed class SchemaElem private[schema] (
  * This is what the XML Schema specification calls a schema document, or the document element thereof.
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
-final class SchemaRootElem(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class SchemaRootElem private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsSchemaEName, "The element must be a 'schema' element")
   require(indexedElem.elemPath.isRoot, "The element must be the root of the element tree")
 
@@ -183,7 +197,10 @@ final class SchemaRootElem(indexedElem: indexed.Elem, docUri: URI) extends Schem
  * a term like an element declaration IS a particle, so a particle does NOT HAVE a term. More generally, it is the schema
  * XML document that is leading, and not the abstract schema model that has no knowledge about its XML representation.
  */
-abstract class SchemaComponent(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+abstract class SchemaComponent private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   /**
    * Returns the target namespace of the schema component, if any, wrapped in an Option.
@@ -215,7 +232,11 @@ trait Particle extends SchemaComponent {
 /**
  * Element declaration or element reference. That is, the "xs:element" XML element.
  */
-abstract class ElementDeclarationOrReference(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+abstract class ElementDeclarationOrReference private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsElementEName, "The element must be an 'element' element")
 
   /**
@@ -320,14 +341,22 @@ abstract class ElementDeclarationOrReference(indexedElem: indexed.Elem, docUri: 
 /**
  * Element declaration. An element declaration is either a global or local element declaration.
  */
-abstract class ElementDeclaration(indexedElem: indexed.Elem, docUri: URI) extends ElementDeclarationOrReference(indexedElem, docUri) {
+abstract class ElementDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ElementDeclarationOrReference(indexedElem, childElems, docUri) {
+
   require(!isReference, "Must not be a reference")
 }
 
 /**
  * Global element declaration.
  */
-final class GlobalElementDeclaration(indexedElem: indexed.Elem, docUri: URI) extends ElementDeclaration(indexedElem, docUri) {
+final class GlobalElementDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) {
+
   require(isGlobal, "Must be global")
 
   /**
@@ -352,7 +381,11 @@ final class GlobalElementDeclaration(indexedElem: indexed.Elem, docUri: URI) ext
 /**
  * Local element declaration.
  */
-final class LocalElementDeclaration(indexedElem: indexed.Elem, docUri: URI) extends ElementDeclaration(indexedElem, docUri) with Particle {
+final class LocalElementDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) with Particle {
+
   require(!isGlobal, "Must be local")
 
   /**
@@ -390,7 +423,11 @@ final class LocalElementDeclaration(indexedElem: indexed.Elem, docUri: URI) exte
  * Element reference. Strictly it is not an element declaration, but it can be considered an element declaration in that
  * it is represented by the same xs:element XML element.
  */
-final class ElementReference(indexedElem: indexed.Elem, docUri: URI) extends ElementDeclarationOrReference(indexedElem, docUri) with Particle {
+final class ElementReference private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ElementDeclarationOrReference(indexedElem, childElems, docUri) with Particle {
+
   require(isReference, "Must be a reference")
   require(!isGlobal, "Must not be global")
 
@@ -422,7 +459,11 @@ trait AttributeUse extends SchemaComponent {
 /**
  * Attribute declaration or attribute reference. That is, the "xs:attribute" XML element.
  */
-abstract class AttributeDeclarationOrReference(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+abstract class AttributeDeclarationOrReference private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsAttributeEName, "The element must be an 'attribute' element")
 
   /**
@@ -488,14 +529,22 @@ abstract class AttributeDeclarationOrReference(indexedElem: indexed.Elem, docUri
 /**
  * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
  */
-abstract class AttributeDeclaration(indexedElem: indexed.Elem, docUri: URI) extends AttributeDeclarationOrReference(indexedElem, docUri) {
+abstract class AttributeDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) {
+
   require(!isReference, "Must not be a reference")
 }
 
 /**
  * Global attribute declaration.
  */
-final class GlobalAttributeDeclaration(indexedElem: indexed.Elem, docUri: URI) extends AttributeDeclaration(indexedElem, docUri) {
+final class GlobalAttributeDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) {
+
   require(isGlobal, "Must be global")
 
   /**
@@ -518,7 +567,11 @@ final class GlobalAttributeDeclaration(indexedElem: indexed.Elem, docUri: URI) e
 /**
  * Local attribute declaration.
  */
-final class LocalAttributeDeclaration(indexedElem: indexed.Elem, docUri: URI) extends AttributeDeclaration(indexedElem, docUri) with AttributeUse {
+final class LocalAttributeDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) with AttributeUse {
+
   require(!isGlobal, "Must be local")
 
   /**
@@ -556,7 +609,11 @@ final class LocalAttributeDeclaration(indexedElem: indexed.Elem, docUri: URI) ex
  * Attribute reference. Strictly it is not an attribute declaration, but it can be considered an attribute declaration in that
  * it is represented by the same xs:attribute XML element.
  */
-final class AttributeReference(indexedElem: indexed.Elem, docUri: URI) extends AttributeDeclarationOrReference(indexedElem, docUri) with AttributeUse {
+final class AttributeReference private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) with AttributeUse {
+
   require(isReference, "Must be a reference")
   require(!isGlobal, "Must not be global")
 
@@ -579,7 +636,10 @@ final class AttributeReference(indexedElem: indexed.Elem, docUri: URI) extends A
 /**
  * Schema type definition, which is either a simple type or a complex type.
  */
-abstract class TypeDefinition(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+abstract class TypeDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
 
   /**
    * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
@@ -600,7 +660,11 @@ abstract class TypeDefinition(indexedElem: indexed.Elem, docUri: URI) extends Sc
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
  */
-final class SimpleTypeDefinition(indexedElem: indexed.Elem, docUri: URI) extends TypeDefinition(indexedElem, docUri) {
+final class SimpleTypeDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends TypeDefinition(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsSimpleTypeEName, "The element must be an 'simpleType' element")
 
   final override def targetNamespaceOption: Option[String] = {
@@ -611,7 +675,11 @@ final class SimpleTypeDefinition(indexedElem: indexed.Elem, docUri: URI) extends
 /**
  * Complex type definition. That is, the "xs:complexType" XML element.
  */
-final class ComplexTypeDefinition(indexedElem: indexed.Elem, docUri: URI) extends TypeDefinition(indexedElem, docUri) {
+final class ComplexTypeDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends TypeDefinition(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsComplexTypeEName, "The element must be an 'complexType' element")
 
   final override def targetNamespaceOption: Option[String] = {
@@ -622,7 +690,11 @@ final class ComplexTypeDefinition(indexedElem: indexed.Elem, docUri: URI) extend
 /**
  * Attribute group definition. That is, the "xs:attributeGroup" XML element.
  */
-final class AttributeGroupDefinition(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+final class AttributeGroupDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsAttributeGroupEName, "The element must be an 'attributeGroup' element")
 
   final override def targetNamespaceOption: Option[String] = {
@@ -633,7 +705,11 @@ final class AttributeGroupDefinition(indexedElem: indexed.Elem, docUri: URI) ext
 /**
  * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
-final class IdentityConstraintDefinition(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+final class IdentityConstraintDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(
     Set(XsKeyEName, XsKeyrefEName, XsUniqueEName).contains(elem.resolvedName),
     "The element must be an 'key', 'keyref' or 'unique' element")
@@ -646,7 +722,11 @@ final class IdentityConstraintDefinition(indexedElem: indexed.Elem, docUri: URI)
 /**
  * Model group definition. That is, the "xs:group" XML element.
  */
-sealed class ModelGroupDefinition private[schema] (indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+sealed class ModelGroupDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
 
   final override def targetNamespaceOption: Option[String] = {
@@ -668,7 +748,11 @@ sealed class ModelGroupDefinition private[schema] (indexedElem: indexed.Elem, do
 /**
  * Notation declaration. That is, the "xs:notation" XML element.
  */
-final class NotationDeclaration(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+final class NotationDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsNotationEName, "The element must be a 'notation' element")
 
   final override def targetNamespaceOption: Option[String] = {
@@ -679,7 +763,11 @@ final class NotationDeclaration(indexedElem: indexed.Elem, docUri: URI) extends 
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-sealed class ModelGroup private[schema] (indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+sealed class ModelGroup private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(
     Set(XsAllEName, XsSequenceEName, XsChoiceEName).contains(elem.resolvedName),
     "The element must be an 'all', 'sequence' or 'choice' element")
@@ -698,7 +786,11 @@ sealed class ModelGroup private[schema] (indexedElem: indexed.Elem, docUri: URI)
 /**
  * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
  */
-sealed class Wildcard private[schema] (indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+sealed class Wildcard private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(
     Set(XsAnyEName, XsAnyAttributeEName).contains(elem.resolvedName),
     "The element must be an 'any', 'anyAttribute' element")
@@ -709,7 +801,11 @@ sealed class Wildcard private[schema] (indexedElem: indexed.Elem, docUri: URI) e
 /**
  * Annotation schema component. That is, the "xs:annotation" XML element.
  */
-final class Annotation(indexedElem: indexed.Elem, docUri: URI) extends SchemaComponent(indexedElem, docUri) {
+final class Annotation private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsAnnotationEName, "The element must be an 'annotation' element")
 
   final override def targetNamespaceOption: Option[String] = None
@@ -720,21 +816,33 @@ final class Annotation(indexedElem: indexed.Elem, docUri: URI) extends SchemaCom
 /**
  * The "xs:import" XML element.
  */
-final class Import(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Import private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsImportEName, "The element must be an 'import' element")
 }
 
 /**
  * The "xs:include" XML element.
  */
-final class Include(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Include private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsIncludeEName, "The element must be an 'include' element")
 }
 
 /**
  * The "xs:redefine" XML element.
  */
-final class Redefine(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Redefine private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsRedefineEName, "The element must be a 'redefine' element")
 }
 
@@ -743,94 +851,139 @@ final class Redefine(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(
 /**
  * The "xs:complexContent" XML element.
  */
-final class ComplexContent(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class ComplexContent private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsComplexContentEName, "The element must be a 'complexContent' element")
 }
 
 /**
  * The "xs:simpleContent" XML element.
  */
-final class SimpleContent(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class SimpleContent private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsSimpleContentEName, "The element must be a 'simpleContent' element")
 }
 
 /**
  * The "xs:extension" XML element.
  */
-final class Extension(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Extension private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsExtensionEName, "The element must be an 'extension' element")
 }
 
 /**
  * The "xs:restriction" XML element.
  */
-final class Restriction(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Restriction private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsRestrictionEname, "The element must be a 'restriction' element")
 }
 
 /**
  * The "xs:appinfo" XML element.
  */
-final class Appinfo(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Appinfo private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsAppinfoEName, "The element must be an 'appinfo' element")
 }
 
 /**
  * The "xs:documentation" XML element.
  */
-final class Documentation(indexedElem: indexed.Elem, docUri: URI) extends SchemaElem(indexedElem, docUri) {
+final class Documentation private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
   require(elem.resolvedName == XsDocumentationEName, "The element must be a 'documentation' element")
 }
 
 // Companion objects
 
+object SchemaRootElem {
+
+  /**
+   * Public factory method for SchemaRootElem instances. It returns `SchemaElem(indexedElem, docUri)` as a `SchemaRootElem`.
+   *
+   * This is an expensive method, but once a `SchemaRootElem` has been created, querying through the `ElemLike` API is very fast.
+   */
+  def apply(indexedElem: indexed.Elem, docUri: URI): SchemaRootElem = {
+    require(indexedElem.elemPath.isRoot)
+
+    val childElems = indexedElem.findAllChildElems.map(e => SchemaElem.apply(e, docUri))
+    new SchemaRootElem(indexedElem, childElems, docUri)
+  }
+}
+
 object SchemaElem {
 
+  /**
+   * Recursive public factory method for SchemaElem instances.
+   */
   def apply(indexedElem: indexed.Elem, docUri: URI): SchemaElem = {
+    // Recursive calls
+    val childElems = indexedElem.findAllChildElems.map(e => SchemaElem.apply(e, docUri))
+
     indexedElem.elemPath.elementNameOption.getOrElse(XsSchemaEName) match {
-      case XsSchemaEName => new SchemaRootElem(indexedElem, docUri)
+      case XsSchemaEName => new SchemaRootElem(indexedElem, childElems, docUri)
       case XsElementEName if indexedElem.attributeOption(RefEName).isDefined =>
-        new ElementReference(indexedElem, docUri)
+        new ElementReference(indexedElem, childElems, docUri)
       case XsElementEName if indexedElem.elemPath.entries.size == 1 =>
-        new GlobalElementDeclaration(indexedElem, docUri)
-      case XsElementEName => new LocalElementDeclaration(indexedElem, docUri)
+        new GlobalElementDeclaration(indexedElem, childElems, docUri)
+      case XsElementEName => new LocalElementDeclaration(indexedElem, childElems, docUri)
       case XsAttributeEName if indexedElem.attributeOption(RefEName).isDefined =>
-        new AttributeReference(indexedElem, docUri)
+        new AttributeReference(indexedElem, childElems, docUri)
       case XsAttributeEName if indexedElem.elemPath.entries.size == 1 =>
-        new GlobalAttributeDeclaration(indexedElem, docUri)
-      case XsAttributeEName => new LocalAttributeDeclaration(indexedElem, docUri)
-      case XsSimpleTypeEName => new SimpleTypeDefinition(indexedElem, docUri)
-      case XsComplexTypeEName => new ComplexTypeDefinition(indexedElem, docUri)
-      case XsAttributeGroupEName => new AttributeGroupDefinition(indexedElem, docUri)
-      case XsKeyEName => new IdentityConstraintDefinition(indexedElem, docUri)
-      case XsKeyrefEName => new IdentityConstraintDefinition(indexedElem, docUri)
-      case XsUniqueEName => new IdentityConstraintDefinition(indexedElem, docUri)
+        new GlobalAttributeDeclaration(indexedElem, childElems, docUri)
+      case XsAttributeEName => new LocalAttributeDeclaration(indexedElem, childElems, docUri)
+      case XsSimpleTypeEName => new SimpleTypeDefinition(indexedElem, childElems, docUri)
+      case XsComplexTypeEName => new ComplexTypeDefinition(indexedElem, childElems, docUri)
+      case XsAttributeGroupEName => new AttributeGroupDefinition(indexedElem, childElems, docUri)
+      case XsKeyEName => new IdentityConstraintDefinition(indexedElem, childElems, docUri)
+      case XsKeyrefEName => new IdentityConstraintDefinition(indexedElem, childElems, docUri)
+      case XsUniqueEName => new IdentityConstraintDefinition(indexedElem, childElems, docUri)
       case XsGroupEName if (indexedElem \@ RefEName).isDefined =>
-        new ModelGroupDefinition(indexedElem, docUri) with Particle
-      case XsGroupEName => new ModelGroupDefinition(indexedElem, docUri)
+        new ModelGroupDefinition(indexedElem, childElems, docUri) with Particle
+      case XsGroupEName => new ModelGroupDefinition(indexedElem, childElems, docUri)
       case XsAllEName if inNamedGroup(indexedElem) =>
-        new ModelGroup(indexedElem, docUri)
+        new ModelGroup(indexedElem, childElems, docUri)
       case XsSequenceEName if inNamedGroup(indexedElem) =>
-        new ModelGroup(indexedElem, docUri)
+        new ModelGroup(indexedElem, childElems, docUri)
       case XsChoiceEName if inNamedGroup(indexedElem) =>
-        new ModelGroup(indexedElem, docUri)
-      case XsAllEName => new ModelGroup(indexedElem, docUri) with Particle
-      case XsSequenceEName => new ModelGroup(indexedElem, docUri) with Particle
-      case XsChoiceEName => new ModelGroup(indexedElem, docUri) with Particle
-      case XsNotationEName => new NotationDeclaration(indexedElem, docUri)
-      case XsAnnotationEName => new Annotation(indexedElem, docUri)
-      case XsAnyEName => new Wildcard(indexedElem, docUri) with Particle
-      case XsAnyAttributeEName => new Wildcard(indexedElem, docUri)
-      case XsImportEName => new Import(indexedElem, docUri)
-      case XsIncludeEName => new Include(indexedElem, docUri)
-      case XsRedefineEName => new Redefine(indexedElem, docUri)
-      case XsComplexContentEName => new ComplexContent(indexedElem, docUri)
-      case XsSimpleContentEName => new SimpleContent(indexedElem, docUri)
-      case XsAppinfoEName => new Appinfo(indexedElem, docUri)
-      case XsDocumentationEName => new Documentation(indexedElem, docUri)
-      case XsExtensionEName => new Extension(indexedElem, docUri)
-      case XsRestrictionEname => new Restriction(indexedElem, docUri)
-      case _ => new SchemaElem(indexedElem, docUri)
+        new ModelGroup(indexedElem, childElems, docUri)
+      case XsAllEName => new ModelGroup(indexedElem, childElems, docUri) with Particle
+      case XsSequenceEName => new ModelGroup(indexedElem, childElems, docUri) with Particle
+      case XsChoiceEName => new ModelGroup(indexedElem, childElems, docUri) with Particle
+      case XsNotationEName => new NotationDeclaration(indexedElem, childElems, docUri)
+      case XsAnnotationEName => new Annotation(indexedElem, childElems, docUri)
+      case XsAnyEName => new Wildcard(indexedElem, childElems, docUri) with Particle
+      case XsAnyAttributeEName => new Wildcard(indexedElem, childElems, docUri)
+      case XsImportEName => new Import(indexedElem, childElems, docUri)
+      case XsIncludeEName => new Include(indexedElem, childElems, docUri)
+      case XsRedefineEName => new Redefine(indexedElem, childElems, docUri)
+      case XsComplexContentEName => new ComplexContent(indexedElem, childElems, docUri)
+      case XsSimpleContentEName => new SimpleContent(indexedElem, childElems, docUri)
+      case XsAppinfoEName => new Appinfo(indexedElem, childElems, docUri)
+      case XsDocumentationEName => new Documentation(indexedElem, childElems, docUri)
+      case XsExtensionEName => new Extension(indexedElem, childElems, docUri)
+      case XsRestrictionEname => new Restriction(indexedElem, childElems, docUri)
+      case _ => new SchemaElem(indexedElem, childElems, docUri)
     }
   }
 
