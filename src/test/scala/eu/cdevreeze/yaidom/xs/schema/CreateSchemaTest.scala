@@ -47,11 +47,11 @@ class CreateSchemaTest extends Suite {
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
 
-    val globalElemDecls2 = schema \\! EName(NS, "element")
-    val elemDecls2 = schema \\ EName(NS, "element")
+    val globalElemDecls2 = schema \\! EName(XsNamespace, "element")
+    val elemDecls2 = schema \\ EName(XsNamespace, "element")
 
-    val globalElemDecls3 = schema \\! EName(NS, "element")
-    val elemDecls3 = schema \\ EName(NS, "element")
+    val globalElemDecls3 = schema \\! EName(XsNamespace, "element")
+    val elemDecls3 = schema \\ EName(XsNamespace, "element")
 
     val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
     val attrDecls = schema.findAllElems collect { case e: AttributeDeclarationOrReference => e }
@@ -174,7 +174,7 @@ class CreateSchemaTest extends Suite {
     val expectedElemBuilder =
       elem(
         qname = QName("xs:complexContent"),
-        namespaces = Declarations.from("xs" -> NS),
+        namespaces = Declarations.from("xs" -> XsNamespace),
         children =
           Vector(
             elem(
@@ -246,13 +246,13 @@ class CreateSchemaTest extends Suite {
       result.toSet
     }
 
-    val topmostElemDecls = schema.findTopmostElems(e => e.resolvedName == ENameElement) collect { case e: ElementDeclarationOrReference => e }
+    val topmostElemDecls = schema.findTopmostElems(e => e.resolvedName == XsElementEName) collect { case e: ElementDeclarationOrReference => e }
 
     expectResult(globalElemDecls) {
       topmostElemDecls
     }
     expectResult(elemDecls) {
-      topmostElemDecls flatMap { e => e +: (e.filterElems(_.resolvedName == ENameElement) collect { case e: ElementDeclarationOrReference => e }) }
+      topmostElemDecls flatMap { e => e +: (e.filterElems(_.resolvedName == XsElementEName) collect { case e: ElementDeclarationOrReference => e }) }
     }
 
     expectResult(4) {
@@ -296,7 +296,7 @@ class CreateSchemaTest extends Suite {
       shipOrderElemDeclOption.get.scopeOption
     }
 
-    val nameElemDeclOption = schema.filterElems(_.resolvedName == ENameElement) collect { case e: ElementDeclarationOrReference => e } find { e =>
+    val nameElemDeclOption = schema.filterElems(_.resolvedName == XsElementEName) collect { case e: ElementDeclarationOrReference => e } find { e =>
       e.nameAttributeOption == Some("name")
     }
 
@@ -314,7 +314,7 @@ class CreateSchemaTest extends Suite {
     }
 
     val orderidAttrDeclOption =
-      (schema.findTopmostElems(_.resolvedName == ENameAttribute) collect { case e: AttributeDeclarationOrReference => e } find { e =>
+      (schema.findTopmostElems(_.resolvedName == XsAttributeEName) collect { case e: AttributeDeclarationOrReference => e } find { e =>
         e.nameAttributeOption == Some("orderid")
       }).headOption
 
