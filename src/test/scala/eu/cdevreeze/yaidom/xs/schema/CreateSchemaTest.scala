@@ -62,7 +62,7 @@ class CreateSchemaTest extends Suite {
       globalElemDecls map { elemDecl => elemDecl.ename }
     }
     expectResult(Seq(EName(tns, "shiporder"))) {
-      globalElemDecls2 collect { case elemDecl: GlobalElementDeclaration => elemDecl } map { elemDecl => elemDecl.ename }
+      globalElemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } map { elemDecl => elemDecl.ename }
     }
     expectResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
@@ -87,10 +87,12 @@ class CreateSchemaTest extends Suite {
       EName(tns, "price"))
 
     expectResult(expectedElemNames) {
-      elemDecls flatMap { elemDecl => elemDecl.enameOption }
+      elemDecls collect {
+        case elemDecl: ElementDeclaration => elemDecl.ename
+      }
     }
     expectResult(expectedElemNames) {
-      elemDecls2 collect { case elemDecl: ElementDeclarationOrReference => elemDecl } flatMap { elemDecl => elemDecl.enameOption }
+      elemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl.ename }
     }
     expectResult(expectedElemNames) {
       elemDecls3 map { e =>
@@ -281,54 +283,54 @@ class CreateSchemaTest extends Suite {
       schema.targetNamespaceOption
     }
 
-    val shipOrderElemDeclOption = schema.findAllGlobalElementDeclarations find { e => e.nameAttributeOption == Some("shiporder") }
+    val shipOrderElemDeclOption = schema.findAllGlobalElementDeclarations find { e => e.nameAttribute == "shiporder" }
 
     assert(shipOrderElemDeclOption.isDefined)
-    assert(shipOrderElemDeclOption.get.isGlobal)
+    assert(shipOrderElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     expectResult(Some(expectedTns)) {
-      shipOrderElemDeclOption.get.targetNamespaceOption
+      shipOrderElemDeclOption.get.indexedElem.rootElem \@ TargetNamespaceEName
     }
-    expectResult(Some(EName(expectedTns, "shiporder"))) {
-      shipOrderElemDeclOption.get.enameOption
+    expectResult(EName(expectedTns, "shiporder")) {
+      shipOrderElemDeclOption.get.ename
     }
     expectResult(None) {
-      shipOrderElemDeclOption.get.scopeOption
+      shipOrderElemDeclOption.get.indexedElem findAncestor {
+        e => e.resolvedName == XsComplexTypeEName
+      }
     }
 
-    val nameElemDeclOption = schema.filterElems(_.resolvedName == XsElementEName) collect { case e: ElementDeclarationOrReference => e } find { e =>
-      e.nameAttributeOption == Some("name")
+    val nameElemDeclOption = schema.filterElems(_.resolvedName == XsElementEName) collect { case e: ElementDeclaration => e } find { e =>
+      e.nameAttribute == "name"
     }
 
     assert(nameElemDeclOption.isDefined)
-    assert(!nameElemDeclOption.get.isGlobal)
+    assert(!nameElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     expectResult(Some(expectedTns)) {
-      nameElemDeclOption.get.targetNamespaceOption
+      nameElemDeclOption.get.indexedElem.rootElem \@ TargetNamespaceEName
     }
-    expectResult(Some(EName(expectedTns, "name"))) {
-      nameElemDeclOption.get.enameOption
+    expectResult(EName(expectedTns, "name")) {
+      nameElemDeclOption.get.ename
     }
     expectResult(Some(5)) {
-      nameElemDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
+      nameElemDeclOption.get.indexedElem findAncestor {
+        e => e.resolvedName == XsComplexTypeEName
+      } map { e => e.elemPath.entries.size }
     }
 
     val orderidAttrDeclOption =
-      (schema.findTopmostElems(_.resolvedName == XsAttributeEName) collect { case e: AttributeDeclarationOrReference => e } find { e =>
-        e.nameAttributeOption == Some("orderid")
+      (schema.findTopmostElems(_.resolvedName == XsAttributeEName) collect { case e: AttributeDeclaration => e } find { e =>
+        e.nameAttribute == "orderid"
       }).headOption
 
     assert(orderidAttrDeclOption.isDefined)
-    assert(!orderidAttrDeclOption.get.isGlobal)
+    assert(!orderidAttrDeclOption.get.isInstanceOf[GlobalAttributeDeclaration])
 
-    expectResult(None) {
-      orderidAttrDeclOption.get.targetNamespaceOption
-    }
-    expectResult(Some(EName(None, "orderid"))) {
-      orderidAttrDeclOption.get.enameOption
-    }
     expectResult(Some(2)) {
-      orderidAttrDeclOption.get.scopeOption map { complexTypeDef => complexTypeDef.elemPath.entries.size }
+      orderidAttrDeclOption.get.indexedElem findAncestor {
+        e => e.resolvedName == XsComplexTypeEName
+      } map { e => e.elemPath.entries.size }
     }
   }
 

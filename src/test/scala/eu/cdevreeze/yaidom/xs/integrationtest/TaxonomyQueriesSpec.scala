@@ -184,10 +184,16 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     scenario("Only global element declarations can have substitution groups") {
 
       Given("all local element declarations")
-      val elemDecls = schemaDocSet filterElementDeclarationOrReferences { e => !e.isGlobal }
+      val elemDecls = schemaDocSet filterElementDeclarationOrReferences {
+        case e: GlobalElementDeclaration => false
+        case _ => true
+      }
 
       When("asking for their substitution groups")
-      val substGroups = elemDecls.flatMap(_.substitutionGroupOption).toSet
+      val substGroups = {
+        val result = elemDecls collect { case e: GlobalElementDeclaration => e } flatMap (_.substitutionGroupOption)
+        result.toSet
+      }
 
       Then("no substitution groups are found")
       expectResult(Set()) {
@@ -213,13 +219,13 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       And("they are all in the same 'sbr' (http://www.nltaxonomie.nl/2011/xbrl/xbrl-syntax-extension) target namespace")
       expectResult(List(Some(nsSbr))) {
-        elemDecls.map(_.targetNamespaceOption).distinct
+        elemDecls.map(_.indexedElem.rootElem \@ TargetNamespaceEName).distinct
       }
 
       And("indeed all these element declarations are used as substitution groups")
       val allGlobalElemDecls = schemaDocSet.findAllGlobalElementDeclarations
 
-      assert(elemDecls forall (elem => allGlobalElemDecls.find(e => e.substitutionGroupOption == elem.enameOption).isDefined))
+      assert(elemDecls forall (elem => allGlobalElemDecls.find(e => e.substitutionGroupOption == Some(elem.ename)).isDefined))
 
       val substGroupQNames = elemDecls map { _.ename } map { ename => ename.toQName(Some("sbr")) }
       info("In fact, the substitution groups introduced in xbrl-syntax-extension.xsd are: " + substGroupQNames.mkString(", "))

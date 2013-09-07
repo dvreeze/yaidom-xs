@@ -77,7 +77,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * taken into account.
    */
   final def findGlobalElementDeclarationByEName(ename: EName): Option[GlobalElementDeclaration] =
-    filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
+    filterGlobalElementDeclarations(_.ename == ename).headOption
 
   /**
    * Returns the substitution group "ancestry". The result always starts with the passed substitution group EName.

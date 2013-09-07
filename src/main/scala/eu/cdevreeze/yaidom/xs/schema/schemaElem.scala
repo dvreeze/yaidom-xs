@@ -90,20 +90,6 @@ sealed class SchemaElem private[schema] (
 
   final override def toString: String = elem.toString
 
-  /**
-   * Returns `elem.scope`
-   */
-  final def scope: Scope = elem.scope
-
-  /**
-   * Returns the namespaces declared in this element.
-   *
-   * If the original parsed XML document contained duplicate namespace declarations (i.e. namespace declarations that are the same
-   * as some namespace declarations in their context), these duplicate namespace declarations were lost during parsing of the
-   * XML into an `Elem` tree. They therefore do not occur in the namespace declarations returned by this method.
-   */
-  final def namespaces: Declarations = indexedElem.namespaces
-
   final def idOption: Option[String] = elem \@ IdEName
 
   /**
@@ -142,12 +128,6 @@ final class SchemaRootElem private[schema] (
     filterChildElems { e => e.resolvedName == XsElementEName } collect { case e: GlobalElementDeclaration if p(e) => e }
 
   /**
-   * Finds the global element declaration with the given EName, if any, wrapped in an Option.
-   */
-  final def findGlobalElementDeclarationByEName(ename: EName): Option[GlobalElementDeclaration] =
-    filterGlobalElementDeclarations(_.enameOption == Some(ename)).headOption
-
-  /**
    * Returns all global attribute declarations.
    */
   final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
@@ -171,50 +151,27 @@ final class SchemaRootElem private[schema] (
    * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =
-    filterElems { e => e.resolvedName == XsImportEName } collect { case e: Import => e }
+    filterChildElems { e => e.resolvedName == XsImportEName } collect { case e: Import => e }
 
   /**
    * Returns all includes.
    */
   final def findAllIncludes: immutable.IndexedSeq[Include] =
-    filterElems { e => e.resolvedName == XsIncludeEName } collect { case e: Include => e }
+    filterChildElems { e => e.resolvedName == XsIncludeEName } collect { case e: Include => e }
 
   /**
    * Returns all redefines.
    */
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
-    filterElems { e => e.resolvedName == XsRedefineEName } collect { case e: Redefine => e }
+    filterChildElems { e => e.resolvedName == XsRedefineEName } collect { case e: Redefine => e }
 }
 
 // Schema Components
 
 /**
- * Schema component, as specified in the XML Schema specification, part 1, section 2.2.
- *
- * There is an important difference, however. For example, in the abstract schema model, a particle contains a term, such
- * as an element declaration. In the concrete XML representation of the schema, the particle and the term that it contains,
- * such as an element declaration, are part of the same XML element. To keep close to the XML representation of XML Schema,
- * a term like an element declaration IS a particle, so a particle does NOT HAVE a term. More generally, it is the schema
- * XML document that is leading, and not the abstract schema model that has no knowledge about its XML representation.
- */
-abstract class SchemaComponent private[schema] (
-  indexedElem: indexed.Elem,
-  childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
-
-  /**
-   * Returns the target namespace of the schema component, if any, wrapped in an Option.
-   *
-   * Some types of schema component do not have the notion of a target namespace (in which case None is returned), but most do
-   * (whether it is defined or not).
-   */
-  def targetNamespaceOption: Option[String]
-}
-
-/**
  * Particle, having a min and max occurs (possibly default).
  */
-trait Particle extends SchemaComponent {
+trait Particle extends SchemaElem {
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
 
@@ -235,52 +192,20 @@ trait Particle extends SchemaComponent {
 abstract class ElementDeclarationOrReference private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsElementEName, "The element must be an 'element' element")
+}
 
-  /**
-   * Returns true if and only if the element declaration has the schema element as its parent.
-   *
-   * Element references are not considered global, because their parent is not the schema element, but they do always
-   * refer to global element declarations.
-   */
-  final def isGlobal: Boolean = indexedElem.elemPath.entries.size == 1
+/**
+ * Element declaration. An element declaration is either a global or local element declaration.
+ */
+abstract class ElementDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ElementDeclarationOrReference(indexedElem, childElems, docUri) with HasName {
 
-  /**
-   * Returns true if and only if the element declaration is a reference to another (global) element declaration.
-   * Top level element declarations are never references.
-   */
-  final def isReference: Boolean = refOption.isDefined
-
-  /**
-   * Returns true if and only if the element declaration is abstract.
-   * Only global element declarations can be abstract.
-   */
-  final def isAbstract: Boolean = abstractOption == Some(true)
-
-  /**
-   * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
-   * if any, wrapped in an Option.
-   */
-  final def enameOption: Option[EName] = {
-    val tnsOption = targetNamespaceOption
-    val localNameOption = nameAttributeOption
-    localNameOption map { nm => EName(tnsOption, nm) }
-  }
-
-  /**
-   * Returns the value of the "name" attribute, if any, wrapped in an Option.
-   */
-  final def nameAttributeOption: Option[String] = elem \@ NameEName
-
-  /**
-   * Returns the "scope", if any, wrapped in an Option.
-   *
-   * That is, if this element declaration is not a reference, and has a complex type definition as ancestor, that complex
-   * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
-   */
-  def scopeOption: Option[indexed.Elem]
+  require((elem \@ RefEName).isEmpty, "Must not be a reference")
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
@@ -290,28 +215,6 @@ abstract class ElementDeclarationOrReference private[schema] (
     typeAttrAttrOption map { tpe =>
       elem.scope.resolveQNameOption(QName(tpe)).getOrElse(
         sys.error("Could not resolve type '%s' as expanded name".format(tpe)))
-    }
-  }
-
-  /**
-   * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
-   */
-  final def substitutionGroupOption: Option[EName] = {
-    val substGroupAttrOption = elem \@ SubstitutionGroupEName
-    substGroupAttrOption map { substGroup =>
-      elem.scope.resolveQNameOption(QName(substGroup)).getOrElse(
-        sys.error("Could not resolve substitution group '%s' as expanded name".format(substGroup)))
-    }
-  }
-
-  /**
-   * Returns the value of the 'abstract' attribute, if any, wrapped in an Option.
-   */
-  final def abstractOption: Option[Boolean] = {
-    try {
-      (elem \@ AbstractEName) map (_.toBoolean)
-    } catch {
-      case e: Exception => None
     }
   }
 
@@ -325,28 +228,6 @@ abstract class ElementDeclarationOrReference private[schema] (
       case e: Exception => None
     }
   }
-
-  /**
-   * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
-   */
-  final def refOption: Option[EName] = {
-    val refOption = elem \@ RefEName
-    refOption map { ref =>
-      elem.scope.resolveQNameOption(QName(ref)).getOrElse(
-        sys.error("Could not resolve ref '%s' as expanded name".format(ref)))
-    }
-  }
-}
-
-/**
- * Element declaration. An element declaration is either a global or local element declaration.
- */
-abstract class ElementDeclaration private[schema] (
-  indexedElem: indexed.Elem,
-  childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends ElementDeclarationOrReference(indexedElem, childElems, docUri) {
-
-  require(!isReference, "Must not be a reference")
 }
 
 /**
@@ -355,27 +236,20 @@ abstract class ElementDeclaration private[schema] (
 final class GlobalElementDeclaration private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) {
+  docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) with CanBeAbstract {
 
-  require(isGlobal, "Must be global")
-
-  /**
-   * Returns the target namespace, if any, wrapped in an Option. The target namespace of a global component is the target namespace
-   * of the schema root element, if any.
-   */
-  final override def targetNamespaceOption: Option[String] = indexedElem.rootElem.attributeOption(TargetNamespaceEName)
+  require(indexedElem.elemPath.entries.size == 1, "Must be global")
 
   /**
-   * Returns None as the non-existent scope, wrapped in an Option.
+   * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
    */
-  final override def scopeOption: Option[indexed.Elem] = None
-
-  /**
-   * Returns `enameOption.get`.
-   */
-  final def ename: EName = enameOption.getOrElse(sys.error("Global element declarations must have a name"))
-
-  final def typeOption: Option[EName] = elem.attributeAsResolvedQNameOption(TypeEName)
+  final def substitutionGroupOption: Option[EName] = {
+    val substGroupAttrOption = elem \@ SubstitutionGroupEName
+    substGroupAttrOption map { substGroup =>
+      elem.scope.resolveQNameOption(QName(substGroup)).getOrElse(
+        sys.error("Could not resolve substitution group '%s' as expanded name".format(substGroup)))
+    }
+  }
 }
 
 /**
@@ -386,37 +260,7 @@ final class LocalElementDeclaration private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) with Particle {
 
-  require(!isGlobal, "Must be local")
-
-  /**
-   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
-   * of the schema root element, if any, and on the form and (schema root element) elementFormDefault attributes, if any.
-   */
-  final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-
-    val formOption = elem.attributeOption(FormEName)
-    val elementFormDefaultOption = indexedElem.rootElem.attributeOption(ElementFormDefaultEName)
-
-    if (formOption == Some("qualified")) tnsOption
-    else if (formOption.isEmpty && (elementFormDefaultOption == Some("qualified"))) tnsOption
-    else None
-  }
-
-  /**
-   * Returns the "scope", as a complex type definition, wrapped in an Option.
-   */
-  final override def scopeOption: Option[indexed.Elem] = {
-    val complexTypeOption = indexedElem.elemPath findAncestorPath { p =>
-      p.elementNameOption.getOrElse(XsSchemaEName) == XsComplexTypeEName
-    } map { p => indexed.Elem(indexedElem.rootElem).findElem(e => e.elemPath == p).get }
-    complexTypeOption
-  }
-
-  /**
-   * Returns `enameOption.get`.
-   */
-  final def ename: EName = enameOption.getOrElse(sys.error("Local element declarations must have a name"))
+  require(indexedElem.elemPath.entries.size >= 2, "Must be local")
 }
 
 /**
@@ -428,32 +272,14 @@ final class ElementReference private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends ElementDeclarationOrReference(indexedElem, childElems, docUri) with Particle {
 
-  require(isReference, "Must be a reference")
-  require(!isGlobal, "Must not be global")
-
-  /**
-   * Returns None as the optional target namespace of the (unresolved) element reference.
-   */
-  final override def targetNamespaceOption: Option[String] = None
-
-  /**
-   * Returns None as the optional scope of the (unresolved) element reference.
-   */
-  final override def scopeOption: Option[indexed.Elem] = None
+  require((elem \@ RefEName).isDefined, "Must be a reference")
+  require(indexedElem.elemPath.entries.size >= 2, "Must not be global")
 
   /**
    * Returns the value of the 'ref' attribute as expanded name.
    */
-  final def ref: EName = refOption.getOrElse(sys.error("Element references must have a ref attribute"))
-}
-
-/**
- * Attribute use. The correspondence between attribute use and attribute declarations is analogous to the one between
- * particles and (for example) element declarations.
- */
-trait AttributeUse extends SchemaComponent {
-
-  // TODO
+  final def ref: EName =
+    elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Element references must have a ref attribute"))
 }
 
 /**
@@ -462,46 +288,20 @@ trait AttributeUse extends SchemaComponent {
 abstract class AttributeDeclarationOrReference private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsAttributeEName, "The element must be an 'attribute' element")
+}
 
-  /**
-   * Returns true if and only if the attribute declaration has the schema element as its parent.
-   *
-   * Attribute references are not considered global, because their parent is not the schema element, but they do always
-   * refer to global attribute declarations.
-   */
-  final def isGlobal: Boolean = indexedElem.elemPath.entries.size == 1
+/**
+ * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
+ */
+abstract class AttributeDeclaration private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) with HasName {
 
-  /**
-   * Returns true if and only if the attribute declaration is a reference to another (global) attribute declaration.
-   * Top level attribute declarations are never references.
-   */
-  final def isReference: Boolean = refOption.isDefined
-
-  /**
-   * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
-   * if any, wrapped in an Option.
-   */
-  final def enameOption: Option[EName] = {
-    val tnsOption = targetNamespaceOption
-    val localNameOption = nameAttributeOption
-    localNameOption map { nm => EName(tnsOption, nm) }
-  }
-
-  /**
-   * Returns the value of the "name" attribute, if any, wrapped in an Option.
-   */
-  final def nameAttributeOption: Option[String] = elem \@ NameEName
-
-  /**
-   * Returns the "scope", if any, wrapped in an Option.
-   *
-   * That is, if this attribute declaration is not a reference, and has a complex type definition as ancestor, that complex
-   * type definition is returned as indexed.Elem, wrapped in an Option. In all other cases, None is returned.
-   */
-  def scopeOption: Option[indexed.Elem]
+  require((elem \@ RefEName).isEmpty, "Must not be a reference")
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
@@ -513,28 +313,6 @@ abstract class AttributeDeclarationOrReference private[schema] (
         sys.error("Could not resolve type '%s' as expanded name".format(tpe)))
     }
   }
-
-  /**
-   * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
-   */
-  final def refOption: Option[EName] = {
-    val refOption = elem \@ RefEName
-    refOption map { ref =>
-      elem.scope.resolveQNameOption(QName(ref)).getOrElse(
-        sys.error("Could not resolve ref '%s' as expanded name".format(ref)))
-    }
-  }
-}
-
-/**
- * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
- */
-abstract class AttributeDeclaration private[schema] (
-  indexedElem: indexed.Elem,
-  childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) {
-
-  require(!isReference, "Must not be a reference")
 }
 
 /**
@@ -545,23 +323,7 @@ final class GlobalAttributeDeclaration private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) {
 
-  require(isGlobal, "Must be global")
-
-  /**
-   * Returns the target namespace, if any, wrapped in an Option. The target namespace of a global component is the target namespace
-   * of the schema root element, if any.
-   */
-  final override def targetNamespaceOption: Option[String] = indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-
-  /**
-   * Returns None as the non-existent scope, wrapped in an Option.
-   */
-  final override def scopeOption: Option[indexed.Elem] = None
-
-  /**
-   * Returns `enameOption.get`.
-   */
-  final def ename: EName = enameOption.getOrElse(sys.error("Global attribute declarations must have a name"))
+  require(indexedElem.elemPath.entries.size == 1, "Must be global")
 }
 
 /**
@@ -570,39 +332,9 @@ final class GlobalAttributeDeclaration private[schema] (
 final class LocalAttributeDeclaration private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) with AttributeUse {
+  docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) {
 
-  require(!isGlobal, "Must be local")
-
-  /**
-   * Returns the target namespace, if any, wrapped in an Option. The target namespace depends on the target namespace
-   * of the schema root element, if any, and on the form and (schema root element) attributeFormDefault attributes, if any.
-   */
-  final override def targetNamespaceOption: Option[String] = {
-    val tnsOption = indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-
-    val formOption = elem.attributeOption(FormEName)
-    val attributeFormDefaultOption = indexedElem.rootElem.attributeOption(AttributeFormDefaultEName)
-
-    if (formOption == Some("qualified")) tnsOption
-    else if (formOption.isEmpty && (attributeFormDefaultOption == Some("qualified"))) tnsOption
-    else None
-  }
-
-  /**
-   * Returns the "scope", as a complex type definition, wrapped in an Option.
-   */
-  final override def scopeOption: Option[indexed.Elem] = {
-    val complexTypeOption = indexedElem.elemPath findAncestorPath { p =>
-      p.elementNameOption.getOrElse(XsSchemaEName) == XsComplexTypeEName
-    } map { p => indexed.Elem(indexedElem.rootElem).findElem(e => e.elemPath == p).get }
-    complexTypeOption
-  }
-
-  /**
-   * Returns `enameOption.get`.
-   */
-  final def ename: EName = enameOption.getOrElse(sys.error("Local attribute declarations must have a name"))
+  require(indexedElem.elemPath.entries.size >= 2, "Must be local")
 }
 
 /**
@@ -612,25 +344,16 @@ final class LocalAttributeDeclaration private[schema] (
 final class AttributeReference private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) with AttributeUse {
+  docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) {
 
-  require(isReference, "Must be a reference")
-  require(!isGlobal, "Must not be global")
-
-  /**
-   * Returns None as the optional target namespace of the (unresolved) attribute reference.
-   */
-  final override def targetNamespaceOption: Option[String] = None
-
-  /**
-   * Returns None as the optional scope of the (unresolved) attribute reference.
-   */
-  final override def scopeOption: Option[indexed.Elem] = None
+  require((elem \@ RefEName).isDefined, "Must be a reference")
+  require(indexedElem.elemPath.entries.size >= 2, "Must not be global")
 
   /**
    * Returns the value of the 'ref' attribute as expanded name.
    */
-  final def ref: EName = refOption.getOrElse(sys.error("Attribute references must have a ref attribute"))
+  final def ref: EName =
+    elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Attribute references must have a ref attribute"))
 }
 
 /**
@@ -639,14 +362,14 @@ final class AttributeReference private[schema] (
 abstract class TypeDefinition private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   /**
-   * Returns the `EName` by combining the target namespace and the value of the "name" attribute,
+   * Returns the `EName` by combining the target namespace (of the schema root element) and the value of the "name" attribute,
    * if any, wrapped in an Option.
    */
   final def enameOption: Option[EName] = {
-    val tnsOption = targetNamespaceOption
+    val tnsOption = indexedElem.rootElem \@ TargetNamespaceEName
     val localNameOption = nameAttributeOption
     localNameOption map { nm => EName(tnsOption, nm) }
   }
@@ -666,10 +389,6 @@ final class SimpleTypeDefinition private[schema] (
   docUri: URI) extends TypeDefinition(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsSimpleTypeEName, "The element must be an 'simpleType' element")
-
-  final override def targetNamespaceOption: Option[String] = {
-    indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-  }
 }
 
 /**
@@ -681,10 +400,6 @@ final class ComplexTypeDefinition private[schema] (
   docUri: URI) extends TypeDefinition(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsComplexTypeEName, "The element must be an 'complexType' element")
-
-  final override def targetNamespaceOption: Option[String] = {
-    indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-  }
 }
 
 /**
@@ -693,55 +408,85 @@ final class ComplexTypeDefinition private[schema] (
 final class AttributeGroupDefinition private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsAttributeGroupEName, "The element must be an 'attributeGroup' element")
-
-  final override def targetNamespaceOption: Option[String] = {
-    indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-  }
 }
 
 /**
  * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
-final class IdentityConstraintDefinition private[schema] (
+abstract class IdentityConstraintDefinition private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(
     Set(XsKeyEName, XsKeyrefEName, XsUniqueEName).contains(elem.resolvedName),
     "The element must be an 'key', 'keyref' or 'unique' element")
-
-  final override def targetNamespaceOption: Option[String] = {
-    indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-  }
 }
 
 /**
- * Model group definition. That is, the "xs:group" XML element.
+ * Identity constraint definition "xs:key".
  */
-sealed class ModelGroupDefinition private[schema] (
+final class KeyConstraint private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends IdentityConstraintDefinition(indexedElem, childElems, docUri) {
+
+  require(elem.resolvedName == XsKeyEName, "The element must be a 'key' element")
+}
+
+/**
+ * Identity constraint definition "xs:keyref".
+ */
+final class KeyrefConstraint private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends IdentityConstraintDefinition(indexedElem, childElems, docUri) {
+
+  require(elem.resolvedName == XsKeyrefEName, "The element must be a 'keyref' element")
+}
+
+/**
+ * Identity constraint definition "xs:unique".
+ */
+final class UniqueConstraint private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends IdentityConstraintDefinition(indexedElem, childElems, docUri) {
+
+  require(elem.resolvedName == XsUniqueEName, "The element must be a 'unique' element")
+}
+
+/**
+ * Model group definition. That is, the "xs:group" XML element introducing a named model group.
+ */
+final class ModelGroupDefinition private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
+  require((elem \@ RefEName).isEmpty, "The element must have no 'ref' attribute")
+}
 
-  final override def targetNamespaceOption: Option[String] = {
-    indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-  }
+/**
+ * Model group reference. That is, the "xs:group" XML element referring to a named model group.
+ */
+final class ModelGroupReference private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) with Particle {
+
+  require(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
+  require((elem \@ RefEName).isDefined, "The element must have a 'ref' attribute")
 
   /**
-   * Returns the value of the 'ref' attribute as expanded name, if any, wrapped in an Option.
+   * Returns the value of the 'ref' attribute as expanded name.
    */
-  final def refOption: Option[EName] = {
-    val refOption = elem \@ RefEName
-    refOption map { ref =>
-      elem.scope.resolveQNameOption(QName(ref)).getOrElse(
-        sys.error("Could not resolve ref '%s' as expanded name".format(ref)))
-    }
+  final def ref: EName = {
+    elem.attributeAsResolvedQName(RefEName)
   }
 }
 
@@ -751,28 +496,25 @@ sealed class ModelGroupDefinition private[schema] (
 final class NotationDeclaration private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsNotationEName, "The element must be a 'notation' element")
-
-  final override def targetNamespaceOption: Option[String] = {
-    indexedElem.rootElem.attributeOption(TargetNamespaceEName)
-  }
 }
 
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-sealed class ModelGroup private[schema] (
+abstract class ModelGroup private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) with Particle {
 
   require(
     Set(XsAllEName, XsSequenceEName, XsChoiceEName).contains(elem.resolvedName),
     "The element must be an 'all', 'sequence' or 'choice' element")
-
-  final override def targetNamespaceOption: Option[String] = None
+  require(
+    !inNamedGroup || (minOccursAttrOption.isEmpty && maxOccursAttrOption.isEmpty),
+    "If in a named group, there must be no @minOccurs and @maxOccurs")
 
   final def inNamedGroup: Boolean = {
     assert(indexedElem.elemPath.parentPathOption.isDefined)
@@ -784,18 +526,58 @@ sealed class ModelGroup private[schema] (
 }
 
 /**
- * Wildcard. That is, the "xs:any" or "xs:anyAttribute" XML element.
+ * Model group "all".
  */
-sealed class Wildcard private[schema] (
+final class AllGroup private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends ModelGroup(indexedElem, childElems, docUri) {
 
-  require(
-    Set(XsAnyEName, XsAnyAttributeEName).contains(elem.resolvedName),
-    "The element must be an 'any', 'anyAttribute' element")
+  require(elem.resolvedName == XsAllEName, "The element must be an 'all' element")
+}
 
-  final override def targetNamespaceOption: Option[String] = None
+/**
+ * Model group "choice".
+ */
+final class ChoiceGroup private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ModelGroup(indexedElem, childElems, docUri) {
+
+  require(elem.resolvedName == XsChoiceEName, "The element must be a 'choice' element")
+}
+
+/**
+ * Model group "sequence".
+ */
+final class SequenceGroup private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends ModelGroup(indexedElem, childElems, docUri) {
+
+  require(elem.resolvedName == XsSequenceEName, "The element must be a 'sequence' element")
+}
+
+/**
+ * Wildcard "xs:any".
+ */
+final class AnyWildcard private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) with Particle {
+
+  require(elem.resolvedName == XsAnyEName, "The element must be an 'any' element")
+}
+
+/**
+ * Wildcard "xs:anyAttribute".
+ */
+final class AnyAttributeWildcard private[schema] (
+  indexedElem: indexed.Elem,
+  childElems: immutable.IndexedSeq[SchemaElem],
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
+
+  require(elem.resolvedName == XsAnyAttributeEName, "The element must be an 'anyAttribute' element")
 }
 
 /**
@@ -804,11 +586,9 @@ sealed class Wildcard private[schema] (
 final class Annotation private[schema] (
   indexedElem: indexed.Elem,
   childElems: immutable.IndexedSeq[SchemaElem],
-  docUri: URI) extends SchemaComponent(indexedElem, childElems, docUri) {
+  docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsAnnotationEName, "The element must be an 'annotation' element")
-
-  final override def targetNamespaceOption: Option[String] = None
 }
 
 // Import, include, redefine
@@ -914,6 +694,41 @@ final class Documentation private[schema] (
   require(elem.resolvedName == XsDocumentationEName, "The element must be a 'documentation' element")
 }
 
+// Capabilities
+
+trait CanBeAbstract { self: SchemaElem =>
+
+  /**
+   * Returns true if and only if the element declaration is abstract.
+   * Only global element declarations can be abstract.
+   */
+  final def isAbstract: Boolean = abstractOption(elem) == Some(true)
+
+  final def abstractOption(elem: Elem): Option[Boolean] = {
+    try {
+      (elem \@ AbstractEName) map (_.toBoolean)
+    } catch {
+      case e: Exception => None
+    }
+  }
+}
+
+trait HasName { self: SchemaElem =>
+
+  /**
+   * Returns the `EName` by combining the target namespace (of the schema root element) and the value of the "name" attribute
+   */
+  final def ename: EName = {
+    val tnsOption = indexedElem.rootElem \@ TargetNamespaceEName
+    EName(tnsOption, nameAttribute)
+  }
+
+  /**
+   * Returns the value of the "name" attribute
+   */
+  final def nameAttribute: String = (elem \@ NameEName).getOrElse(sys.error("Expected @name"))
+}
+
 // Companion objects
 
 object SchemaRootElem {
@@ -955,25 +770,19 @@ object SchemaElem {
       case XsSimpleTypeEName => new SimpleTypeDefinition(indexedElem, childElems, docUri)
       case XsComplexTypeEName => new ComplexTypeDefinition(indexedElem, childElems, docUri)
       case XsAttributeGroupEName => new AttributeGroupDefinition(indexedElem, childElems, docUri)
-      case XsKeyEName => new IdentityConstraintDefinition(indexedElem, childElems, docUri)
-      case XsKeyrefEName => new IdentityConstraintDefinition(indexedElem, childElems, docUri)
-      case XsUniqueEName => new IdentityConstraintDefinition(indexedElem, childElems, docUri)
+      case XsKeyEName => new KeyConstraint(indexedElem, childElems, docUri)
+      case XsKeyrefEName => new KeyrefConstraint(indexedElem, childElems, docUri)
+      case XsUniqueEName => new UniqueConstraint(indexedElem, childElems, docUri)
       case XsGroupEName if (indexedElem \@ RefEName).isDefined =>
-        new ModelGroupDefinition(indexedElem, childElems, docUri) with Particle
+        new ModelGroupReference(indexedElem, childElems, docUri)
       case XsGroupEName => new ModelGroupDefinition(indexedElem, childElems, docUri)
-      case XsAllEName if inNamedGroup(indexedElem) =>
-        new ModelGroup(indexedElem, childElems, docUri)
-      case XsSequenceEName if inNamedGroup(indexedElem) =>
-        new ModelGroup(indexedElem, childElems, docUri)
-      case XsChoiceEName if inNamedGroup(indexedElem) =>
-        new ModelGroup(indexedElem, childElems, docUri)
-      case XsAllEName => new ModelGroup(indexedElem, childElems, docUri) with Particle
-      case XsSequenceEName => new ModelGroup(indexedElem, childElems, docUri) with Particle
-      case XsChoiceEName => new ModelGroup(indexedElem, childElems, docUri) with Particle
+      case XsAllEName => new AllGroup(indexedElem, childElems, docUri)
+      case XsSequenceEName => new SequenceGroup(indexedElem, childElems, docUri)
+      case XsChoiceEName => new ChoiceGroup(indexedElem, childElems, docUri)
       case XsNotationEName => new NotationDeclaration(indexedElem, childElems, docUri)
       case XsAnnotationEName => new Annotation(indexedElem, childElems, docUri)
-      case XsAnyEName => new Wildcard(indexedElem, childElems, docUri) with Particle
-      case XsAnyAttributeEName => new Wildcard(indexedElem, childElems, docUri)
+      case XsAnyEName => new AnyWildcard(indexedElem, childElems, docUri)
+      case XsAnyAttributeEName => new AnyAttributeWildcard(indexedElem, childElems, docUri)
       case XsImportEName => new Import(indexedElem, childElems, docUri)
       case XsIncludeEName => new Include(indexedElem, childElems, docUri)
       case XsRedefineEName => new Redefine(indexedElem, childElems, docUri)
@@ -985,13 +794,6 @@ object SchemaElem {
       case XsRestrictionEname => new Restriction(indexedElem, childElems, docUri)
       case _ => new SchemaElem(indexedElem, childElems, docUri)
     }
-  }
-
-  private def inNamedGroup(indexedElem: indexed.Elem): Boolean = {
-    assert(indexedElem.elemPath.parentPathOption.isDefined)
-    val parent = indexedElem.rootElem.getWithElemPath(indexedElem.elemPath.parentPath)
-
-    (parent.resolvedName == XsGroupEName) && ((parent \@ NameEName).isDefined)
   }
 }
 
