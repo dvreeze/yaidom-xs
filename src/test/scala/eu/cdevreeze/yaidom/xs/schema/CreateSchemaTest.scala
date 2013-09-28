@@ -295,8 +295,8 @@ class CreateSchemaTest extends Suite {
       shipOrderElemDeclOption.get.ename
     }
     expectResult(None) {
-      shipOrderElemDeclOption.get.indexedElem findAncestor {
-        e => e.resolvedName == XsComplexTypeEName
+      shipOrderElemDeclOption.get.indexedElem.elemPath findAncestorPath {
+        e => e.elementNameOption == Some(XsComplexTypeEName)
       }
     }
 
@@ -314,9 +314,9 @@ class CreateSchemaTest extends Suite {
       nameElemDeclOption.get.ename
     }
     expectResult(Some(5)) {
-      nameElemDeclOption.get.indexedElem findAncestor {
-        e => e.resolvedName == XsComplexTypeEName
-      } map { e => e.elemPath.entries.size }
+      nameElemDeclOption.get.indexedElem.elemPath findAncestorPath {
+        e => e.elementNameOption == Some(XsComplexTypeEName)
+      } map { _.entries.size }
     }
 
     val orderidAttrDeclOption =
@@ -328,9 +328,9 @@ class CreateSchemaTest extends Suite {
     assert(!orderidAttrDeclOption.get.isInstanceOf[GlobalAttributeDeclaration])
 
     expectResult(Some(2)) {
-      orderidAttrDeclOption.get.indexedElem findAncestor {
-        e => e.resolvedName == XsComplexTypeEName
-      } map { e => e.elemPath.entries.size }
+      orderidAttrDeclOption.get.indexedElem.elemPath findAncestorPath {
+        e => e.elementNameOption == Some(XsComplexTypeEName)
+      } map { _.entries.size }
     }
   }
 
