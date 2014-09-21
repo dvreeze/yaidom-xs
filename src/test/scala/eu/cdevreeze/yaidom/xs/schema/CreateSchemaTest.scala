@@ -68,7 +68,7 @@ class CreateSchemaTest extends Suite {
     }
     assertResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
-        val tnsOption = e.indexedElem.rootElem \@ EName("targetNamespace")
+        val tnsOption = e.docawareElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
@@ -98,7 +98,7 @@ class CreateSchemaTest extends Suite {
     }
     assertResult(expectedElemNames) {
       elemDecls3 map { e =>
-        val tnsOption = e.indexedElem.rootElem \@ EName("targetNamespace")
+        val tnsOption = e.docawareElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
@@ -291,13 +291,13 @@ class CreateSchemaTest extends Suite {
     assert(shipOrderElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     assertResult(Some(expectedTns)) {
-      shipOrderElemDeclOption.get.indexedElem.rootElem \@ TargetNamespaceEName
+      shipOrderElemDeclOption.get.docawareElem.rootElem \@ TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "shiporder")) {
       shipOrderElemDeclOption.get.ename
     }
     assertResult(None) {
-      shipOrderElemDeclOption.get.indexedElem.path findAncestorPath {
+      shipOrderElemDeclOption.get.docawareElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       }
     }
@@ -310,13 +310,13 @@ class CreateSchemaTest extends Suite {
     assert(!nameElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     assertResult(Some(expectedTns)) {
-      nameElemDeclOption.get.indexedElem.rootElem \@ TargetNamespaceEName
+      nameElemDeclOption.get.docawareElem.rootElem \@ TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "name")) {
       nameElemDeclOption.get.ename
     }
     assertResult(Some(5)) {
-      nameElemDeclOption.get.indexedElem.path findAncestorPath {
+      nameElemDeclOption.get.docawareElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
     }
@@ -330,7 +330,7 @@ class CreateSchemaTest extends Suite {
     assert(!orderidAttrDeclOption.get.isInstanceOf[GlobalAttributeDeclaration])
 
     assertResult(Some(2)) {
-      orderidAttrDeclOption.get.indexedElem.path findAncestorPath {
+      orderidAttrDeclOption.get.docawareElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
     }

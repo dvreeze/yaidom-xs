@@ -219,7 +219,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       And("they are all in the same 'sbr' (http://www.nltaxonomie.nl/2011/xbrl/xbrl-syntax-extension) target namespace")
       assertResult(List(Some(nsSbr))) {
-        elemDecls.map(_.indexedElem.rootElem \@ TargetNamespaceEName).distinct
+        elemDecls.map(_.docawareElem.rootElem \@ TargetNamespaceEName).distinct
       }
 
       And("indeed all these element declarations are used as substitution groups")
