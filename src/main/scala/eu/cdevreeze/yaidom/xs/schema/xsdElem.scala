@@ -371,10 +371,14 @@ abstract class TypeDefinition private[schema] (
   final def nameAttributeOption: Option[String] = elem \@ NameEName
 }
 
+trait NamedTypeDefinition extends TypeDefinition with HasName
+
+trait AnonymousTypeDefinition extends TypeDefinition
+
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
  */
-final class SimpleTypeDefinition private[schema] (
+abstract class SimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) {
 
@@ -382,14 +386,56 @@ final class SimpleTypeDefinition private[schema] (
 }
 
 /**
+ * Named simple type definition. That is, the "xs:simpleType" XML element.
+ */
+final class NamedSimpleTypeDefinition private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with NamedTypeDefinition {
+
+  require(docawareElem.path.entries.size == 1, "Must be global")
+}
+
+/**
+ * Anonymous simple type definition. That is, the "xs:simpleType" XML element.
+ */
+final class AnonymousSimpleTypeDefinition private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition {
+
+  require(docawareElem.path.entries.size >= 2, "Must not be global")
+}
+
+/**
  * Complex type definition. That is, the "xs:complexType" XML element.
  */
-final class ComplexTypeDefinition private[schema] (
+abstract class ComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) {
 
   require(elem.resolvedName == XsComplexTypeEName, "The element must be an 'complexType' element")
 }
+
+/**
+ * Named complex type definition. That is, the "xs:complexType" XML element.
+ */
+final class NamedComplexTypeDefinition private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with NamedTypeDefinition {
+
+  require(docawareElem.path.entries.size == 1, "Must be global")
+}
+
+/**
+ * Anonymous complex type definition. That is, the "xs:complexType" XML element.
+ */
+final class AnonymousComplexTypeDefinition private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition {
+
+  require(docawareElem.path.entries.size >= 2, "Must not be global")
+}
+
+// TODO Attribute group definition or reference
 
 /**
  * Attribute group definition. That is, the "xs:attributeGroup" XML element.
@@ -732,8 +778,12 @@ object XsdElem {
       case XsAttributeEName if docawareElem.path.entries.size == 1 =>
         new GlobalAttributeDeclaration(docawareElem, childElems)
       case XsAttributeEName => new LocalAttributeDeclaration(docawareElem, childElems)
-      case XsSimpleTypeEName => new SimpleTypeDefinition(docawareElem, childElems)
-      case XsComplexTypeEName => new ComplexTypeDefinition(docawareElem, childElems)
+      case XsSimpleTypeEName if docawareElem.path.entries.size == 1 =>
+        new NamedSimpleTypeDefinition(docawareElem, childElems)
+      case XsSimpleTypeEName => new AnonymousSimpleTypeDefinition(docawareElem, childElems)
+      case XsComplexTypeEName if docawareElem.path.entries.size == 1 =>
+        new NamedComplexTypeDefinition(docawareElem, childElems)
+      case XsComplexTypeEName => new AnonymousComplexTypeDefinition(docawareElem, childElems)
       case XsAttributeGroupEName => new AttributeGroupDefinition(docawareElem, childElems)
       case XsKeyEName => new KeyConstraint(docawareElem, childElems)
       case XsKeyrefEName => new KeyrefConstraint(docawareElem, childElems)
