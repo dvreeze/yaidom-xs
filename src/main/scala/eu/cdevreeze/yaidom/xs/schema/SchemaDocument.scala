@@ -27,13 +27,12 @@ import eu.cdevreeze.yaidom._
  *
  * @author Chris de Vreeze
  */
-final class SchemaDocument(val wrappedDocument: indexed.Document) extends Immutable {
+final class SchemaDocument(val wrappedDocument: docaware.Document) extends Immutable {
 
   require(wrappedDocument.uriOption.isDefined, "Missing URI of document")
 
-  final val schema: SchemaRootElem = SchemaRootElem(
-    wrappedDocument.documentElement,
-    wrappedDocument.uriOption.get)
+  final val schema: SchemaRootElem =
+    SchemaRootElem(wrappedDocument.documentElement)
 
   final override def toString: String = wrappedDocument.document.toString
 }

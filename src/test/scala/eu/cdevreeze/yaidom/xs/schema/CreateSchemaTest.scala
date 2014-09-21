@@ -43,7 +43,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -129,7 +129,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("XMLSchema.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -222,7 +222,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("ifrs-gp-2006-08-15.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -276,7 +276,7 @@ class CreateSchemaTest extends Suite {
 
     val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
 
-    val schemaDoc = new SchemaDocument(indexed.Document(doc).withUriOption(Some(docUri)))
+    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
     val schema = schemaDoc.schema
 
     val expectedTns = "http://shiporder"

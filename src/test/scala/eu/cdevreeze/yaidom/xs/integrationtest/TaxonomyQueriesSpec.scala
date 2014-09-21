@@ -61,7 +61,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     Vector(root)
   }
 
-  val docs: immutable.IndexedSeq[indexed.Document] = {
+  val docs: immutable.IndexedSeq[docaware.Document] = {
     def findFiles(root: File): Vector[File] = {
       require(root.isDirectory)
       root.listFiles.toVector flatMap { f => if (f.isDirectory) findFiles(f) else if (f.isFile) Vector(f) else Vector() }
@@ -73,7 +73,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
     val docs = files map { f =>
       val doc = docParser.parse(new FileInputStream(f))
-      indexed.Document(doc.withUriOption(Some(f.toURI)))
+      docaware.Document(f.toURI, doc)
     }
 
     docs
@@ -87,7 +87,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     result.toMap
   }
 
-  val linkbaseDocs: Map[URI, indexed.Document] = {
+  val linkbaseDocs: Map[URI, docaware.Document] = {
     val result =
       docs filter { doc =>
         doc.documentElement.resolvedName == EName(nsLink, "linkbase")
