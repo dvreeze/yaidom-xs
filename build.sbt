@@ -9,17 +9,17 @@ organization := "eu.cdevreeze.yaidom"
 
 version := "0.1.2-SNAPSHOT"
 
-scalaVersion := "2.10.1"
+scalaVersion := "2.11.2"
 
-// crossScalaVersions := Seq("2.10.1")
+// crossScalaVersions := Seq("2.11.2")
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
-libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "0.6.14"
+libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "0.8.2"
 
-libraryDependencies += "junit" % "junit" % "4.10" % "test"
+libraryDependencies += "junit" % "junit" % "4.11" % "test"
 
-libraryDependencies += "org.scalatest" % "scalatest_2.10" % "1.9.1" % "test"
+libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.1.3" % "test"
 
 libraryDependencies += "org.apache.ws.xmlschema" % "xmlschema-core" % "2.0.3"
 

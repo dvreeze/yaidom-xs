@@ -20,7 +20,9 @@ package schema
 
 import java.net.URI
 import scala.collection.immutable
+import scala.reflect.classTag
 import eu.cdevreeze.yaidom._
+import eu.cdevreeze.yaidom.subtypeaware.SubtypeAwareParentElemLike
 import SchemaElem._
 
 /**
@@ -48,7 +50,7 @@ import SchemaElem._
 sealed class SchemaElem private[schema] (
   val indexedElem: indexed.Elem,
   val childElems: immutable.IndexedSeq[SchemaElem],
-  val docUri: URI) extends ElemLike[SchemaElem] with HasText with Immutable {
+  val docUri: URI) extends ElemLike[SchemaElem] with SubtypeAwareParentElemLike[SchemaElem] with HasText with Immutable {
 
   /**
    * The yaidom Elem itself, stored as a val
@@ -61,7 +63,7 @@ sealed class SchemaElem private[schema] (
 
   require(indexedElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
   require(
-    (elem.resolvedName == XsSchemaEName) || (!indexedElem.elemPath.isRoot),
+    (elem.resolvedName == XsSchemaEName) || (!indexedElem.path.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
 
   /**
@@ -111,7 +113,7 @@ final class SchemaRootElem private[schema] (
   docUri: URI) extends SchemaElem(indexedElem, childElems, docUri) {
 
   require(elem.resolvedName == XsSchemaEName, "The element must be a 'schema' element")
-  require(indexedElem.elemPath.isRoot, "The element must be the root of the element tree")
+  require(indexedElem.path.isRoot, "The element must be the root of the element tree")
 
   final def targetNamespaceOption: Option[String] = elem \@ TargetNamespaceEName
 
@@ -119,25 +121,25 @@ final class SchemaRootElem private[schema] (
    * Returns all global element declarations.
    */
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
-    filterChildElems { e => e.resolvedName == XsElementEName } collect { case e: GlobalElementDeclaration => e }
+    findAllChildElemsOfType(classTag[GlobalElementDeclaration])
 
   /**
    * Returns all global element declarations obeying the given predicate.
    */
   final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
-    filterChildElems { e => e.resolvedName == XsElementEName } collect { case e: GlobalElementDeclaration if p(e) => e }
+    filterChildElemsOfType(classTag[GlobalElementDeclaration])(p)
 
   /**
    * Returns all global attribute declarations.
    */
   final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    filterChildElems { e => e.resolvedName == XsAttributeEName } collect { case e: GlobalAttributeDeclaration => e }
+    findAllChildElemsOfType(classTag[GlobalAttributeDeclaration])
 
   /**
    * Returns all global attribute declarations obeying the given predicate.
    */
   final def filterGlobalAttributeDeclarations(p: GlobalAttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    filterChildElems { e => e.resolvedName == XsAttributeEName } collect { case e: GlobalAttributeDeclaration if p(e) => e }
+    filterChildElemsOfType(classTag[GlobalAttributeDeclaration])(p)
 
   /**
    * Returns all global element declarations that have a substitution group matching the given predicate on the
@@ -151,19 +153,19 @@ final class SchemaRootElem private[schema] (
    * Returns all imports.
    */
   final def findAllImports: immutable.IndexedSeq[Import] =
-    filterChildElems { e => e.resolvedName == XsImportEName } collect { case e: Import => e }
+    findAllChildElemsOfType(classTag[Import])
 
   /**
    * Returns all includes.
    */
   final def findAllIncludes: immutable.IndexedSeq[Include] =
-    filterChildElems { e => e.resolvedName == XsIncludeEName } collect { case e: Include => e }
+    findAllChildElemsOfType(classTag[Include])
 
   /**
    * Returns all redefines.
    */
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
-    filterChildElems { e => e.resolvedName == XsRedefineEName } collect { case e: Redefine => e }
+    findAllChildElemsOfType(classTag[Redefine])
 }
 
 // Schema Components
@@ -238,7 +240,7 @@ final class GlobalElementDeclaration private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) with CanBeAbstract {
 
-  require(indexedElem.elemPath.entries.size == 1, "Must be global")
+  require(indexedElem.path.entries.size == 1, "Must be global")
 
   /**
    * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
@@ -260,7 +262,7 @@ final class LocalElementDeclaration private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends ElementDeclaration(indexedElem, childElems, docUri) with Particle {
 
-  require(indexedElem.elemPath.entries.size >= 2, "Must be local")
+  require(indexedElem.path.entries.size >= 2, "Must be local")
 }
 
 /**
@@ -273,7 +275,7 @@ final class ElementReference private[schema] (
   docUri: URI) extends ElementDeclarationOrReference(indexedElem, childElems, docUri) with Particle {
 
   require((elem \@ RefEName).isDefined, "Must be a reference")
-  require(indexedElem.elemPath.entries.size >= 2, "Must not be global")
+  require(indexedElem.path.entries.size >= 2, "Must not be global")
 
   /**
    * Returns the value of the 'ref' attribute as expanded name.
@@ -323,7 +325,7 @@ final class GlobalAttributeDeclaration private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) {
 
-  require(indexedElem.elemPath.entries.size == 1, "Must be global")
+  require(indexedElem.path.entries.size == 1, "Must be global")
 }
 
 /**
@@ -334,7 +336,7 @@ final class LocalAttributeDeclaration private[schema] (
   childElems: immutable.IndexedSeq[SchemaElem],
   docUri: URI) extends AttributeDeclaration(indexedElem, childElems, docUri) {
 
-  require(indexedElem.elemPath.entries.size >= 2, "Must be local")
+  require(indexedElem.path.entries.size >= 2, "Must be local")
 }
 
 /**
@@ -347,7 +349,7 @@ final class AttributeReference private[schema] (
   docUri: URI) extends AttributeDeclarationOrReference(indexedElem, childElems, docUri) {
 
   require((elem \@ RefEName).isDefined, "Must be a reference")
-  require(indexedElem.elemPath.entries.size >= 2, "Must not be global")
+  require(indexedElem.path.entries.size >= 2, "Must not be global")
 
   /**
    * Returns the value of the 'ref' attribute as expanded name.
@@ -517,10 +519,10 @@ abstract class ModelGroup private[schema] (
     "If in a named group, there must be no @minOccurs and @maxOccurs")
 
   final def inNamedGroup: Boolean = {
-    assert(indexedElem.elemPath.parentPathOption.isDefined)
-    val parentPath = indexedElem.elemPath.parentPath
+    assert(indexedElem.path.parentPathOption.isDefined)
+    val parentPath = indexedElem.path.parentPath
 
-    val parent = indexedElem.rootElem.getWithElemPath(parentPath)
+    val parent = indexedElem.rootElem.getElemOrSelfByPath(parentPath)
     (parent.resolvedName == XsGroupEName) && ((parent \@ NameEName).isDefined)
   }
 }
@@ -739,7 +741,7 @@ object SchemaRootElem {
    * This is an expensive method, but once a `SchemaRootElem` has been created, querying through the `ElemLike` API is very fast.
    */
   def apply(indexedElem: indexed.Elem, docUri: URI): SchemaRootElem = {
-    require(indexedElem.elemPath.isRoot)
+    require(indexedElem.path.isRoot)
 
     val childElems = indexedElem.findAllChildElems.map(e => SchemaElem.apply(e, docUri))
     new SchemaRootElem(indexedElem, childElems, docUri)
@@ -755,16 +757,16 @@ object SchemaElem {
     // Recursive calls
     val childElems = indexedElem.findAllChildElems.map(e => SchemaElem.apply(e, docUri))
 
-    indexedElem.elemPath.elementNameOption.getOrElse(XsSchemaEName) match {
+    indexedElem.path.elementNameOption.getOrElse(XsSchemaEName) match {
       case XsSchemaEName => new SchemaRootElem(indexedElem, childElems, docUri)
       case XsElementEName if indexedElem.attributeOption(RefEName).isDefined =>
         new ElementReference(indexedElem, childElems, docUri)
-      case XsElementEName if indexedElem.elemPath.entries.size == 1 =>
+      case XsElementEName if indexedElem.path.entries.size == 1 =>
         new GlobalElementDeclaration(indexedElem, childElems, docUri)
       case XsElementEName => new LocalElementDeclaration(indexedElem, childElems, docUri)
       case XsAttributeEName if indexedElem.attributeOption(RefEName).isDefined =>
         new AttributeReference(indexedElem, childElems, docUri)
-      case XsAttributeEName if indexedElem.elemPath.entries.size == 1 =>
+      case XsAttributeEName if indexedElem.path.entries.size == 1 =>
         new GlobalAttributeDeclaration(indexedElem, childElems, docUri)
       case XsAttributeEName => new LocalAttributeDeclaration(indexedElem, childElems, docUri)
       case XsSimpleTypeEName => new SimpleTypeDefinition(indexedElem, childElems, docUri)

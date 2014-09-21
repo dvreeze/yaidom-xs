@@ -21,11 +21,13 @@ package schema
 import java.{ util => jutil, io => jio }
 import javax.xml.parsers.SAXParserFactory
 import scala.collection.immutable
+import scala.reflect.classTag
 import org.xml.sax.{ EntityResolver, InputSource }
 import org.junit.{ Test, Before, Ignore }
 import org.junit.runner.RunWith
 import org.scalatest.{ Suite, BeforeAndAfterAll }
 import org.scalatest.junit.JUnitRunner
+import eu.cdevreeze.yaidom.subtypeaware.SubtypeAwareParentElemApi.anyElem
 
 /**
  * XML Schema creation test case.
@@ -45,7 +47,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
+    val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
 
     val globalElemDecls2 = schema \\! EName(XsNamespace, "element")
     val elemDecls2 = schema \\ EName(XsNamespace, "element")
@@ -54,7 +56,7 @@ class CreateSchemaTest extends Suite {
     val elemDecls3 = schema \\ EName(XsNamespace, "element")
 
     val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
-    val attrDecls = schema.findAllElems collect { case e: AttributeDeclarationOrReference => e }
+    val attrDecls = schema.findAllElemsOfType(classTag[AttributeDeclarationOrReference])
 
     val tns = "http://shiporder"
 
@@ -131,14 +133,14 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
+    val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
 
     assert(globalElemDecls.size >= 40)
     assert(globalElemDecls.size <= 50)
     assert(elemDecls.size > globalElemDecls.size)
 
     val occursAttrGroupOption =
-      schema.findAllElemsOrSelf collect { case e: AttributeGroupDefinition => e } find { e => (e \@ EName("name")) == Some("occurs") }
+      schema.findAllElemsOrSelfOfType(classTag[AttributeGroupDefinition]) find { e => (e \@ EName("name")) == Some("occurs") }
 
     assert(occursAttrGroupOption.isDefined)
 
@@ -224,7 +226,7 @@ class CreateSchemaTest extends Suite {
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
-    val elemDecls = schema.findAllElems collect { case e: ElementDeclarationOrReference => e }
+    val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
 
     assert(globalElemDecls.size >= 4000)
     assert(globalElemDecls.size <= 5000)
@@ -248,13 +250,13 @@ class CreateSchemaTest extends Suite {
       result.toSet
     }
 
-    val topmostElemDecls = schema.findTopmostElems(e => e.resolvedName == XsElementEName) collect { case e: ElementDeclarationOrReference => e }
+    val topmostElemDecls = schema.findTopmostElemsOfType(classTag[ElementDeclarationOrReference])(anyElem)
 
     expectResult(globalElemDecls) {
       topmostElemDecls
     }
     expectResult(elemDecls) {
-      topmostElemDecls flatMap { e => e +: (e.filterElems(_.resolvedName == XsElementEName) collect { case e: ElementDeclarationOrReference => e }) }
+      topmostElemDecls flatMap { e => e +: (e.findAllElemsOfType(classTag[ElementDeclarationOrReference])) }
     }
 
     expectResult(4) {
@@ -295,12 +297,12 @@ class CreateSchemaTest extends Suite {
       shipOrderElemDeclOption.get.ename
     }
     expectResult(None) {
-      shipOrderElemDeclOption.get.indexedElem.elemPath findAncestorPath {
+      shipOrderElemDeclOption.get.indexedElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       }
     }
 
-    val nameElemDeclOption = schema.filterElems(_.resolvedName == XsElementEName) collect { case e: ElementDeclaration => e } find { e =>
+    val nameElemDeclOption = schema.findAllElemsOfType(classTag[ElementDeclaration]) find { e =>
       e.nameAttribute == "name"
     }
 
@@ -314,13 +316,13 @@ class CreateSchemaTest extends Suite {
       nameElemDeclOption.get.ename
     }
     expectResult(Some(5)) {
-      nameElemDeclOption.get.indexedElem.elemPath findAncestorPath {
+      nameElemDeclOption.get.indexedElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
     }
 
     val orderidAttrDeclOption =
-      (schema.findTopmostElems(_.resolvedName == XsAttributeEName) collect { case e: AttributeDeclaration => e } find { e =>
+      (schema.findTopmostElemsOfType(classTag[AttributeDeclaration])(anyElem) find { e =>
         e.nameAttribute == "orderid"
       }).headOption
 
@@ -328,7 +330,7 @@ class CreateSchemaTest extends Suite {
     assert(!orderidAttrDeclOption.get.isInstanceOf[GlobalAttributeDeclaration])
 
     expectResult(Some(2)) {
-      orderidAttrDeclOption.get.indexedElem.elemPath findAncestorPath {
+      orderidAttrDeclOption.get.indexedElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
     }
