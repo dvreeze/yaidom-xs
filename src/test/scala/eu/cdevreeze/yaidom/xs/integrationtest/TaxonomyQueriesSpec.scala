@@ -106,7 +106,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaCount = schemaDocs.size
 
       Then("more than 100 schemas are found")
-      expectResult(100) {
+      assertResult(100) {
         100.min(schemaCount)
       }
 
@@ -121,7 +121,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val linkbaseCount = linkbaseDocs.size
 
       Then("more than 100 linkbases are found")
-      expectResult(100) {
+      assertResult(100) {
         100.min(linkbaseCount)
       }
 
@@ -144,7 +144,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val substGroupOption = elemDecl.substitutionGroupOption
 
       Then("it is found, and equals sbr:presentationTuple")
-      expectResult(Some(EName(nsSbr, "presentationTuple"))) {
+      assertResult(Some(EName(nsSbr, "presentationTuple"))) {
         substGroupOption
       }
     }
@@ -161,7 +161,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val substGroups = elemDecls flatMap { _.substitutionGroupOption }
 
       Then("only sbr:presentationTuple and sbr:specificationTuple are found")
-      expectResult(Set(EName(nsSbr, "presentationTuple"), EName(nsSbr, "specificationTuple"))) {
+      assertResult(Set(EName(nsSbr, "presentationTuple"), EName(nsSbr, "specificationTuple"))) {
         substGroups.toSet
       }
     }
@@ -175,7 +175,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val substGroupAncestries = substGroups map { substGroup => schemaDocSet.findSubstitutionGroupAncestry(substGroup) }
 
       Then("these element declarations themselves have substitution group xbrli:tuple (xbrli:tuple is the subst. group head)")
-      expectResult(Set(EName(nsXbrli, "tuple"))) {
+      assertResult(Set(EName(nsXbrli, "tuple"))) {
         val result = substGroupAncestries map { _.last }
         result.toSet
       }
@@ -196,7 +196,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       }
 
       Then("no substitution groups are found")
-      expectResult(Set()) {
+      assertResult(Set()) {
         substGroups
       }
     }
@@ -213,12 +213,12 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       Then("all these element declarations are in the xbrli:item or xbrli:tuple substitution group")
       val expectedSubstGroupOptions = Set(Some(EName(nsXbrli, "item")), Some(EName(nsXbrli, "tuple")))
 
-      expectResult(expectedSubstGroupOptions) {
+      assertResult(expectedSubstGroupOptions) {
         elemDecls.map(e => e.substitutionGroupOption).toSet
       }
 
       And("they are all in the same 'sbr' (http://www.nltaxonomie.nl/2011/xbrl/xbrl-syntax-extension) target namespace")
-      expectResult(List(Some(nsSbr))) {
+      assertResult(List(Some(nsSbr))) {
         elemDecls.map(_.indexedElem.rootElem \@ TargetNamespaceEName).distinct
       }
 
@@ -266,7 +266,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val topLevelConcepts = schemaDoc.schema.findAllDirectSubstitutables(conceptSubstGroups)
 
       Then("all global element declarations are found")
-      expectResult(schemaDoc.schema.findAllGlobalElementDeclarations) {
+      assertResult(schemaDoc.schema.findAllGlobalElementDeclarations) {
         topLevelConcepts
       }
     }
@@ -287,7 +287,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val itemTypes = itemDecls flatMap { e => e.typeAttributeOption }
 
       Then("only 'expected' types are found")
-      expectResult(Set(
+      assertResult(Set(
         nsXbrli,
         "http://www.nltaxonomie.nl/iso/iso4217",
         "http://www.nltaxonomie.nl/7.0/basis/sbr/types/nl-types",
@@ -318,7 +318,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val elemUris = allElemsWithUri map { e => e.uriOption.get }
 
       Then("no duplicate URIs are found")
-      expectResult(allElemsWithUri.size) {
+      assertResult(allElemsWithUri.size) {
         elemUris.size
       }
 
@@ -335,7 +335,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val targetENames = allGlobalElemDecls map { e => e.ename }
 
       Then("no duplicate ENames are found")
-      expectResult(allGlobalElemDecls.size) {
+      assertResult(allGlobalElemDecls.size) {
         targetENames.size
       }
 
@@ -374,11 +374,11 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
         }
 
       Then("no broken imports are found")
-      expectResult(allImports.size) {
+      assertResult(allImports.size) {
         schemaLocations.size
       }
       /*
-      expectResult(allImports.size) {
+      assertResult(allImports.size) {
         foundSchemaDocs.size
       }
       */

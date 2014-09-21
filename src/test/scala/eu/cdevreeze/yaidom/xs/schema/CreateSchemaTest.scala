@@ -60,13 +60,13 @@ class CreateSchemaTest extends Suite {
 
     val tns = "http://shiporder"
 
-    expectResult(Seq(EName(tns, "shiporder"))) {
+    assertResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls map { elemDecl => elemDecl.ename }
     }
-    expectResult(Seq(EName(tns, "shiporder"))) {
+    assertResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } map { elemDecl => elemDecl.ename }
     }
-    expectResult(Seq(EName(tns, "shiporder"))) {
+    assertResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
         val tnsOption = e.indexedElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
@@ -88,15 +88,15 @@ class CreateSchemaTest extends Suite {
       EName(tns, "quantity"),
       EName(tns, "price"))
 
-    expectResult(expectedElemNames) {
+    assertResult(expectedElemNames) {
       elemDecls collect {
         case elemDecl: ElementDeclaration => elemDecl.ename
       }
     }
-    expectResult(expectedElemNames) {
+    assertResult(expectedElemNames) {
       elemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl.ename }
     }
-    expectResult(expectedElemNames) {
+    assertResult(expectedElemNames) {
       elemDecls3 map { e =>
         val tnsOption = e.indexedElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
@@ -104,14 +104,14 @@ class CreateSchemaTest extends Suite {
       }
     }
 
-    expectResult(Seq()) {
+    assertResult(Seq()) {
       globalAttrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
-    expectResult(Seq("orderid")) {
+    assertResult(Seq("orderid")) {
       attrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
 
-    expectResult(Set(docUri)) {
+    assertResult(Set(docUri)) {
       schema.findAllElemsOrSelf.map(_.docUri).toSet
     }
   }
@@ -163,13 +163,13 @@ class CreateSchemaTest extends Suite {
       }
 
     assert(openAttrsComplexTypeOption.isDefined)
-    expectResult(2) {
+    assertResult(2) {
       openAttrsComplexTypeOption.get.findAllChildElems.size
     }
 
     val secondChildElem = openAttrsComplexTypeOption.get.findAllChildElems(1)
 
-    expectResult("complexContent") {
+    assertResult("complexContent") {
       secondChildElem.localName
     }
 
@@ -190,21 +190,21 @@ class CreateSchemaTest extends Suite {
                   attributes = Vector(QName("namespace") -> "##other", QName("processContents") -> "lax"))))))
     val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.elem.scope)
 
-    expectResult(resolved.Elem(expectedElem)) {
+    assertResult(resolved.Elem(expectedElem)) {
       resolved.Elem(secondChildElem.elem).removeAllInterElementWhitespace
     }
 
-    expectResult(1) {
+    assertResult(1) {
       schema.findAllImports.size
     }
-    expectResult(0) {
+    assertResult(0) {
       schema.findAllIncludes.size
     }
-    expectResult(0) {
+    assertResult(0) {
       schema.findAllRedefines.size
     }
 
-    expectResult(Set(docUri)) {
+    assertResult(Set(docUri)) {
       schema.findAllElemsOrSelf.map(_.docUri).toSet
     }
   }
@@ -232,7 +232,7 @@ class CreateSchemaTest extends Suite {
     assert(globalElemDecls.size <= 5000)
     assert(elemDecls.size > globalElemDecls.size)
 
-    expectResult(22) {
+    assertResult(22) {
       val filteredElemDecls = globalElemDecls filter { elemDecl =>
         elemDecl.ename.localPart.startsWith("Accumulated")
       }
@@ -241,31 +241,31 @@ class CreateSchemaTest extends Suite {
 
     val nsXbrli = "http://www.xbrl.org/2003/instance"
 
-    expectResult(Set(EName(nsXbrli, "item"), EName(nsXbrli, "tuple"))) {
+    assertResult(Set(EName(nsXbrli, "item"), EName(nsXbrli, "tuple"))) {
       val result = globalElemDecls flatMap { elemDecl => elemDecl.substitutionGroupOption }
       result.toSet
     }
-    expectResult(Set("instant", "duration")) {
+    assertResult(Set("instant", "duration")) {
       val result = globalElemDecls flatMap { elemDecl => elemDecl.attributeOption(EName(nsXbrli, "periodType")) }
       result.toSet
     }
 
     val topmostElemDecls = schema.findTopmostElemsOfType(classTag[ElementDeclarationOrReference])(anyElem)
 
-    expectResult(globalElemDecls) {
+    assertResult(globalElemDecls) {
       topmostElemDecls
     }
-    expectResult(elemDecls) {
+    assertResult(elemDecls) {
       topmostElemDecls flatMap { e => e +: (e.findAllElemsOfType(classTag[ElementDeclarationOrReference])) }
     }
 
-    expectResult(4) {
+    assertResult(4) {
       schema.findAllImports.size
     }
-    expectResult(0) {
+    assertResult(0) {
       schema.findAllIncludes.size
     }
-    expectResult(0) {
+    assertResult(0) {
       schema.findAllRedefines.size
     }
   }
@@ -281,7 +281,7 @@ class CreateSchemaTest extends Suite {
 
     val expectedTns = "http://shiporder"
 
-    expectResult(Some(expectedTns)) {
+    assertResult(Some(expectedTns)) {
       schema.targetNamespaceOption
     }
 
@@ -290,13 +290,13 @@ class CreateSchemaTest extends Suite {
     assert(shipOrderElemDeclOption.isDefined)
     assert(shipOrderElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
-    expectResult(Some(expectedTns)) {
+    assertResult(Some(expectedTns)) {
       shipOrderElemDeclOption.get.indexedElem.rootElem \@ TargetNamespaceEName
     }
-    expectResult(EName(expectedTns, "shiporder")) {
+    assertResult(EName(expectedTns, "shiporder")) {
       shipOrderElemDeclOption.get.ename
     }
-    expectResult(None) {
+    assertResult(None) {
       shipOrderElemDeclOption.get.indexedElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       }
@@ -309,13 +309,13 @@ class CreateSchemaTest extends Suite {
     assert(nameElemDeclOption.isDefined)
     assert(!nameElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
-    expectResult(Some(expectedTns)) {
+    assertResult(Some(expectedTns)) {
       nameElemDeclOption.get.indexedElem.rootElem \@ TargetNamespaceEName
     }
-    expectResult(EName(expectedTns, "name")) {
+    assertResult(EName(expectedTns, "name")) {
       nameElemDeclOption.get.ename
     }
-    expectResult(Some(5)) {
+    assertResult(Some(5)) {
       nameElemDeclOption.get.indexedElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
@@ -329,7 +329,7 @@ class CreateSchemaTest extends Suite {
     assert(orderidAttrDeclOption.isDefined)
     assert(!orderidAttrDeclOption.get.isInstanceOf[GlobalAttributeDeclaration])
 
-    expectResult(Some(2)) {
+    assertResult(Some(2)) {
       orderidAttrDeclOption.get.indexedElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
