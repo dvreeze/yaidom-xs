@@ -61,10 +61,10 @@ class CreateSchemaTest extends Suite {
     val tns = "http://shiporder"
 
     assertResult(Seq(EName(tns, "shiporder"))) {
-      globalElemDecls map { elemDecl => elemDecl.ename }
+      globalElemDecls map { elemDecl => elemDecl.targetEName }
     }
     assertResult(Seq(EName(tns, "shiporder"))) {
-      globalElemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } map { elemDecl => elemDecl.ename }
+      globalElemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl } map { elemDecl => elemDecl.targetEName }
     }
     assertResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
@@ -90,11 +90,11 @@ class CreateSchemaTest extends Suite {
 
     assertResult(expectedElemNames) {
       elemDecls collect {
-        case elemDecl: ElementDeclaration => elemDecl.ename
+        case elemDecl: ElementDeclaration => elemDecl.targetEName
       }
     }
     assertResult(expectedElemNames) {
-      elemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl.ename }
+      elemDecls2 collect { case elemDecl: ElementDeclaration => elemDecl.targetEName }
     }
     assertResult(expectedElemNames) {
       elemDecls3 map { e =>
@@ -234,7 +234,7 @@ class CreateSchemaTest extends Suite {
 
     assertResult(22) {
       val filteredElemDecls = globalElemDecls filter { elemDecl =>
-        elemDecl.ename.localPart.startsWith("Accumulated")
+        elemDecl.targetEName.localPart.startsWith("Accumulated")
       }
       filteredElemDecls.size
     }
@@ -294,7 +294,7 @@ class CreateSchemaTest extends Suite {
       shipOrderElemDeclOption.get.docawareElem.rootElem \@ TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "shiporder")) {
-      shipOrderElemDeclOption.get.ename
+      shipOrderElemDeclOption.get.targetEName
     }
     assertResult(None) {
       shipOrderElemDeclOption.get.docawareElem.path findAncestorPath {
@@ -313,7 +313,7 @@ class CreateSchemaTest extends Suite {
       nameElemDeclOption.get.docawareElem.rootElem \@ TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "name")) {
-      nameElemDeclOption.get.ename
+      nameElemDeclOption.get.targetEName
     }
     assertResult(Some(5)) {
       nameElemDeclOption.get.docawareElem.path findAncestorPath {

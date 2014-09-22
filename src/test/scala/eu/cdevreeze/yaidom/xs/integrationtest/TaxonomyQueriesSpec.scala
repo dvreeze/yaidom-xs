@@ -225,9 +225,9 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       And("indeed all these element declarations are used as substitution groups")
       val allGlobalElemDecls = schemaDocSet.findAllGlobalElementDeclarations
 
-      assert(elemDecls forall (elem => allGlobalElemDecls.find(e => e.substitutionGroupOption == Some(elem.ename)).isDefined))
+      assert(elemDecls forall (elem => allGlobalElemDecls.find(e => e.substitutionGroupOption == Some(elem.targetEName)).isDefined))
 
-      val substGroupQNames = elemDecls map { _.ename } map { ename => ename.toQName(Some("sbr")) }
+      val substGroupQNames = elemDecls map { _.targetEName } map { ename => ename.toQName(Some("sbr")) }
       info("In fact, the substitution groups introduced in xbrl-syntax-extension.xsd are: " + substGroupQNames.mkString(", "))
     }
 
@@ -332,7 +332,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
         schemaDocSet.findAllGlobalElementDeclarations
 
       When("asking for their target ENames")
-      val targetENames = allGlobalElemDecls map { e => e.ename }
+      val targetENames = allGlobalElemDecls map { e => e.targetEName }
 
       Then("no duplicate ENames are found")
       assertResult(allGlobalElemDecls.size) {

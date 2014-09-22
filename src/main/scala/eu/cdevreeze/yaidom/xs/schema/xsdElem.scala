@@ -56,12 +56,12 @@ sealed class XsdElem private[schema] (
    */
   final val elem: Elem = docawareElem.elem
 
-  require(
+  assert(
     childElems.map(_.docawareElem) == docawareElem.findAllChildElems,
     "Corrupt element!")
 
-  require(docawareElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
-  require(
+  assert(docawareElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
+  assert(
     (elem.resolvedName == XsSchemaEName) || (!docawareElem.path.isRoot),
     "This element must either be a 'schema' element, or not be the root of the element tree")
 
@@ -112,8 +112,8 @@ final class SchemaRootElem private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsSchemaEName, "The element must be a 'schema' element")
-  require(docawareElem.path.isRoot, "The element must be the root of the element tree")
+  assert(elem.resolvedName == XsSchemaEName, "The element must be a 'schema' element")
+  assert(docawareElem.path.isRoot, "The element must be the root of the element tree")
 
   final def targetNamespaceOption: Option[String] = elem \@ TargetNamespaceEName
 
@@ -195,7 +195,7 @@ abstract class ElementDeclarationOrReference private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsElementEName, "The element must be an 'element' element")
+  assert(elem.resolvedName == XsElementEName, "The element must be an 'element' element")
 }
 
 /**
@@ -205,7 +205,8 @@ abstract class ElementDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with HasName {
 
-  require((elem \@ RefEName).isEmpty, "Must not be a reference")
+  assert((elem \@ RefEName).isEmpty, "Must not be a reference")
+  assert((elem \@ NameEName).isDefined, "Must have a name")
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
@@ -237,7 +238,9 @@ final class GlobalElementDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(docawareElem, childElems) with CanBeAbstract {
 
-  require(docawareElem.path.entries.size == 1, "Must be global")
+  assert(docawareElem.path.entries.size == 1, "Must be global")
+
+  def targetNamespaceOption: Option[String] = docawareElem.rootElem.attributeOption(TargetNamespaceEName)
 
   /**
    * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
@@ -258,7 +261,31 @@ final class LocalElementDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(docawareElem, childElems) with Particle {
 
-  require(docawareElem.path.entries.size >= 2, "Must be local")
+  assert(docawareElem.path.entries.size >= 2, "Must be local")
+
+  final def targetNamespaceOption: Option[String] = {
+    val tnsOption = docawareElem.rootElem \@ TargetNamespaceEName
+    if (isQualified) tnsOption else None
+  }
+
+  private def isQualified: Boolean = isQualified(docawareElem.path)
+
+  private def isQualified(path: Path): Boolean = {
+    if (path.isRoot) {
+      docawareElem.rootElem.attributeOption(ElementFormDefaultEName) map {
+        case "qualified" => true
+        case "unqualified" => false
+      } getOrElse false
+    } else {
+      docawareElem.elem.attributeOption(FormEName) map {
+        case "qualified" => true
+        case "unqualified" => false
+      } getOrElse {
+        // Recursive call
+        isQualified(Path.Root)
+      }
+    }
+  }
 }
 
 /**
@@ -267,16 +294,10 @@ final class LocalElementDeclaration private[schema] (
  */
 final class ElementReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with Particle {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with Particle with IsReference {
 
-  require((elem \@ RefEName).isDefined, "Must be a reference")
-  require(docawareElem.path.entries.size >= 2, "Must not be global")
-
-  /**
-   * Returns the value of the 'ref' attribute as expanded name.
-   */
-  final def ref: EName =
-    elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Element references must have a ref attribute"))
+  assert((elem \@ RefEName).isDefined, "Must be a reference")
+  assert(docawareElem.path.entries.size >= 2, "Must not be global")
 }
 
 /**
@@ -286,7 +307,7 @@ abstract class AttributeDeclarationOrReference private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsAttributeEName, "The element must be an 'attribute' element")
+  assert(elem.resolvedName == XsAttributeEName, "The element must be an 'attribute' element")
 }
 
 /**
@@ -296,7 +317,8 @@ abstract class AttributeDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) with HasName {
 
-  require((elem \@ RefEName).isEmpty, "Must not be a reference")
+  assert((elem \@ RefEName).isEmpty, "Must not be a reference")
+  assert((elem \@ NameEName).isDefined, "Must have a name")
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
@@ -317,7 +339,9 @@ final class GlobalAttributeDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(docawareElem, childElems) {
 
-  require(docawareElem.path.entries.size == 1, "Must be global")
+  assert(docawareElem.path.entries.size == 1, "Must be global")
+
+  def targetNamespaceOption: Option[String] = docawareElem.rootElem.attributeOption(TargetNamespaceEName)
 }
 
 /**
@@ -327,7 +351,31 @@ final class LocalAttributeDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(docawareElem, childElems) {
 
-  require(docawareElem.path.entries.size >= 2, "Must be local")
+  assert(docawareElem.path.entries.size >= 2, "Must be local")
+
+  final def targetNamespaceOption: Option[String] = {
+    val tnsOption = docawareElem.rootElem \@ TargetNamespaceEName
+    if (isQualified) tnsOption else None
+  }
+
+  private def isQualified: Boolean = isQualified(docawareElem.path)
+
+  private def isQualified(path: Path): Boolean = {
+    if (path.isRoot) {
+      docawareElem.rootElem.attributeOption(AttributeFormDefaultEName) map {
+        case "qualified" => true
+        case "unqualified" => false
+      } getOrElse false
+    } else {
+      docawareElem.elem.attributeOption(FormEName) map {
+        case "qualified" => true
+        case "unqualified" => false
+      } getOrElse {
+        // Recursive call
+        isQualified(Path.Root)
+      }
+    }
+  }
 }
 
 /**
@@ -336,16 +384,10 @@ final class LocalAttributeDeclaration private[schema] (
  */
 final class AttributeReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) with IsReference {
 
-  require((elem \@ RefEName).isDefined, "Must be a reference")
-  require(docawareElem.path.entries.size >= 2, "Must not be global")
-
-  /**
-   * Returns the value of the 'ref' attribute as expanded name.
-   */
-  final def ref: EName =
-    elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Attribute references must have a ref attribute"))
+  assert((elem \@ RefEName).isDefined, "Must be a reference")
+  assert(docawareElem.path.entries.size >= 2, "Must not be global")
 }
 
 /**
@@ -354,21 +396,6 @@ final class AttributeReference private[schema] (
 abstract class TypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
-
-  /**
-   * Returns the `EName` by combining the target namespace (of the schema root element) and the value of the "name" attribute,
-   * if any, wrapped in an Option.
-   */
-  final def enameOption: Option[EName] = {
-    val tnsOption = docawareElem.rootElem \@ TargetNamespaceEName
-    val localNameOption = nameAttributeOption
-    localNameOption map { nm => EName(tnsOption, nm) }
-  }
-
-  /**
-   * Returns the value of the "name" attribute, if any, wrapped in an Option.
-   */
-  final def nameAttributeOption: Option[String] = elem \@ NameEName
 }
 
 trait NamedTypeDefinition extends TypeDefinition with HasName
@@ -382,7 +409,7 @@ abstract class SimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsSimpleTypeEName, "The element must be an 'simpleType' element")
+  assert(elem.resolvedName == XsSimpleTypeEName, "The element must be an 'simpleType' element")
 }
 
 /**
@@ -392,7 +419,9 @@ final class NamedSimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with NamedTypeDefinition {
 
-  require(docawareElem.path.entries.size == 1, "Must be global")
+  assert(docawareElem.path.entries.size == 1, "Must be global")
+
+  def targetNamespaceOption: Option[String] = docawareElem.rootElem.attributeOption(TargetNamespaceEName)
 }
 
 /**
@@ -402,7 +431,7 @@ final class AnonymousSimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition {
 
-  require(docawareElem.path.entries.size >= 2, "Must not be global")
+  assert(docawareElem.path.entries.size >= 2, "Must not be global")
 }
 
 /**
@@ -412,7 +441,7 @@ abstract class ComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsComplexTypeEName, "The element must be an 'complexType' element")
+  assert(elem.resolvedName == XsComplexTypeEName, "The element must be an 'complexType' element")
 }
 
 /**
@@ -422,7 +451,9 @@ final class NamedComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with NamedTypeDefinition {
 
-  require(docawareElem.path.entries.size == 1, "Must be global")
+  assert(docawareElem.path.entries.size == 1, "Must be global")
+
+  def targetNamespaceOption: Option[String] = docawareElem.rootElem.attributeOption(TargetNamespaceEName)
 }
 
 /**
@@ -432,19 +463,41 @@ final class AnonymousComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition {
 
-  require(docawareElem.path.entries.size >= 2, "Must not be global")
+  assert(docawareElem.path.entries.size >= 2, "Must not be global")
 }
 
-// TODO Attribute group definition or reference
+/**
+ * Attribute group definition or reference. That is, the "xs:attributeGroup" XML element.
+ */
+abstract class AttributeGroupDefinitionOrReference private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+
+  assert(elem.resolvedName == XsAttributeGroupEName, "The element must be an 'attributeGroup' element")
+}
 
 /**
  * Attribute group definition. That is, the "xs:attributeGroup" XML element.
  */
 final class AttributeGroupDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(docawareElem, childElems) with HasName {
 
-  require(elem.resolvedName == XsAttributeGroupEName, "The element must be an 'attributeGroup' element")
+  assert((elem \@ RefEName).isEmpty, "Must not be a reference")
+  assert((elem \@ NameEName).isDefined, "Must have a name")
+
+  def targetNamespaceOption: Option[String] = docawareElem.rootElem.attributeOption(TargetNamespaceEName)
+}
+
+/**
+ * Attribute group reference. That is, the "xs:attributeGroup" XML element.
+ */
+final class AttributeGroupReference private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(docawareElem, childElems) with IsReference {
+
+  assert((elem \@ RefEName).isDefined, "Must be a reference")
+  assert((elem \@ NameEName).isEmpty, "Must not have a name")
 }
 
 /**
@@ -454,7 +507,7 @@ abstract class IdentityConstraintDefinition private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(
+  assert(
     Set(XsKeyEName, XsKeyrefEName, XsUniqueEName).contains(elem.resolvedName),
     "The element must be an 'key', 'keyref' or 'unique' element")
 }
@@ -466,7 +519,7 @@ final class KeyConstraint private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsKeyEName, "The element must be a 'key' element")
+  assert(elem.resolvedName == XsKeyEName, "The element must be a 'key' element")
 }
 
 /**
@@ -476,7 +529,7 @@ final class KeyrefConstraint private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsKeyrefEName, "The element must be a 'keyref' element")
+  assert(elem.resolvedName == XsKeyrefEName, "The element must be a 'keyref' element")
 }
 
 /**
@@ -486,7 +539,17 @@ final class UniqueConstraint private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsUniqueEName, "The element must be a 'unique' element")
+  assert(elem.resolvedName == XsUniqueEName, "The element must be a 'unique' element")
+}
+
+/**
+ * Model group definition. That is, the "xs:group" XML element introducing a named model group.
+ */
+abstract class ModelGroupDefinitionOrReference private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+
+  assert(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
 }
 
 /**
@@ -494,10 +557,9 @@ final class UniqueConstraint private[schema] (
  */
 final class ModelGroupDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
-  require((elem \@ RefEName).isEmpty, "The element must have no 'ref' attribute")
+  assert((elem \@ RefEName).isEmpty, "The element must have no 'ref' attribute")
 }
 
 /**
@@ -505,17 +567,9 @@ final class ModelGroupDefinition private[schema] (
  */
 final class ModelGroupReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(docawareElem, childElems) with Particle with IsReference {
 
-  require(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
-  require((elem \@ RefEName).isDefined, "The element must have a 'ref' attribute")
-
-  /**
-   * Returns the value of the 'ref' attribute as expanded name.
-   */
-  final def ref: EName = {
-    elem.attributeAsResolvedQName(RefEName)
-  }
+  assert((elem \@ RefEName).isDefined, "The element must have a 'ref' attribute")
 }
 
 /**
@@ -525,7 +579,7 @@ final class NotationDeclaration private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsNotationEName, "The element must be a 'notation' element")
+  assert(elem.resolvedName == XsNotationEName, "The element must be a 'notation' element")
 }
 
 /**
@@ -535,9 +589,10 @@ abstract class ModelGroup private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle {
 
-  require(
+  assert(
     Set(XsAllEName, XsSequenceEName, XsChoiceEName).contains(elem.resolvedName),
     "The element must be an 'all', 'sequence' or 'choice' element")
+  // TODO Check in apply method, and replace require by assert here
   require(
     !inNamedGroup || (minOccursAttrOption.isEmpty && maxOccursAttrOption.isEmpty),
     "If in a named group, there must be no @minOccurs and @maxOccurs")
@@ -558,7 +613,7 @@ final class AllGroup private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsAllEName, "The element must be an 'all' element")
+  assert(elem.resolvedName == XsAllEName, "The element must be an 'all' element")
 }
 
 /**
@@ -568,7 +623,7 @@ final class ChoiceGroup private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsChoiceEName, "The element must be a 'choice' element")
+  assert(elem.resolvedName == XsChoiceEName, "The element must be a 'choice' element")
 }
 
 /**
@@ -578,7 +633,7 @@ final class SequenceGroup private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsSequenceEName, "The element must be a 'sequence' element")
+  assert(elem.resolvedName == XsSequenceEName, "The element must be a 'sequence' element")
 }
 
 /**
@@ -588,7 +643,7 @@ final class AnyWildcard private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle {
 
-  require(elem.resolvedName == XsAnyEName, "The element must be an 'any' element")
+  assert(elem.resolvedName == XsAnyEName, "The element must be an 'any' element")
 }
 
 /**
@@ -598,7 +653,7 @@ final class AnyAttributeWildcard private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsAnyAttributeEName, "The element must be an 'anyAttribute' element")
+  assert(elem.resolvedName == XsAnyAttributeEName, "The element must be an 'anyAttribute' element")
 }
 
 /**
@@ -608,7 +663,7 @@ final class Annotation private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsAnnotationEName, "The element must be an 'annotation' element")
+  assert(elem.resolvedName == XsAnnotationEName, "The element must be an 'annotation' element")
 }
 
 // Import, include, redefine
@@ -620,7 +675,7 @@ final class Import private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsImportEName, "The element must be an 'import' element")
+  assert(elem.resolvedName == XsImportEName, "The element must be an 'import' element")
 }
 
 /**
@@ -630,7 +685,7 @@ final class Include private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsIncludeEName, "The element must be an 'include' element")
+  assert(elem.resolvedName == XsIncludeEName, "The element must be an 'include' element")
 }
 
 /**
@@ -640,7 +695,7 @@ final class Redefine private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsRedefineEName, "The element must be a 'redefine' element")
+  assert(elem.resolvedName == XsRedefineEName, "The element must be a 'redefine' element")
 }
 
 // Other schema parts, that are not Schema Components themselves, such as extension, restriction, etc.
@@ -652,7 +707,7 @@ final class ComplexContent private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsComplexContentEName, "The element must be a 'complexContent' element")
+  assert(elem.resolvedName == XsComplexContentEName, "The element must be a 'complexContent' element")
 }
 
 /**
@@ -662,7 +717,7 @@ final class SimpleContent private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsSimpleContentEName, "The element must be a 'simpleContent' element")
+  assert(elem.resolvedName == XsSimpleContentEName, "The element must be a 'simpleContent' element")
 }
 
 /**
@@ -672,7 +727,7 @@ final class Extension private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsExtensionEName, "The element must be an 'extension' element")
+  assert(elem.resolvedName == XsExtensionEName, "The element must be an 'extension' element")
 }
 
 /**
@@ -682,7 +737,27 @@ final class Restriction private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsRestrictionEname, "The element must be a 'restriction' element")
+  assert(elem.resolvedName == XsRestrictionEName, "The element must be a 'restriction' element")
+}
+
+/**
+ * The "xs:field" XML element.
+ */
+final class Field private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+
+  assert(elem.resolvedName == XsFieldEName, "The element must be a 'field' element")
+}
+
+/**
+ * The "xs:selector" XML element.
+ */
+final class Selector private[schema] (
+  docawareElem: docaware.Elem,
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+
+  assert(elem.resolvedName == XsSelectorEName, "The element must be a 'selector' element")
 }
 
 /**
@@ -692,7 +767,7 @@ final class Appinfo private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsAppinfoEName, "The element must be an 'appinfo' element")
+  assert(elem.resolvedName == XsAppinfoEName, "The element must be an 'appinfo' element")
 }
 
 /**
@@ -702,7 +777,7 @@ final class Documentation private[schema] (
   docawareElem: docaware.Elem,
   childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
 
-  require(elem.resolvedName == XsDocumentationEName, "The element must be a 'documentation' element")
+  assert(elem.resolvedName == XsDocumentationEName, "The element must be a 'documentation' element")
 }
 
 // Capabilities
@@ -726,11 +801,13 @@ trait CanBeAbstract { self: XsdElem =>
 
 trait HasName { self: XsdElem =>
 
+  def targetNamespaceOption: Option[String]
+
   /**
-   * Returns the `EName` by combining the target namespace (of the schema root element) and the value of the "name" attribute
+   * Returns the `EName` by combining the target namespace and the value of the "name" attribute.
    */
-  final def ename: EName = {
-    val tnsOption = docawareElem.rootElem \@ TargetNamespaceEName
+  final def targetEName: EName = {
+    val tnsOption = targetNamespaceOption
     EName(tnsOption, nameAttribute)
   }
 
@@ -738,6 +815,15 @@ trait HasName { self: XsdElem =>
    * Returns the value of the "name" attribute
    */
   final def nameAttribute: String = (elem \@ NameEName).getOrElse(sys.error("Expected @name"))
+}
+
+trait IsReference { self: XsdElem =>
+
+  /**
+   * Returns the value of the 'ref' attribute as expanded name.
+   */
+  final def ref: EName =
+    elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Attribute references must have a ref attribute"))
 }
 
 // Companion objects
@@ -760,54 +846,120 @@ object SchemaRootElem {
 object XsdElem {
 
   /**
-   * Recursive public factory method for XsdElem instances.
+   * Recursive public factory method for XsdElem instances. Indeed, construction of an XsdElem is expensive,
+   * but after construction querying is very fast, due to the stored child XsdElems.
    */
   def apply(docawareElem: docaware.Elem): XsdElem = {
+    // TODO Better error messages, and more checks, so that constructors only need assertions and no require statements
+    // TODO Turn this into a validating factory method that accumulates validation errors
+
+    require(
+      docawareElem.rootElem.resolvedName == XsSchemaEName,
+      "The root of the element tree must be a 'schema' element")
+    require(
+      (docawareElem.resolvedName == XsSchemaEName) || (!docawareElem.path.isRoot),
+      "This element must either be a 'schema' element, or not be the root of the element tree")
+
     // Recursive calls
     val childElems = docawareElem.findAllChildElems.map(e => XsdElem.apply(e))
 
-    docawareElem.path.elementNameOption.getOrElse(XsSchemaEName) match {
-      case XsSchemaEName => new SchemaRootElem(docawareElem, childElems)
-      case XsElementEName if docawareElem.attributeOption(RefEName).isDefined =>
-        new ElementReference(docawareElem, childElems)
+    assert(
+      childElems.map(_.docawareElem) == docawareElem.findAllChildElems,
+      "Corrupt element!")
+
+    docawareElem.resolvedName match {
+      case XsSchemaEName =>
+        new SchemaRootElem(docawareElem, childElems)
       case XsElementEName if docawareElem.path.entries.size == 1 =>
+        require(docawareElem.attributeOption(NameEName).isDefined)
         new GlobalElementDeclaration(docawareElem, childElems)
-      case XsElementEName => new LocalElementDeclaration(docawareElem, childElems)
-      case XsAttributeEName if docawareElem.attributeOption(RefEName).isDefined =>
-        new AttributeReference(docawareElem, childElems)
+      case XsElementEName if docawareElem.attributeOption(RefEName).isDefined =>
+        require(docawareElem.attributeOption(NameEName).isEmpty)
+        new ElementReference(docawareElem, childElems)
+      case XsElementEName if docawareElem.attributeOption(NameEName).isDefined =>
+        require(docawareElem.attributeOption(RefEName).isEmpty)
+        new LocalElementDeclaration(docawareElem, childElems)
+      case XsElementEName =>
+        sys.error(s"Not an element declaration or reference")
       case XsAttributeEName if docawareElem.path.entries.size == 1 =>
+        require(docawareElem.attributeOption(NameEName).isDefined)
         new GlobalAttributeDeclaration(docawareElem, childElems)
-      case XsAttributeEName => new LocalAttributeDeclaration(docawareElem, childElems)
+      case XsAttributeEName if docawareElem.attributeOption(RefEName).isDefined =>
+        require(docawareElem.attributeOption(NameEName).isEmpty)
+        new AttributeReference(docawareElem, childElems)
+      case XsAttributeEName if docawareElem.attributeOption(NameEName).isDefined =>
+        require(docawareElem.attributeOption(RefEName).isEmpty)
+        new LocalAttributeDeclaration(docawareElem, childElems)
+      case XsAttributeEName =>
+        sys.error(s"Not an attribute declaration or reference")
       case XsSimpleTypeEName if docawareElem.path.entries.size == 1 =>
+        require(docawareElem.attributeOption(NameEName).isDefined)
         new NamedSimpleTypeDefinition(docawareElem, childElems)
-      case XsSimpleTypeEName => new AnonymousSimpleTypeDefinition(docawareElem, childElems)
+      case XsSimpleTypeEName =>
+        require(docawareElem.attributeOption(NameEName).isEmpty)
+        new AnonymousSimpleTypeDefinition(docawareElem, childElems)
       case XsComplexTypeEName if docawareElem.path.entries.size == 1 =>
+        require(docawareElem.attributeOption(NameEName).isDefined)
         new NamedComplexTypeDefinition(docawareElem, childElems)
-      case XsComplexTypeEName => new AnonymousComplexTypeDefinition(docawareElem, childElems)
-      case XsAttributeGroupEName => new AttributeGroupDefinition(docawareElem, childElems)
-      case XsKeyEName => new KeyConstraint(docawareElem, childElems)
-      case XsKeyrefEName => new KeyrefConstraint(docawareElem, childElems)
-      case XsUniqueEName => new UniqueConstraint(docawareElem, childElems)
+      case XsComplexTypeEName =>
+        require(docawareElem.attributeOption(NameEName).isEmpty)
+        new AnonymousComplexTypeDefinition(docawareElem, childElems)
+      case XsAttributeGroupEName if docawareElem.attributeOption(RefEName).isDefined =>
+        require(docawareElem.attributeOption(NameEName).isEmpty)
+        new AttributeGroupReference(docawareElem, childElems)
+      case XsAttributeGroupEName if docawareElem.attributeOption(NameEName).isDefined =>
+        require(docawareElem.attributeOption(RefEName).isEmpty)
+        new AttributeGroupDefinition(docawareElem, childElems)
+      case XsAttributeGroupEName =>
+        sys.error(s"Not an attribute group definition or reference")
+      case XsKeyEName =>
+        new KeyConstraint(docawareElem, childElems)
+      case XsKeyrefEName =>
+        new KeyrefConstraint(docawareElem, childElems)
+      case XsUniqueEName =>
+        new UniqueConstraint(docawareElem, childElems)
       case XsGroupEName if (docawareElem \@ RefEName).isDefined =>
         new ModelGroupReference(docawareElem, childElems)
-      case XsGroupEName => new ModelGroupDefinition(docawareElem, childElems)
-      case XsAllEName => new AllGroup(docawareElem, childElems)
-      case XsSequenceEName => new SequenceGroup(docawareElem, childElems)
-      case XsChoiceEName => new ChoiceGroup(docawareElem, childElems)
-      case XsNotationEName => new NotationDeclaration(docawareElem, childElems)
-      case XsAnnotationEName => new Annotation(docawareElem, childElems)
-      case XsAnyEName => new AnyWildcard(docawareElem, childElems)
-      case XsAnyAttributeEName => new AnyAttributeWildcard(docawareElem, childElems)
-      case XsImportEName => new Import(docawareElem, childElems)
-      case XsIncludeEName => new Include(docawareElem, childElems)
-      case XsRedefineEName => new Redefine(docawareElem, childElems)
-      case XsComplexContentEName => new ComplexContent(docawareElem, childElems)
-      case XsSimpleContentEName => new SimpleContent(docawareElem, childElems)
-      case XsAppinfoEName => new Appinfo(docawareElem, childElems)
-      case XsDocumentationEName => new Documentation(docawareElem, childElems)
-      case XsExtensionEName => new Extension(docawareElem, childElems)
-      case XsRestrictionEname => new Restriction(docawareElem, childElems)
-      case _ => new XsdElem(docawareElem, childElems)
+      case XsGroupEName =>
+        new ModelGroupDefinition(docawareElem, childElems)
+      case XsAllEName =>
+        new AllGroup(docawareElem, childElems)
+      case XsSequenceEName =>
+        new SequenceGroup(docawareElem, childElems)
+      case XsChoiceEName =>
+        new ChoiceGroup(docawareElem, childElems)
+      case XsNotationEName =>
+        new NotationDeclaration(docawareElem, childElems)
+      case XsAnnotationEName =>
+        new Annotation(docawareElem, childElems)
+      case XsAnyEName =>
+        new AnyWildcard(docawareElem, childElems)
+      case XsAnyAttributeEName =>
+        new AnyAttributeWildcard(docawareElem, childElems)
+      case XsImportEName =>
+        new Import(docawareElem, childElems)
+      case XsIncludeEName =>
+        new Include(docawareElem, childElems)
+      case XsRedefineEName =>
+        new Redefine(docawareElem, childElems)
+      case XsComplexContentEName =>
+        new ComplexContent(docawareElem, childElems)
+      case XsSimpleContentEName =>
+        new SimpleContent(docawareElem, childElems)
+      case XsAppinfoEName =>
+        new Appinfo(docawareElem, childElems)
+      case XsDocumentationEName =>
+        new Documentation(docawareElem, childElems)
+      case XsExtensionEName =>
+        new Extension(docawareElem, childElems)
+      case XsRestrictionEName =>
+        new Restriction(docawareElem, childElems)
+      case XsFieldEName =>
+        new Field(docawareElem, childElems)
+      case XsSelectorEName =>
+        new Selector(docawareElem, childElems)
+      case _ =>
+        new XsdElem(docawareElem, childElems)
     }
   }
 }

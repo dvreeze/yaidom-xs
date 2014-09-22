@@ -54,7 +54,7 @@ package object schema {
   val XsImportEName = EName(XsNamespace, "import")
   val XsIncludeEName = EName(XsNamespace, "include")
   val XsRedefineEName = EName(XsNamespace, "redefine")
-  val XsRestrictionEname = EName(XsNamespace, "restriction")
+  val XsRestrictionEName = EName(XsNamespace, "restriction")
   val XsExtensionEName = EName(XsNamespace, "extension")
   val XsListEName = EName(XsNamespace, "list")
   val XsUnionEName = EName(XsNamespace, "union")
