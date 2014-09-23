@@ -780,52 +780,6 @@ final class Documentation private[schema] (
   assert(elem.resolvedName == XsDocumentationEName, "The element must be a 'documentation' element")
 }
 
-// Capabilities
-
-trait CanBeAbstract { self: XsdElem =>
-
-  /**
-   * Returns true if and only if the element declaration is abstract.
-   * Only global element declarations can be abstract.
-   */
-  final def isAbstract: Boolean = abstractOption(elem) == Some(true)
-
-  final def abstractOption(elem: Elem): Option[Boolean] = {
-    try {
-      (elem \@ AbstractEName) map (_.toBoolean)
-    } catch {
-      case e: Exception => None
-    }
-  }
-}
-
-trait HasName { self: XsdElem =>
-
-  def targetNamespaceOption: Option[String]
-
-  /**
-   * Returns the `EName` by combining the target namespace and the value of the "name" attribute.
-   */
-  final def targetEName: EName = {
-    val tnsOption = targetNamespaceOption
-    EName(tnsOption, nameAttribute)
-  }
-
-  /**
-   * Returns the value of the "name" attribute
-   */
-  final def nameAttribute: String = (elem \@ NameEName).getOrElse(sys.error("Expected @name"))
-}
-
-trait IsReference { self: XsdElem =>
-
-  /**
-   * Returns the value of the 'ref' attribute as expanded name.
-   */
-  final def ref: EName =
-    elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Attribute references must have a ref attribute"))
-}
-
 // Companion objects
 
 object SchemaRootElem {
@@ -844,6 +798,52 @@ object SchemaRootElem {
 }
 
 object XsdElem {
+
+  // Capabilities
+
+  trait CanBeAbstract { self: XsdElem =>
+
+    /**
+     * Returns true if and only if the element declaration is abstract.
+     * Only global element declarations can be abstract.
+     */
+    final def isAbstract: Boolean = abstractOption(elem) == Some(true)
+
+    final def abstractOption(elem: Elem): Option[Boolean] = {
+      try {
+        (elem \@ AbstractEName) map (_.toBoolean)
+      } catch {
+        case e: Exception => None
+      }
+    }
+  }
+
+  trait HasName { self: XsdElem =>
+
+    def targetNamespaceOption: Option[String]
+
+    /**
+     * Returns the `EName` by combining the target namespace and the value of the "name" attribute.
+     */
+    final def targetEName: EName = {
+      val tnsOption = targetNamespaceOption
+      EName(tnsOption, nameAttribute)
+    }
+
+    /**
+     * Returns the value of the "name" attribute
+     */
+    final def nameAttribute: String = (elem \@ NameEName).getOrElse(sys.error("Expected @name"))
+  }
+
+  trait IsReference { self: XsdElem =>
+
+    /**
+     * Returns the value of the 'ref' attribute as expanded name.
+     */
+    final def ref: EName =
+      elem.attributeAsResolvedQNameOption(RefEName).getOrElse(sys.error("Attribute references must have a ref attribute"))
+  }
 
   /**
    * Recursive public factory method for XsdElem instances. Indeed, construction of an XsdElem is expensive,
