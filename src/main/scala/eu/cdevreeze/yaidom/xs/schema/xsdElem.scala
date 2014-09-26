@@ -23,6 +23,7 @@ import scala.collection.immutable
 import scala.reflect.classTag
 import eu.cdevreeze.yaidom._
 import eu.cdevreeze.yaidom.subtypeaware.SubtypeAwareParentElemLike
+import eu.cdevreeze.yaidom.xs.schemaapi
 import XsdElem._
 
 /**
@@ -47,9 +48,13 @@ import XsdElem._
  *
  * @author Chris de Vreeze
  */
-sealed class XsdElem private[schema] (
+class XsdElem private[schema] (
   val docawareElem: docaware.Elem,
-  val childElems: immutable.IndexedSeq[XsdElem]) extends ElemLike[XsdElem] with SubtypeAwareParentElemLike[XsdElem] with HasText with Immutable {
+  val childElems: immutable.IndexedSeq[XsdElem]) extends ElemLike[XsdElem] with SubtypeAwareParentElemLike[XsdElem] with HasText with schemaapi.XsdElem[XsdElem] with Immutable {
+
+  type GlobalElementDeclarationType = GlobalElementDeclaration
+
+  type GlobalAttributeDeclarationType = GlobalAttributeDeclaration
 
   /**
    * The yaidom Elem itself, stored as a val
@@ -110,7 +115,7 @@ sealed class XsdElem private[schema] (
  */
 final class SchemaRootElem private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.SchemaRootElem[XsdElem] {
 
   assert(elem.resolvedName == XsSchemaEName, "The element must be a 'schema' element")
   assert(docawareElem.path.isRoot, "The element must be the root of the element tree")
@@ -173,7 +178,7 @@ final class SchemaRootElem private[schema] (
 /**
  * Particle, having a min and max occurs (possibly default).
  */
-trait Particle extends XsdElem {
+trait Particle extends XsdElem with schemaapi.Particle[XsdElem] {
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
 
@@ -193,7 +198,7 @@ trait Particle extends XsdElem {
  */
 abstract class ElementDeclarationOrReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.ElementDeclarationOrReference[XsdElem] {
 
   assert(elem.resolvedName == XsElementEName, "The element must be an 'element' element")
 }
@@ -203,7 +208,7 @@ abstract class ElementDeclarationOrReference private[schema] (
  */
 abstract class ElementDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with HasName {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with HasName with schemaapi.ElementDeclaration[XsdElem] {
 
   assert((elem \@ RefEName).isEmpty, "Must not be a reference")
   assert((elem \@ NameEName).isDefined, "Must have a name")
@@ -236,7 +241,7 @@ abstract class ElementDeclaration private[schema] (
  */
 final class GlobalElementDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(docawareElem, childElems) with CanBeAbstract {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(docawareElem, childElems) with CanBeAbstract with schemaapi.GlobalElementDeclaration[XsdElem] {
 
   assert(docawareElem.path.entries.size == 1, "Must be global")
 
@@ -259,7 +264,7 @@ final class GlobalElementDeclaration private[schema] (
  */
 final class LocalElementDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(docawareElem, childElems) with Particle {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(docawareElem, childElems) with Particle with schemaapi.LocalElementDeclaration[XsdElem] {
 
   assert(docawareElem.path.entries.size >= 2, "Must be local")
 
@@ -294,7 +299,7 @@ final class LocalElementDeclaration private[schema] (
  */
 final class ElementReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with Particle with IsReference {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(docawareElem, childElems) with Particle with IsReference with schemaapi.ElementReference[XsdElem] {
 
   assert((elem \@ RefEName).isDefined, "Must be a reference")
   assert(docawareElem.path.entries.size >= 2, "Must not be global")
@@ -305,7 +310,7 @@ final class ElementReference private[schema] (
  */
 abstract class AttributeDeclarationOrReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.AttributeDeclarationOrReference[XsdElem] {
 
   assert(elem.resolvedName == XsAttributeEName, "The element must be an 'attribute' element")
 }
@@ -315,7 +320,7 @@ abstract class AttributeDeclarationOrReference private[schema] (
  */
 abstract class AttributeDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) with HasName {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) with HasName with schemaapi.AttributeDeclaration[XsdElem] {
 
   assert((elem \@ RefEName).isEmpty, "Must not be a reference")
   assert((elem \@ NameEName).isDefined, "Must have a name")
@@ -337,7 +342,7 @@ abstract class AttributeDeclaration private[schema] (
  */
 final class GlobalAttributeDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(docawareElem, childElems) with schemaapi.GlobalAttributeDeclaration[XsdElem] {
 
   assert(docawareElem.path.entries.size == 1, "Must be global")
 
@@ -349,7 +354,7 @@ final class GlobalAttributeDeclaration private[schema] (
  */
 final class LocalAttributeDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(docawareElem, childElems) with schemaapi.LocalAttributeDeclaration[XsdElem] {
 
   assert(docawareElem.path.entries.size >= 2, "Must be local")
 
@@ -384,7 +389,7 @@ final class LocalAttributeDeclaration private[schema] (
  */
 final class AttributeReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) with IsReference {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(docawareElem, childElems) with IsReference with schemaapi.AttributeReference[XsdElem] {
 
   assert((elem \@ RefEName).isDefined, "Must be a reference")
   assert(docawareElem.path.entries.size >= 2, "Must not be global")
@@ -395,7 +400,7 @@ final class AttributeReference private[schema] (
  */
 abstract class TypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.TypeDefinition[XsdElem] {
 }
 
 trait NamedTypeDefinition extends TypeDefinition with HasName
@@ -407,7 +412,7 @@ trait AnonymousTypeDefinition extends TypeDefinition
  */
 abstract class SimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) with schemaapi.SimpleTypeDefinition[XsdElem] {
 
   assert(elem.resolvedName == XsSimpleTypeEName, "The element must be an 'simpleType' element")
 }
@@ -417,7 +422,7 @@ abstract class SimpleTypeDefinition private[schema] (
  */
 final class NamedSimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with NamedTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with NamedTypeDefinition with schemaapi.NamedSimpleTypeDefinition[XsdElem] {
 
   assert(docawareElem.path.entries.size == 1, "Must be global")
 
@@ -429,7 +434,7 @@ final class NamedSimpleTypeDefinition private[schema] (
  */
 final class AnonymousSimpleTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition with schemaapi.AnonymousSimpleTypeDefinition[XsdElem] {
 
   assert(docawareElem.path.entries.size >= 2, "Must not be global")
 }
@@ -439,7 +444,7 @@ final class AnonymousSimpleTypeDefinition private[schema] (
  */
 abstract class ComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(docawareElem, childElems) with schemaapi.ComplexTypeDefinition[XsdElem] {
 
   assert(elem.resolvedName == XsComplexTypeEName, "The element must be an 'complexType' element")
 }
@@ -449,7 +454,7 @@ abstract class ComplexTypeDefinition private[schema] (
  */
 final class NamedComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with NamedTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with NamedTypeDefinition with schemaapi.NamedComplexTypeDefinition[XsdElem] {
 
   assert(docawareElem.path.entries.size == 1, "Must be global")
 
@@ -461,7 +466,7 @@ final class NamedComplexTypeDefinition private[schema] (
  */
 final class AnonymousComplexTypeDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(docawareElem, childElems) with AnonymousTypeDefinition with schemaapi.AnonymousComplexTypeDefinition[XsdElem] {
 
   assert(docawareElem.path.entries.size >= 2, "Must not be global")
 }
@@ -471,7 +476,7 @@ final class AnonymousComplexTypeDefinition private[schema] (
  */
 abstract class AttributeGroupDefinitionOrReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.AttributeGroupDefinitionOrReference[XsdElem] {
 
   assert(elem.resolvedName == XsAttributeGroupEName, "The element must be an 'attributeGroup' element")
 }
@@ -481,7 +486,7 @@ abstract class AttributeGroupDefinitionOrReference private[schema] (
  */
 final class AttributeGroupDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(docawareElem, childElems) with HasName {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(docawareElem, childElems) with HasName with schemaapi.AttributeGroupDefinition[XsdElem] {
 
   assert((elem \@ RefEName).isEmpty, "Must not be a reference")
   assert((elem \@ NameEName).isDefined, "Must have a name")
@@ -494,7 +499,7 @@ final class AttributeGroupDefinition private[schema] (
  */
 final class AttributeGroupReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(docawareElem, childElems) with IsReference {
+  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(docawareElem, childElems) with IsReference with schemaapi.AttributeGroupReference[XsdElem] {
 
   assert((elem \@ RefEName).isDefined, "Must be a reference")
   assert((elem \@ NameEName).isEmpty, "Must not have a name")
@@ -505,7 +510,7 @@ final class AttributeGroupReference private[schema] (
  */
 abstract class IdentityConstraintDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.IdentityConstraintDefinition[XsdElem] {
 
   assert(
     Set(XsKeyEName, XsKeyrefEName, XsUniqueEName).contains(elem.resolvedName),
@@ -517,7 +522,7 @@ abstract class IdentityConstraintDefinition private[schema] (
  */
 final class KeyConstraint private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) with schemaapi.KeyConstraint[XsdElem] {
 
   assert(elem.resolvedName == XsKeyEName, "The element must be a 'key' element")
 }
@@ -527,7 +532,7 @@ final class KeyConstraint private[schema] (
  */
 final class KeyrefConstraint private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) with schemaapi.KeyrefConstraint[XsdElem] {
 
   assert(elem.resolvedName == XsKeyrefEName, "The element must be a 'keyref' element")
 }
@@ -537,7 +542,7 @@ final class KeyrefConstraint private[schema] (
  */
 final class UniqueConstraint private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(docawareElem, childElems) with schemaapi.UniqueConstraint[XsdElem] {
 
   assert(elem.resolvedName == XsUniqueEName, "The element must be a 'unique' element")
 }
@@ -547,7 +552,7 @@ final class UniqueConstraint private[schema] (
  */
 abstract class ModelGroupDefinitionOrReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.ModelGroupDefinitionOrReference[XsdElem] {
 
   assert(elem.resolvedName == XsGroupEName, "The element must be a 'group' element")
 }
@@ -557,7 +562,7 @@ abstract class ModelGroupDefinitionOrReference private[schema] (
  */
 final class ModelGroupDefinition private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(docawareElem, childElems) with schemaapi.ModelGroupDefinition[XsdElem] {
 
   assert((elem \@ RefEName).isEmpty, "The element must have no 'ref' attribute")
 }
@@ -567,7 +572,7 @@ final class ModelGroupDefinition private[schema] (
  */
 final class ModelGroupReference private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(docawareElem, childElems) with Particle with IsReference {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(docawareElem, childElems) with Particle with IsReference with schemaapi.ModelGroupReference[XsdElem] {
 
   assert((elem \@ RefEName).isDefined, "The element must have a 'ref' attribute")
 }
@@ -577,7 +582,7 @@ final class ModelGroupReference private[schema] (
  */
 final class NotationDeclaration private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.NotationDeclaration[XsdElem] {
 
   assert(elem.resolvedName == XsNotationEName, "The element must be a 'notation' element")
 }
@@ -587,7 +592,7 @@ final class NotationDeclaration private[schema] (
  */
 abstract class ModelGroup private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle with schemaapi.ModelGroup[XsdElem] {
 
   assert(
     Set(XsAllEName, XsSequenceEName, XsChoiceEName).contains(elem.resolvedName),
@@ -611,7 +616,7 @@ abstract class ModelGroup private[schema] (
  */
 final class AllGroup private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) with schemaapi.AllGroup[XsdElem] {
 
   assert(elem.resolvedName == XsAllEName, "The element must be an 'all' element")
 }
@@ -621,7 +626,7 @@ final class AllGroup private[schema] (
  */
 final class ChoiceGroup private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) with schemaapi.ChoiceGroup[XsdElem] {
 
   assert(elem.resolvedName == XsChoiceEName, "The element must be a 'choice' element")
 }
@@ -631,7 +636,7 @@ final class ChoiceGroup private[schema] (
  */
 final class SequenceGroup private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(docawareElem, childElems) with schemaapi.SequenceGroup[XsdElem] {
 
   assert(elem.resolvedName == XsSequenceEName, "The element must be a 'sequence' element")
 }
@@ -641,7 +646,7 @@ final class SequenceGroup private[schema] (
  */
 final class AnyWildcard private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with Particle with schemaapi.AnyWildcard[XsdElem] {
 
   assert(elem.resolvedName == XsAnyEName, "The element must be an 'any' element")
 }
@@ -651,7 +656,7 @@ final class AnyWildcard private[schema] (
  */
 final class AnyAttributeWildcard private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.AnyAttributeWildcard[XsdElem] {
 
   assert(elem.resolvedName == XsAnyAttributeEName, "The element must be an 'anyAttribute' element")
 }
@@ -661,7 +666,7 @@ final class AnyAttributeWildcard private[schema] (
  */
 final class Annotation private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Annotation[XsdElem] {
 
   assert(elem.resolvedName == XsAnnotationEName, "The element must be an 'annotation' element")
 }
@@ -673,7 +678,7 @@ final class Annotation private[schema] (
  */
 final class Import private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Import[XsdElem] {
 
   assert(elem.resolvedName == XsImportEName, "The element must be an 'import' element")
 }
@@ -683,7 +688,7 @@ final class Import private[schema] (
  */
 final class Include private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Include[XsdElem] {
 
   assert(elem.resolvedName == XsIncludeEName, "The element must be an 'include' element")
 }
@@ -693,7 +698,7 @@ final class Include private[schema] (
  */
 final class Redefine private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Redefine[XsdElem] {
 
   assert(elem.resolvedName == XsRedefineEName, "The element must be a 'redefine' element")
 }
@@ -705,7 +710,7 @@ final class Redefine private[schema] (
  */
 final class ComplexContent private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.ComplexContent[XsdElem] {
 
   assert(elem.resolvedName == XsComplexContentEName, "The element must be a 'complexContent' element")
 }
@@ -715,7 +720,7 @@ final class ComplexContent private[schema] (
  */
 final class SimpleContent private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.SimpleContent[XsdElem] {
 
   assert(elem.resolvedName == XsSimpleContentEName, "The element must be a 'simpleContent' element")
 }
@@ -725,7 +730,7 @@ final class SimpleContent private[schema] (
  */
 final class Extension private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Extension[XsdElem] {
 
   assert(elem.resolvedName == XsExtensionEName, "The element must be an 'extension' element")
 }
@@ -735,7 +740,7 @@ final class Extension private[schema] (
  */
 final class Restriction private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Restriction[XsdElem] {
 
   assert(elem.resolvedName == XsRestrictionEName, "The element must be a 'restriction' element")
 }
@@ -745,7 +750,7 @@ final class Restriction private[schema] (
  */
 final class Field private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Field[XsdElem] {
 
   assert(elem.resolvedName == XsFieldEName, "The element must be a 'field' element")
 }
@@ -755,7 +760,7 @@ final class Field private[schema] (
  */
 final class Selector private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Selector[XsdElem] {
 
   assert(elem.resolvedName == XsSelectorEName, "The element must be a 'selector' element")
 }
@@ -765,7 +770,7 @@ final class Selector private[schema] (
  */
 final class Appinfo private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Appinfo[XsdElem] {
 
   assert(elem.resolvedName == XsAppinfoEName, "The element must be an 'appinfo' element")
 }
@@ -775,7 +780,7 @@ final class Appinfo private[schema] (
  */
 final class Documentation private[schema] (
   docawareElem: docaware.Elem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) {
+  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(docawareElem, childElems) with schemaapi.Documentation[XsdElem] {
 
   assert(elem.resolvedName == XsDocumentationEName, "The element must be a 'documentation' element")
 }

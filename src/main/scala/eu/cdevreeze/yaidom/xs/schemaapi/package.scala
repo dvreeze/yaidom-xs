@@ -18,13 +18,11 @@ package eu.cdevreeze.yaidom
 package xs
 
 /**
- * This package represents XML Schema document content as immutable yaidom "elements". These schema objects offer the
- * `ElemLike` query API.
- *
- * This API only models schemas. It is not capable of validating instance documents against schemas.
+ * This package defines the API of XML Schema document content as yaidom "elements". These elements offer the
+ * `SubtypeAwareParentElemApi` query API.
  *
  * Only version 1.0 of XML Schema is modeled.
  *
  * @author Chris de Vreeze
  */
-package object schema
+package object schemaapi
