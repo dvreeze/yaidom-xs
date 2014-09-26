@@ -34,7 +34,7 @@ import XsdElem._
  *
  * @author Chris de Vreeze
  */
-trait XsdElem[XsdElemType <: XsdElem[XsdElemType]] extends ElemApi[XsdElemType] with SubtypeAwareParentElemApi[XsdElemType] with HasText { self: XsdElemType =>
+trait XsdElem[XsdElemType <: XsdElem[XsdElemType]] extends ElemApi[XsdElemType] with SubtypeAwareParentElemApi[XsdElemType] { self: XsdElemType =>
 
   type GlobalElementDeclarationType <: XsdElemType
 
