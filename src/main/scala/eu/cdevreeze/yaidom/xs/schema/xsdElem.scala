@@ -48,7 +48,7 @@ import XsdElem._
  *
  * @author Chris de Vreeze
  */
-class XsdElem private[schema] (
+sealed class XsdElem private[schema] (
   val docawareElem: docaware.Elem,
   val childElems: immutable.IndexedSeq[XsdElem]) extends ElemLike[XsdElem] with SubtypeAwareParentElemLike[XsdElem] with HasText with schemaapi.XsdElem[XsdElem] with Immutable {
 

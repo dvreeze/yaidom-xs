@@ -145,7 +145,7 @@ class CreateSchemaTest extends Suite {
     assert(occursAttrGroupOption.isDefined)
 
     val minOccursAttrOption =
-      occursAttrGroupOption.get findElem { e: XsdElem =>
+      occursAttrGroupOption.get findElem { e =>
         e match {
           case e: AttributeDeclarationOrReference if (e \@ EName("name")) == Some("minOccurs") => true
           case _ => false
@@ -155,7 +155,7 @@ class CreateSchemaTest extends Suite {
     assert(minOccursAttrOption.isDefined)
 
     val openAttrsComplexTypeOption =
-      schema findElem { e: XsdElem =>
+      schema findElem { e =>
         e match {
           case e: ComplexTypeDefinition if (e \@ EName("name")) == Some("openAttrs") => true
           case _ => false
@@ -250,7 +250,7 @@ class CreateSchemaTest extends Suite {
       result.toSet
     }
 
-    val topmostElemDecls = schema.findTopmostElemsOfType(classTag[ElementDeclarationOrReference])(_ => true)
+    val topmostElemDecls = schema.findTopmostElemsOfType(classTag[ElementDeclarationOrReference])(anyElem)
 
     assertResult(globalElemDecls) {
       topmostElemDecls
@@ -322,7 +322,7 @@ class CreateSchemaTest extends Suite {
     }
 
     val orderidAttrDeclOption =
-      (schema.findTopmostElemsOfType(classTag[AttributeDeclaration])(_ => true) find { e =>
+      (schema.findTopmostElemsOfType(classTag[AttributeDeclaration])(anyElem) find { e =>
         e.nameAttribute == "orderid"
       }).headOption
 
