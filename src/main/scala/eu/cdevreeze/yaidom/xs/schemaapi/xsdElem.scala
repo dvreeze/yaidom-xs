@@ -30,15 +30,15 @@ import XsdElem._
  *
  * Terminology is taken as much as possible from the book Definitive XML Schema, 2nd Edition (by Priscilla Walmsley).
  *
- * @tparam A The concrete "XsdElem" super-type of all types in the concrete type hierarchy
+ * @tparam E The concrete "XsdElem" super-type of all types in the concrete type hierarchy
  *
  * @author Chris de Vreeze
  */
-trait XsdElem[XsdElemType <: XsdElem[XsdElemType]] extends ElemApi[XsdElemType] with SubtypeAwareParentElemApi[XsdElemType] { self: XsdElemType =>
+trait XsdElem[E <: XsdElem[E]] extends ElemApi[E] with SubtypeAwareParentElemApi[E] { self: E =>
 
-  type GlobalElementDeclarationType <: XsdElemType
+  type GlobalElementDeclarationType <: E with GlobalElementDeclaration[E]
 
-  type GlobalAttributeDeclarationType <: XsdElemType
+  type GlobalAttributeDeclarationType <: E with GlobalAttributeDeclaration[E]
 }
 
 /**
@@ -47,7 +47,7 @@ trait XsdElem[XsdElemType <: XsdElem[XsdElemType]] extends ElemApi[XsdElemType] 
  * This is what the XML Schema specification calls a schema document, or the document element thereof.
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
  */
-trait SchemaRootElem[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait SchemaRootElem[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 
   def targetNamespaceOption: Option[String]
 
@@ -80,12 +80,12 @@ trait SchemaRootElem[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdEle
   /**
    * Returns all imports.
    */
-  def findAllImports: immutable.IndexedSeq[Import[XsdElemType]]
+  def findAllImports: immutable.IndexedSeq[Import[E]]
 
   /**
    * Returns all includes.
    */
-  def findAllIncludes: immutable.IndexedSeq[Include[XsdElemType]]
+  def findAllIncludes: immutable.IndexedSeq[Include[E]]
 }
 
 // Schema Components
@@ -93,7 +93,7 @@ trait SchemaRootElem[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdEle
 /**
  * Particle, having a min and max occurs (possibly default).
  */
-trait Particle[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Particle[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 
   def minOccurs: Int
 
@@ -103,13 +103,13 @@ trait Particle[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType]
 /**
  * Element declaration or element reference. That is, the "xs:element" XML element.
  */
-trait ElementDeclarationOrReference[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait ElementDeclarationOrReference[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Element declaration. An element declaration is either a global or local element declaration.
  */
-trait ElementDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends ElementDeclarationOrReference[XsdElemType] with HasName { self: XsdElemType =>
+trait ElementDeclaration[E <: XsdElem[E]] extends ElementDeclarationOrReference[E] with HasName { self: E =>
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
@@ -125,7 +125,7 @@ trait ElementDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends ElementDec
 /**
  * Global element declaration.
  */
-trait GlobalElementDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends ElementDeclaration[XsdElemType] with CanBeAbstract { self: XsdElemType =>
+trait GlobalElementDeclaration[E <: XsdElem[E]] extends ElementDeclaration[E] with CanBeAbstract { self: E =>
 
   def targetNamespaceOption: Option[String]
 
@@ -138,7 +138,7 @@ trait GlobalElementDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends Elem
 /**
  * Local element declaration.
  */
-trait LocalElementDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends ElementDeclaration[XsdElemType] with Particle[XsdElemType] { self: XsdElemType =>
+trait LocalElementDeclaration[E <: XsdElem[E]] extends ElementDeclaration[E] with Particle[E] { self: E =>
 
   def targetNamespaceOption: Option[String]
 }
@@ -147,19 +147,19 @@ trait LocalElementDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends Eleme
  * Element reference. Strictly it is not an element declaration, but it can be considered an element declaration in that
  * it is represented by the same xs:element XML element.
  */
-trait ElementReference[XsdElemType <: XsdElem[XsdElemType]] extends ElementDeclarationOrReference[XsdElemType] with Particle[XsdElemType] with IsReference { self: XsdElemType =>
+trait ElementReference[E <: XsdElem[E]] extends ElementDeclarationOrReference[E] with Particle[E] with IsReference { self: E =>
 }
 
 /**
  * Attribute declaration or attribute reference. That is, the "xs:attribute" XML element.
  */
-trait AttributeDeclarationOrReference[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait AttributeDeclarationOrReference[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
  */
-trait AttributeDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends AttributeDeclarationOrReference[XsdElemType] with HasName { self: XsdElemType =>
+trait AttributeDeclaration[E <: XsdElem[E]] extends AttributeDeclarationOrReference[E] with HasName { self: E =>
 
   /**
    * Returns the value of the 'type' attribute as expanded name, if any, wrapped in an Option.
@@ -170,7 +170,7 @@ trait AttributeDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends Attribut
 /**
  * Global attribute declaration.
  */
-trait GlobalAttributeDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends AttributeDeclaration[XsdElemType] { self: XsdElemType =>
+trait GlobalAttributeDeclaration[E <: XsdElem[E]] extends AttributeDeclaration[E] { self: E =>
 
   def targetNamespaceOption: Option[String]
 }
@@ -178,7 +178,7 @@ trait GlobalAttributeDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends At
 /**
  * Local attribute declaration.
  */
-trait LocalAttributeDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends AttributeDeclaration[XsdElemType] { self: XsdElemType =>
+trait LocalAttributeDeclaration[E <: XsdElem[E]] extends AttributeDeclaration[E] { self: E =>
 
   def targetNamespaceOption: Option[String]
 }
@@ -187,31 +187,31 @@ trait LocalAttributeDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends Att
  * Attribute reference. Strictly it is not an attribute declaration, but it can be considered an attribute declaration in that
  * it is represented by the same xs:attribute XML element.
  */
-trait AttributeReference[XsdElemType <: XsdElem[XsdElemType]] extends AttributeDeclarationOrReference[XsdElemType] with IsReference { self: XsdElemType =>
+trait AttributeReference[E <: XsdElem[E]] extends AttributeDeclarationOrReference[E] with IsReference { self: E =>
 }
 
 /**
  * Schema type definition, which is either a simple type or a complex type.
  */
-trait TypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait TypeDefinition[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
-trait NamedTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends TypeDefinition[XsdElemType] with HasName { self: XsdElemType =>
+trait NamedTypeDefinition[E <: XsdElem[E]] extends TypeDefinition[E] with HasName { self: E =>
 }
 
-trait AnonymousTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends TypeDefinition[XsdElemType] { self: XsdElemType =>
+trait AnonymousTypeDefinition[E <: XsdElem[E]] extends TypeDefinition[E] { self: E =>
 }
 
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
  */
-trait SimpleTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends TypeDefinition[XsdElemType] { self: XsdElemType =>
+trait SimpleTypeDefinition[E <: XsdElem[E]] extends TypeDefinition[E] { self: E =>
 }
 
 /**
  * Named simple type definition. That is, the "xs:simpleType" XML element.
  */
-trait NamedSimpleTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends SimpleTypeDefinition[XsdElemType] with NamedTypeDefinition[XsdElemType] { self: XsdElemType =>
+trait NamedSimpleTypeDefinition[E <: XsdElem[E]] extends SimpleTypeDefinition[E] with NamedTypeDefinition[E] { self: E =>
 
   def targetNamespaceOption: Option[String]
 }
@@ -219,19 +219,19 @@ trait NamedSimpleTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends Sim
 /**
  * Anonymous simple type definition. That is, the "xs:simpleType" XML element.
  */
-trait AnonymousSimpleTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends SimpleTypeDefinition[XsdElemType] with AnonymousTypeDefinition[XsdElemType] { self: XsdElemType =>
+trait AnonymousSimpleTypeDefinition[E <: XsdElem[E]] extends SimpleTypeDefinition[E] with AnonymousTypeDefinition[E] { self: E =>
 }
 
 /**
  * Complex type definition. That is, the "xs:complexType" XML element.
  */
-trait ComplexTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends TypeDefinition[XsdElemType] { self: XsdElemType =>
+trait ComplexTypeDefinition[E <: XsdElem[E]] extends TypeDefinition[E] { self: E =>
 }
 
 /**
  * Named complex type definition. That is, the "xs:complexType" XML element.
  */
-trait NamedComplexTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends ComplexTypeDefinition[XsdElemType] with NamedTypeDefinition[XsdElemType] { self: XsdElemType =>
+trait NamedComplexTypeDefinition[E <: XsdElem[E]] extends ComplexTypeDefinition[E] with NamedTypeDefinition[E] { self: E =>
 
   def targetNamespaceOption: Option[String]
 }
@@ -239,19 +239,19 @@ trait NamedComplexTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends Co
 /**
  * Anonymous complex type definition. That is, the "xs:complexType" XML element.
  */
-trait AnonymousComplexTypeDefinition[XsdElemType <: XsdElem[XsdElemType]] extends ComplexTypeDefinition[XsdElemType] with AnonymousTypeDefinition[XsdElemType] { self: XsdElemType =>
+trait AnonymousComplexTypeDefinition[E <: XsdElem[E]] extends ComplexTypeDefinition[E] with AnonymousTypeDefinition[E] { self: E =>
 }
 
 /**
  * Attribute group definition or reference. That is, the "xs:attributeGroup" XML element.
  */
-trait AttributeGroupDefinitionOrReference[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait AttributeGroupDefinitionOrReference[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Attribute group definition. That is, the "xs:attributeGroup" XML element.
  */
-trait AttributeGroupDefinition[XsdElemType <: XsdElem[XsdElemType]] extends AttributeGroupDefinitionOrReference[XsdElemType] with HasName { self: XsdElemType =>
+trait AttributeGroupDefinition[E <: XsdElem[E]] extends AttributeGroupDefinitionOrReference[E] with HasName { self: E =>
 
   def targetNamespaceOption: Option[String]
 }
@@ -259,97 +259,97 @@ trait AttributeGroupDefinition[XsdElemType <: XsdElem[XsdElemType]] extends Attr
 /**
  * Attribute group reference. That is, the "xs:attributeGroup" XML element.
  */
-trait AttributeGroupReference[XsdElemType <: XsdElem[XsdElemType]] extends AttributeGroupDefinitionOrReference[XsdElemType] with IsReference { self: XsdElemType =>
+trait AttributeGroupReference[E <: XsdElem[E]] extends AttributeGroupDefinitionOrReference[E] with IsReference { self: E =>
 }
 
 /**
  * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
-trait IdentityConstraintDefinition[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait IdentityConstraintDefinition[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Identity constraint definition "xs:key".
  */
-trait KeyConstraint[XsdElemType <: XsdElem[XsdElemType]] extends IdentityConstraintDefinition[XsdElemType] { self: XsdElemType =>
+trait KeyConstraint[E <: XsdElem[E]] extends IdentityConstraintDefinition[E] { self: E =>
 }
 
 /**
  * Identity constraint definition "xs:keyref".
  */
-trait KeyrefConstraint[XsdElemType <: XsdElem[XsdElemType]] extends IdentityConstraintDefinition[XsdElemType] { self: XsdElemType =>
+trait KeyrefConstraint[E <: XsdElem[E]] extends IdentityConstraintDefinition[E] { self: E =>
 }
 
 /**
  * Identity constraint definition "xs:unique".
  */
-trait UniqueConstraint[XsdElemType <: XsdElem[XsdElemType]] extends IdentityConstraintDefinition[XsdElemType] { self: XsdElemType =>
+trait UniqueConstraint[E <: XsdElem[E]] extends IdentityConstraintDefinition[E] { self: E =>
 }
 
 /**
  * Model group definition. That is, the "xs:group" XML element introducing a named model group.
  */
-trait ModelGroupDefinitionOrReference[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait ModelGroupDefinitionOrReference[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Model group definition. That is, the "xs:group" XML element introducing a named model group.
  */
-trait ModelGroupDefinition[XsdElemType <: XsdElem[XsdElemType]] extends ModelGroupDefinitionOrReference[XsdElemType] { self: XsdElemType =>
+trait ModelGroupDefinition[E <: XsdElem[E]] extends ModelGroupDefinitionOrReference[E] { self: E =>
 }
 
 /**
  * Model group reference. That is, the "xs:group" XML element referring to a named model group.
  */
-trait ModelGroupReference[XsdElemType <: XsdElem[XsdElemType]] extends ModelGroupDefinitionOrReference[XsdElemType] with Particle[XsdElemType] with IsReference { self: XsdElemType =>
+trait ModelGroupReference[E <: XsdElem[E]] extends ModelGroupDefinitionOrReference[E] with Particle[E] with IsReference { self: E =>
 }
 
 /**
  * Notation declaration. That is, the "xs:notation" XML element.
  */
-trait NotationDeclaration[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait NotationDeclaration[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-trait ModelGroup[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] with Particle[XsdElemType] { self: XsdElemType =>
+trait ModelGroup[E <: XsdElem[E]] extends XsdElem[E] with Particle[E] { self: E =>
 }
 
 /**
  * Model group "all".
  */
-trait AllGroup[XsdElemType <: XsdElem[XsdElemType]] extends ModelGroup[XsdElemType] { self: XsdElemType =>
+trait AllGroup[E <: XsdElem[E]] extends ModelGroup[E] { self: E =>
 }
 
 /**
  * Model group "choice".
  */
-trait ChoiceGroup[XsdElemType <: XsdElem[XsdElemType]] extends ModelGroup[XsdElemType] { self: XsdElemType =>
+trait ChoiceGroup[E <: XsdElem[E]] extends ModelGroup[E] { self: E =>
 }
 
 /**
  * Model group "sequence".
  */
-trait SequenceGroup[XsdElemType <: XsdElem[XsdElemType]] extends ModelGroup[XsdElemType] { self: XsdElemType =>
+trait SequenceGroup[E <: XsdElem[E]] extends ModelGroup[E] { self: E =>
 }
 
 /**
  * Wildcard "xs:any".
  */
-trait AnyWildcard[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] with Particle[XsdElemType] { self: XsdElemType =>
+trait AnyWildcard[E <: XsdElem[E]] extends XsdElem[E] with Particle[E] { self: E =>
 }
 
 /**
  * Wildcard "xs:anyAttribute".
  */
-trait AnyAttributeWildcard[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait AnyAttributeWildcard[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * Annotation schema component. That is, the "xs:annotation" XML element.
  */
-trait Annotation[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Annotation[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 // Import, include, redefine
@@ -357,19 +357,19 @@ trait Annotation[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemTyp
 /**
  * The "xs:import" XML element.
  */
-trait Import[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Import[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:include" XML element.
  */
-trait Include[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Include[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:redefine" XML element.
  */
-trait Redefine[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Redefine[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 // Other schema parts, that are not Schema Components themselves, such as extension, restriction, etc.
@@ -377,49 +377,49 @@ trait Redefine[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType]
 /**
  * The "xs:complexContent" XML element.
  */
-trait ComplexContent[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait ComplexContent[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:simpleContent" XML element.
  */
-trait SimpleContent[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait SimpleContent[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:extension" XML element.
  */
-trait Extension[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Extension[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:restriction" XML element.
  */
-trait Restriction[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Restriction[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:field" XML element.
  */
-trait Field[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Field[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:selector" XML element.
  */
-trait Selector[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Selector[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:appinfo" XML element.
  */
-trait Appinfo[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Appinfo[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 /**
  * The "xs:documentation" XML element.
  */
-trait Documentation[XsdElemType <: XsdElem[XsdElemType]] extends XsdElem[XsdElemType] { self: XsdElemType =>
+trait Documentation[E <: XsdElem[E]] extends XsdElem[E] { self: E =>
 }
 
 // Companion objects

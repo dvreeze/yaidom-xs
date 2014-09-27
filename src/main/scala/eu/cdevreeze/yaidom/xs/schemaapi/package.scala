@@ -18,8 +18,8 @@ package eu.cdevreeze.yaidom
 package xs
 
 /**
- * This package defines the API of XML Schema document content as yaidom "elements". These elements offer the
- * `SubtypeAwareParentElemApi` query API.
+ * This package defines the purely abstract API of XML Schema document content as yaidom "elements". These elements
+ * offer the `SubtypeAwareParentElemApi` query API.
  *
  * Only version 1.0 of XML Schema is modeled.
  *
