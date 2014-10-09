@@ -15,7 +15,7 @@ scalaVersion := "2.11.2"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
-libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "0.8.2"
+libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "1.0"
 
 libraryDependencies += "junit" % "junit" % "4.11" % "test"
 

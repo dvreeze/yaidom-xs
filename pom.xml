@@ -136,7 +136,7 @@
 		<dependency>
 			<groupId>eu.cdevreeze.yaidom</groupId>
 			<artifactId>yaidom_${scala.binary.version}</artifactId>
-			<version>0.8.2</version>
+			<version>1.0</version>
 		</dependency>
 
 		<dependency>
