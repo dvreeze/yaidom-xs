@@ -14,13 +14,16 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom
-package xs
-package schema
+package eu.cdevreeze.yaidom.xs
 
 import java.net.URI
+
+import scala.Vector
 import scala.collection.immutable
 import scala.reflect.classTag
+
+import eu.cdevreeze.yaidom.core.EName
+import eu.cdevreeze.yaidom.core.QName
 
 /**
  * Immutable collection of XML Schema Documents that belong together. Typically, a `SchemaDocumentSet` is a collection
@@ -38,10 +41,10 @@ import scala.reflect.classTag
  * @author Chris de Vreeze
  */
 final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDocument]) extends Immutable {
-  require(schemaDocuments forall (doc => doc.wrappedDocument.uriOption.isDefined), "All schema documents must have a base URI")
+  require(schemaDocuments forall (doc => doc.uriOption.isDefined), "All schema documents must have a base URI")
 
   val schemaDocumentsByUri: Map[URI, SchemaDocument] = {
-    val result = schemaDocuments map { doc => (doc.wrappedDocument.uriOption.get -> doc) }
+    val result = schemaDocuments map { doc => (doc.uriOption.get -> doc) }
     result.toMap
   }
 
@@ -94,7 +97,7 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
           substGroupDecl <- substGroupDeclOption
           attrValue <- substGroupDeclOption.get \@ EName("substitutionGroup")
           qname = QName(attrValue)
-          ename <- substGroupDeclOption.get.elem.scope.resolveQNameOption(qname)
+          ename <- substGroupDeclOption.get.scope.resolveQNameOption(qname)
         } yield ename
 
       if (nextSubstGroupOption.isEmpty) Vector()

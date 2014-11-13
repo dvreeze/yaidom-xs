@@ -14,36 +14,34 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom
-package xs
-package schema
+package eu.cdevreeze.yaidom.xs
 
-import java.{ util => jutil, io => jio }
-import javax.xml.parsers.SAXParserFactory
-import scala.collection.immutable
+import scala.Vector
 import scala.reflect.classTag
-import org.xml.sax.{ EntityResolver, InputSource }
-import org.junit.{ Test, Before, Ignore }
-import org.junit.runner.RunWith
-import org.scalatest.{ Suite, BeforeAndAfterAll }
-import org.scalatest.junit.JUnitRunner
-import eu.cdevreeze.yaidom.subtypeaware.SubtypeAwareParentElemApi.anyElem
+
+import org.junit.Test
+import org.scalatest.Suite
+
+import eu.cdevreeze.yaidom.core.Declarations
+import eu.cdevreeze.yaidom.core.EName
+import eu.cdevreeze.yaidom.core.QName
+import eu.cdevreeze.yaidom.queryapi.ElemApi.anyElem
+import eu.cdevreeze.yaidom.queryapi.HasENameApi.ToHasElemApi
+import eu.cdevreeze.yaidom.resolved
+import eu.cdevreeze.yaidom.simple.NodeBuilder
 
 /**
  * XML Schema creation test case.
  *
  * @author Chris de Vreeze
  */
-@RunWith(classOf[JUnitRunner])
-class CreateSchemaTest extends Suite {
+abstract class AbstractCreateSchemaTest extends Suite {
 
-  @Test def testCreateValidSchema() {
-    val docParser = parse.DocumentParserUsingSax.newInstance
-    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
+  protected def getSchemaDocument(fileName: String): SchemaDocument
 
-    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
-
-    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
+  @Test def testCreateValidSchema(): Unit = {
+    val schemaDoc = getSchemaDocument("shiporder.xsd")
+    val docUri = classOf[AbstractCreateSchemaTest].getResource("shiporder.xsd").toURI
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -68,7 +66,7 @@ class CreateSchemaTest extends Suite {
     }
     assertResult(Seq(EName(tns, "shiporder"))) {
       globalElemDecls3 map { e =>
-        val tnsOption = e.docawareElem.rootElem \@ EName("targetNamespace")
+        val tnsOption = e.bridgeElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
@@ -98,7 +96,7 @@ class CreateSchemaTest extends Suite {
     }
     assertResult(expectedElemNames) {
       elemDecls3 map { e =>
-        val tnsOption = e.docawareElem.rootElem \@ EName("targetNamespace")
+        val tnsOption = e.bridgeElem.rootElem \@ EName("targetNamespace")
         val name = (e \@ EName("name")).get
         EName(tnsOption, name)
       }
@@ -111,25 +109,13 @@ class CreateSchemaTest extends Suite {
       attrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
 
-    assertResult(Set(docUri)) {
-      schema.findAllElemsOrSelf.map(_.docUri).toSet
-    }
+    // assertResult(Set(docUri)) {
+    //   schema.findAllElemsOrSelf.map(_.docUri).toSet
+    // }
   }
 
-  @Test def testCreateValidSchemaOfXmlSchema() {
-    val spf = SAXParserFactory.newInstance
-    spf.setFeature("http://xml.org/sax/features/namespaces", true)
-    spf.setFeature("http://xml.org/sax/features/namespace-prefixes", true)
-
-    val docParser = parse.DocumentParserUsingSax.newInstance(
-      spf,
-      () => new parse.DefaultElemProducingSaxHandler with MyEntityResolver)
-
-    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("XMLSchema.xsd"))
-
-    val docUri = classOf[CreateSchemaTest].getResource("XMLSchema.xsd").toURI
-
-    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
+  @Test def testCreateValidSchemaOfXmlSchema(): Unit = {
+    val schemaDoc = getSchemaDocument("XMLSchema.xsd")
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -185,13 +171,13 @@ class CreateSchemaTest extends Suite {
               qname = QName("xs:restriction"),
               attributes = Vector(QName("base") -> "xs:anyType"),
               children = Vector(
-                elem(
+                emptyElem(
                   qname = QName("xs:anyAttribute"),
                   attributes = Vector(QName("namespace") -> "##other", QName("processContents") -> "lax"))))))
-    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.elem.scope)
+    val expectedElem = expectedElemBuilder.build(openAttrsComplexTypeOption.get.scope)
 
     assertResult(resolved.Elem(expectedElem)) {
-      resolved.Elem(secondChildElem.elem).removeAllInterElementWhitespace
+      resolved.Elem(secondChildElem.bridgeElem.toElem).removeAllInterElementWhitespace
     }
 
     assertResult(1) {
@@ -204,25 +190,13 @@ class CreateSchemaTest extends Suite {
       schema.findAllRedefines.size
     }
 
-    assertResult(Set(docUri)) {
-      schema.findAllElemsOrSelf.map(_.docUri).toSet
-    }
+    // assertResult(Set(docUri)) {
+    //   schema.findAllElemsOrSelf.map(_.docUri).toSet
+    // }
   }
 
-  @Test def testCreateValidLargeSchema() {
-    val spf = SAXParserFactory.newInstance
-    spf.setFeature("http://xml.org/sax/features/namespaces", true)
-    spf.setFeature("http://xml.org/sax/features/namespace-prefixes", true)
-
-    val docParser = parse.DocumentParserUsingSax.newInstance(
-      spf,
-      () => new parse.DefaultElemProducingSaxHandler with MyEntityResolver)
-
-    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("ifrs-gp-2006-08-15.xsd"))
-
-    val docUri = classOf[CreateSchemaTest].getResource("ifrs-gp-2006-08-15.xsd").toURI
-
-    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
+  @Test def testCreateValidLargeSchema(): Unit = {
+    val schemaDoc = getSchemaDocument("ifrs-gp-2006-08-15.xsd")
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -270,13 +244,8 @@ class CreateSchemaTest extends Suite {
     }
   }
 
-  @Test def testTargetNamespace() {
-    val docParser = parse.DocumentParserUsingSax.newInstance
-    val doc = docParser.parse(classOf[CreateSchemaTest].getResourceAsStream("shiporder.xsd"))
-
-    val docUri = classOf[CreateSchemaTest].getResource("shiporder.xsd").toURI
-
-    val schemaDoc = new SchemaDocument(docaware.Document(docUri, doc))
+  @Test def testTargetNamespace(): Unit = {
+    val schemaDoc = getSchemaDocument("shiporder.xsd")
     val schema = schemaDoc.schema
 
     val expectedTns = "http://shiporder"
@@ -291,13 +260,13 @@ class CreateSchemaTest extends Suite {
     assert(shipOrderElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     assertResult(Some(expectedTns)) {
-      shipOrderElemDeclOption.get.docawareElem.rootElem \@ TargetNamespaceEName
+      shipOrderElemDeclOption.get.bridgeElem.rootElem \@ TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "shiporder")) {
       shipOrderElemDeclOption.get.targetEName
     }
     assertResult(None) {
-      shipOrderElemDeclOption.get.docawareElem.path findAncestorPath {
+      shipOrderElemDeclOption.get.bridgeElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       }
     }
@@ -310,13 +279,13 @@ class CreateSchemaTest extends Suite {
     assert(!nameElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     assertResult(Some(expectedTns)) {
-      nameElemDeclOption.get.docawareElem.rootElem \@ TargetNamespaceEName
+      nameElemDeclOption.get.bridgeElem.rootElem \@ TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "name")) {
       nameElemDeclOption.get.targetEName
     }
     assertResult(Some(5)) {
-      nameElemDeclOption.get.docawareElem.path findAncestorPath {
+      nameElemDeclOption.get.bridgeElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
     }
@@ -330,15 +299,9 @@ class CreateSchemaTest extends Suite {
     assert(!orderidAttrDeclOption.get.isInstanceOf[GlobalAttributeDeclaration])
 
     assertResult(Some(2)) {
-      orderidAttrDeclOption.get.docawareElem.path findAncestorPath {
+      orderidAttrDeclOption.get.bridgeElem.path findAncestorPath {
         e => e.elementNameOption == Some(XsComplexTypeEName)
       } map { _.entries.size }
-    }
-  }
-
-  trait MyEntityResolver extends EntityResolver {
-    override def resolveEntity(publicId: String, systemId: String): InputSource = {
-      new InputSource(new java.io.StringReader(""))
     }
   }
 }

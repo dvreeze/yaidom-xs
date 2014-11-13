@@ -17,11 +17,18 @@
 package eu.cdevreeze.yaidom
 
 /**
- * Constants such as namespaces and expanded names (in the XML Schema namespace).
+ * This package defines the XML Schema document content API as yaidom "elements". These elements
+ * offer the `SubtypeAwareParentElemApi` query API.
+ *
+ * This API only models schemas. It is not capable of validating instance documents against schemas.
+ *
+ * Only version 1.0 of XML Schema is modeled.
  *
  * @author Chris de Vreeze
  */
 package object xs {
+  
+  import eu.cdevreeze.yaidom.core.EName
 
   val XsNamespace = "http://www.w3.org/2001/XMLSchema"
 

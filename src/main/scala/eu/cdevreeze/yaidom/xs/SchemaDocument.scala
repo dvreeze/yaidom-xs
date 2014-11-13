@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom
-package xs
-package schema
+package eu.cdevreeze.yaidom.xs
 
 import java.net.URI
 import scala.collection.immutable
-import eu.cdevreeze.yaidom._
 
 /**
  * Immutable XML Schema Document.
  *
  * @author Chris de Vreeze
  */
-final class SchemaDocument(val wrappedDocument: docaware.Document) extends Immutable {
+final class SchemaDocument(val uriOption: Option[URI], val bridgeElem: BridgeElem) extends Immutable {
 
-  require(wrappedDocument.uriOption.isDefined, "Missing URI of document")
+  final val schema: SchemaRootElem = SchemaRootElem(bridgeElem)
 
-  final val schema: SchemaRootElem =
-    SchemaRootElem(wrappedDocument.documentElement)
-
-  final override def toString: String = wrappedDocument.document.toString
+  final override def toString: String = bridgeElem.toString
 }
