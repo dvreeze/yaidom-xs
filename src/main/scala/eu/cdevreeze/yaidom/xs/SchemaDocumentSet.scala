@@ -41,10 +41,9 @@ import eu.cdevreeze.yaidom.core.QName
  * @author Chris de Vreeze
  */
 final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDocument]) extends Immutable {
-  require(schemaDocuments forall (doc => doc.uriOption.isDefined), "All schema documents must have a base URI")
 
   val schemaDocumentsByUri: Map[URI, SchemaDocument] = {
-    val result = schemaDocuments map { doc => (doc.uriOption.get -> doc) }
+    val result = schemaDocuments map { doc => (doc.uri -> doc) }
     result.toMap
   }
 

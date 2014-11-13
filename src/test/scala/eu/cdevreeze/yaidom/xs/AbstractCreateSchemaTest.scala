@@ -41,7 +41,6 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testCreateValidSchema(): Unit = {
     val schemaDoc = getSchemaDocument("shiporder.xsd")
-    val docUri = classOf[AbstractCreateSchemaTest].getResource("shiporder.xsd").toURI
     val schema = schemaDoc.schema
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
@@ -109,9 +108,9 @@ abstract class AbstractCreateSchemaTest extends Suite {
       attrDecls flatMap { attrDecl => attrDecl.attributeOption(EName("name")) }
     }
 
-    // assertResult(Set(docUri)) {
-    //   schema.findAllElemsOrSelf.map(_.docUri).toSet
-    // }
+    assertResult(Set(schemaDoc.uri)) {
+      schema.findAllElemsOrSelf.map(_.baseUri).toSet
+    }
   }
 
   @Test def testCreateValidSchemaOfXmlSchema(): Unit = {
@@ -190,9 +189,9 @@ abstract class AbstractCreateSchemaTest extends Suite {
       schema.findAllRedefines.size
     }
 
-    // assertResult(Set(docUri)) {
-    //   schema.findAllElemsOrSelf.map(_.docUri).toSet
-    // }
+    assertResult(Set(schemaDoc.uri)) {
+      schema.findAllElemsOrSelf.map(_.baseUri).toSet
+    }
   }
 
   @Test def testCreateValidLargeSchema(): Unit = {

@@ -24,7 +24,9 @@ import scala.collection.immutable
  *
  * @author Chris de Vreeze
  */
-final class SchemaDocument(val uriOption: Option[URI], val bridgeElem: BridgeElem) extends Immutable {
+final class SchemaDocument(val bridgeElem: BridgeElem) extends Immutable {
+
+  final val uri: URI = bridgeElem.baseUri
 
   final val schema: SchemaRootElem = SchemaRootElem(bridgeElem)
 

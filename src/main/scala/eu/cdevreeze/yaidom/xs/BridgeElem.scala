@@ -91,5 +91,5 @@ trait BridgeElem extends Any {
 
   def unwrappedBackingElem: UnwrappedBackingElem
 
-  def docUriOption: Option[URI]
+  def baseUri: URI
 }

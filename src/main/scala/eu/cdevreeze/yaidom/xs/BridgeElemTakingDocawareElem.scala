@@ -24,23 +24,23 @@ import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.Path
 import eu.cdevreeze.yaidom.core.QName
 import eu.cdevreeze.yaidom.core.Scope
-import eu.cdevreeze.yaidom.indexed
+import eu.cdevreeze.yaidom.docaware
 
 /**
- * Overridable bridge element taking an `indexed.Elem`. This is a value class instance, to prevent object creation.
+ * Overridable bridge element taking an `docaware.Elem`. This is a value class instance, to prevent object creation.
  *
  * @author Chris de Vreeze
  */
-class BridgeElemTakingIndexedElem(val backingElem: eu.cdevreeze.yaidom.indexed.Elem) extends AnyVal with BridgeElem {
+class BridgeElemTakingDocawareElem(val backingElem: eu.cdevreeze.yaidom.docaware.Elem) extends AnyVal with BridgeElem {
 
-  final type BackingElem = eu.cdevreeze.yaidom.indexed.Elem
+  final type BackingElem = eu.cdevreeze.yaidom.docaware.Elem
 
-  final type SelfType = BridgeElemTakingIndexedElem
+  final type SelfType = BridgeElemTakingDocawareElem
 
   final type UnwrappedBackingElem = eu.cdevreeze.yaidom.simple.Elem
 
   final def findAllChildElems: immutable.IndexedSeq[SelfType] =
-    backingElem.findAllChildElems.map(e => new BridgeElemTakingIndexedElem(e))
+    backingElem.findAllChildElems.map(e => new BridgeElemTakingDocawareElem(e))
 
   final def resolvedName: EName = backingElem.resolvedName
 
@@ -55,7 +55,7 @@ class BridgeElemTakingIndexedElem(val backingElem: eu.cdevreeze.yaidom.indexed.E
   final def text: String = backingElem.text
 
   final def findChildElemByPathEntry(entry: Path.Entry): Option[SelfType] =
-    backingElem.findChildElemByPathEntry(entry).map(e => new BridgeElemTakingIndexedElem(e))
+    backingElem.findChildElemByPathEntry(entry).map(e => new BridgeElemTakingDocawareElem(e))
 
   final def toElem: eu.cdevreeze.yaidom.simple.Elem = backingElem.elem
 
@@ -65,10 +65,11 @@ class BridgeElemTakingIndexedElem(val backingElem: eu.cdevreeze.yaidom.indexed.E
 
   final def unwrappedBackingElem: UnwrappedBackingElem = backingElem.elem
 
-  final def docUriOption: Option[URI] = None // TODO
+  // Assuming no use of xml:base
+  final def baseUri: URI = backingElem.docUri
 }
 
-object BridgeElemTakingIndexedElem {
+object BridgeElemTakingDocawareElem {
 
-  def wrap(elem: indexed.Elem): BridgeElemTakingIndexedElem = new BridgeElemTakingIndexedElem(elem)
+  def wrap(elem: docaware.Elem): BridgeElemTakingDocawareElem = new BridgeElemTakingDocawareElem(elem)
 }

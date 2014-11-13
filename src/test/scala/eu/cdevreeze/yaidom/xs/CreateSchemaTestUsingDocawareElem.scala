@@ -23,19 +23,19 @@ import org.xml.sax.EntityResolver
 import org.xml.sax.InputSource
 import org.scalatest.junit.JUnitRunner
 
-import eu.cdevreeze.yaidom.indexed
+import eu.cdevreeze.yaidom.docaware
 import eu.cdevreeze.yaidom.parse.DefaultElemProducingSaxHandler
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
 import eu.cdevreeze.yaidom.simple.Document
 import javax.xml.parsers.SAXParserFactory
 
 /**
- * XML Schema creation test case using indexed elements.
+ * XML Schema creation test case using docaware elements.
  *
  * @author Chris de Vreeze
  */
 @RunWith(classOf[JUnitRunner])
-class CreateSchemaTestUsingIndexedElem extends AbstractCreateSchemaTest {
+class CreateSchemaTestUsingDocawareElem extends AbstractCreateSchemaTest {
 
   protected def getSchemaDocument(fileName: String): SchemaDocument = {
     val spf = SAXParserFactory.newInstance
@@ -46,15 +46,14 @@ class CreateSchemaTestUsingIndexedElem extends AbstractCreateSchemaTest {
       spf,
       () => new DefaultElemProducingSaxHandler with MyEntityResolver)
 
-    val uri = classOf[CreateSchemaTestUsingIndexedElem].getResource(fileName).toURI
+    val uri = classOf[CreateSchemaTestUsingDocawareElem].getResource(fileName).toURI
     val f = new File(uri)
 
     val doc: Document = docParser.parse(f)
 
     val schemaDoc: SchemaDocument =
       new SchemaDocument(
-        doc.uriOption,
-        BridgeElemTakingIndexedElem.wrap(indexed.Elem(doc.documentElement)))
+        BridgeElemTakingDocawareElem.wrap(docaware.Elem(uri, doc.documentElement)))
 
     schemaDoc
   }

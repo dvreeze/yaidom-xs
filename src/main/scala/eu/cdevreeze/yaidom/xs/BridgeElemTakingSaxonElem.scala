@@ -64,7 +64,8 @@ class BridgeElemTakingSaxonElem(val backingElem: saxon.DomElem) extends AnyVal w
 
   final def unwrappedBackingElem: UnwrappedBackingElem = backingElem
 
-  final def docUriOption: Option[URI] = None // TODO
+  final def baseUri: URI =
+    Option(backingElem.wrappedNode.getBaseURI).map(s => new URI(s)).getOrElse(sys.error(s"Missing base URI"))
 }
 
 object BridgeElemTakingSaxonElem {

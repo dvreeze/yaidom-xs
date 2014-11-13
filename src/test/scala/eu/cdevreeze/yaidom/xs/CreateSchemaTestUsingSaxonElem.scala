@@ -41,10 +41,10 @@ class CreateSchemaTestUsingSaxonElem extends AbstractCreateSchemaTest {
     val f = new File(uri)
 
     val node = docBuilder.build(f)
+    node.getUnderlyingNode.setSystemId(uri.toString)
 
     val schemaDoc: SchemaDocument =
       new SchemaDocument(
-        Some(f.toURI),
         BridgeElemTakingSaxonElem.wrap(new saxon.DomDocument(node.getUnderlyingNode.asInstanceOf[DocumentInfo]).documentElement))
 
     schemaDoc

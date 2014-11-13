@@ -62,10 +62,10 @@ sealed class XsdElem private[xs] (
 
   require(childElems.map(_.bridgeElem.backingElem) == bridgeElem.findAllChildElems.map(_.backingElem))
 
-  assert(bridgeElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
-  assert(
-    (resolvedName == XsSchemaEName) || (!bridgeElem.path.isRoot),
-    "This element must either be a 'schema' element, or not be the root of the element tree")
+  // assert(bridgeElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
+  // assert(
+  //   (resolvedName == XsSchemaEName) || (!bridgeElem.path.isRoot),
+  //   "This element must either be a 'schema' element, or not be the root of the element tree")
 
   /**
    * Returns all child elements, in the correct order. That is, returns `childElems`.
@@ -93,7 +93,7 @@ sealed class XsdElem private[xs] (
   final def findChildElemByPathEntry(entry: Path.Entry): Option[XsdElem] =
     childElems.find(e => e.localName == entry.elementName.localPart && e.bridgeElem.path.lastEntry == entry)
 
-  final def docUriOption: Option[URI] = bridgeElem.docUriOption
+  final def baseUri: URI = bridgeElem.baseUri
 
   final override def equals(other: Any): Boolean = other match {
     case e: XsdElem => bridgeElem.backingElem == e.bridgeElem.backingElem
@@ -111,7 +111,7 @@ sealed class XsdElem private[xs] (
    * If the id attribute is absent, None is returned.
    */
   final def uriOption: Option[URI] =
-    idOption.flatMap(id => docUriOption.map(docUri => new URI(docUri.getScheme, docUri.getSchemeSpecificPart, id)))
+    idOption.map(id => new URI(baseUri.getScheme, baseUri.getSchemeSpecificPart, id))
 }
 
 /**
@@ -797,7 +797,7 @@ final class Documentation private[xs] (
 object SchemaRootElem {
 
   /**
-   * Public factory method for SchemaRootElem instances. It returns `XsdElem(bridgeElem, docUri)` as a `SchemaRootElem`.
+   * Public factory method for SchemaRootElem instances. It returns `XsdElem(bridgeElem)` as a `SchemaRootElem`.
    *
    * This is an expensive method, but once a `SchemaRootElem` has been created, querying through the `ElemLike` API is very fast.
    */
@@ -865,12 +865,12 @@ object XsdElem {
     // TODO Better error messages, and more checks, so that constructors only need assertions and no require statements
     // TODO Turn this into a validating factory method that accumulates validation errors
 
-    require(
-      elem.rootElem.resolvedName == XsSchemaEName,
-      "The root of the element tree must be a 'schema' element")
-    require(
-      (elem.resolvedName == XsSchemaEName) || (!elem.path.isRoot),
-      "This element must either be a 'schema' element, or not be the root of the element tree")
+    // require(
+    //   elem.rootElem.resolvedName == XsSchemaEName,
+    //   "The root of the element tree must be a 'schema' element")
+    // require(
+    //   (elem.resolvedName == XsSchemaEName) || (!elem.path.isRoot),
+    //   "This element must either be a 'schema' element, or not be the root of the element tree")
 
     // Recursive calls
     val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e))

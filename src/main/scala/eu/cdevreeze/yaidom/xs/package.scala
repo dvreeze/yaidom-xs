@@ -27,7 +27,7 @@ package eu.cdevreeze.yaidom
  * @author Chris de Vreeze
  */
 package object xs {
-  
+
   import eu.cdevreeze.yaidom.core.EName
 
   val XsNamespace = "http://www.w3.org/2001/XMLSchema"
