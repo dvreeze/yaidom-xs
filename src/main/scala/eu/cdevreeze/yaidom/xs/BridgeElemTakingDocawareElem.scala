@@ -65,8 +65,26 @@ class BridgeElemTakingDocawareElem(val backingElem: eu.cdevreeze.yaidom.docaware
 
   final def unwrappedBackingElem: UnwrappedBackingElem = backingElem.elem
 
-  // Assuming no use of xml:base
-  final def baseUri: URI = backingElem.docUri
+  final def baseUri: URI = getBaseUri(path)
+
+  private def getBaseUri(path: Path): URI = {
+    // Once docaware.Elem has method baseUri, this code can disappear
+    val xmlBaseEName = EName("http://www.w3.org/XML/1998/namespace", "base")
+
+    if (path.isRoot) {
+      val explicitBaseUriOption = backingElem.rootElem.attributeOption(xmlBaseEName).map(s => new URI(s))
+      explicitBaseUriOption.map(u => backingElem.docUri.resolve(u)).getOrElse(backingElem.docUri)
+    } else {
+      val parentPath = path.parentPath
+
+      // Recursive call
+      val parentBaseUri = getBaseUri(parentPath)
+
+      val e = backingElem.rootElem.getElemOrSelfByPath(path)
+      val explicitBaseUriOption = e.attributeOption(xmlBaseEName).map(s => new URI(s))
+      explicitBaseUriOption.map(u => parentBaseUri.resolve(u)).getOrElse(parentBaseUri)
+    }
+  }
 }
 
 object BridgeElemTakingDocawareElem {

@@ -91,5 +91,8 @@ trait BridgeElem extends Any {
 
   def unwrappedBackingElem: UnwrappedBackingElem
 
+  /**
+   * Returns the base URI of the element, by XML Base processing starting with the document URI
+   */
   def baseUri: URI
 }
