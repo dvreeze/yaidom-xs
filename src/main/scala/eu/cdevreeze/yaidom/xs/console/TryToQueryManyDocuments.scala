@@ -17,6 +17,7 @@
 package eu.cdevreeze.yaidom.xs.console
 
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 import scala.Vector
 import scala.util.Try
 import scala.reflect.classTag
@@ -50,7 +51,12 @@ object TryToQueryManyDocuments {
     println(s"Found ${files.size} files")
     println("Parsing all files ...")
 
+    val idx = new AtomicInteger(0)
+
     val docs = (files.par flatMap { f =>
+      val currIdx = idx.getAndIncrement()
+      if (currIdx % 1000 == 0 && currIdx > 0) println(s"Parsed ${currIdx} documents")
+
       val docOption = Try(docParser.parse(f).withUriOption(Some(f.toURI))).toOption
       val schemaDocOption = docOption filter (doc => doc.documentElement.resolvedName == XsSchemaEName)
       schemaDocOption map { doc =>
@@ -60,10 +66,12 @@ object TryToQueryManyDocuments {
 
     println(s"Parsed ${docs.size} schema files")
     println("Starting querying ...")
+    println()
 
     docs.foreach(performQueries)
 
     println("Querying again ...")
+    println()
 
     docs.foreach(performQueries)
 
