@@ -17,17 +17,16 @@
 package eu.cdevreeze.yaidom.xs
 
 import java.io.File
-
 import org.junit.runner.RunWith
 import org.xml.sax.EntityResolver
 import org.xml.sax.InputSource
 import org.scalatest.junit.JUnitRunner
-
 import eu.cdevreeze.yaidom.docaware
 import eu.cdevreeze.yaidom.parse.DefaultElemProducingSaxHandler
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
 import eu.cdevreeze.yaidom.simple.Document
 import javax.xml.parsers.SAXParserFactory
+import eu.cdevreeze.yaidom.bridge.DefaultDocawareBridgeElem
 
 /**
  * XML Schema creation test case using docaware elements.
@@ -53,7 +52,7 @@ class CreateSchemaTestUsingDocawareElem extends AbstractCreateSchemaTest {
 
     val schemaDoc: SchemaDocument =
       new SchemaDocument(
-        BridgeElemTakingDocawareElem.wrap(docaware.Elem(uri, doc.documentElement)))
+        DefaultDocawareBridgeElem.wrap(docaware.Elem(uri, doc.documentElement)))
 
     schemaDoc
   }

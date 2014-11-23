@@ -17,12 +17,11 @@
 package eu.cdevreeze.yaidom.xs
 
 import java.io.File
-
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-
 import net.sf.saxon.om.DocumentInfo
 import net.sf.saxon.s9api.Processor
+import eu.cdevreeze.yaidom.xs.saxon.BridgeElemTakingSaxonElem
 
 /**
  * XML Schema creation test case using Saxon.

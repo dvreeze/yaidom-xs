@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs
+package eu.cdevreeze.yaidom.xs.saxon
 
 import java.net.URI
 
@@ -24,23 +24,23 @@ import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.Path
 import eu.cdevreeze.yaidom.core.QName
 import eu.cdevreeze.yaidom.core.Scope
-import eu.cdevreeze.yaidom.docaware
+import eu.cdevreeze.yaidom.bridge.DocawareBridgeElem
 
 /**
- * Overridable bridge element taking an `docaware.Elem`. This is a value class instance, to prevent object creation.
+ * Overridable bridge element taking a `saxon.DomElem`. This is a value class instance, to prevent object creation.
  *
  * @author Chris de Vreeze
  */
-class BridgeElemTakingDocawareElem(val backingElem: eu.cdevreeze.yaidom.docaware.Elem) extends AnyVal with BridgeElem {
+class BridgeElemTakingSaxonElem(val backingElem: DomElem) extends AnyVal with DocawareBridgeElem {
 
-  final type BackingElem = eu.cdevreeze.yaidom.docaware.Elem
+  final type BackingElem = DomElem
 
-  final type SelfType = BridgeElemTakingDocawareElem
+  final type SelfType = BridgeElemTakingSaxonElem
 
-  final type UnwrappedBackingElem = eu.cdevreeze.yaidom.simple.Elem
+  final type UnwrappedBackingElem = DomElem
 
   final def findAllChildElems: immutable.IndexedSeq[SelfType] =
-    backingElem.findAllChildElems.map(e => new BridgeElemTakingDocawareElem(e))
+    backingElem.findAllChildElems.map(e => new BridgeElemTakingSaxonElem(e))
 
   final def resolvedName: EName = backingElem.resolvedName
 
@@ -55,20 +55,26 @@ class BridgeElemTakingDocawareElem(val backingElem: eu.cdevreeze.yaidom.docaware
   final def text: String = backingElem.text
 
   final def findChildElemByPathEntry(entry: Path.Entry): Option[SelfType] =
-    backingElem.findChildElemByPathEntry(entry).map(e => new BridgeElemTakingDocawareElem(e))
+    backingElem.findChildElemByPathEntry(entry).map(e => new BridgeElemTakingSaxonElem(e))
 
-  final def toElem: eu.cdevreeze.yaidom.simple.Elem = backingElem.elem
+  final def toElem: eu.cdevreeze.yaidom.simple.Elem = backingElem.toElem
 
-  final def rootElem: UnwrappedBackingElem = backingElem.rootElem
+  final def rootElem: UnwrappedBackingElem = backingElem.ancestorsOrSelf.last
 
   final def path: Path = backingElem.path
 
-  final def unwrappedBackingElem: UnwrappedBackingElem = backingElem.elem
+  final def unwrappedBackingElem: UnwrappedBackingElem = backingElem
 
-  final def baseUri: URI = backingElem.baseUri
+  final def docUri: URI = {
+    // Assuming that the document URI is the root element base URI, which is not necessarily true
+    Option(rootElem.wrappedNode.getBaseURI).map(s => new URI(s)).getOrElse(sys.error(s"Missing document URI"))
+  }
+
+  final def baseUri: URI =
+    Option(backingElem.wrappedNode.getBaseURI).map(s => new URI(s)).getOrElse(sys.error(s"Missing base URI"))
 }
 
-object BridgeElemTakingDocawareElem {
+object BridgeElemTakingSaxonElem {
 
-  def wrap(elem: docaware.Elem): BridgeElemTakingDocawareElem = new BridgeElemTakingDocawareElem(elem)
+  def wrap(elem: DomElem): BridgeElemTakingSaxonElem = new BridgeElemTakingSaxonElem(elem)
 }

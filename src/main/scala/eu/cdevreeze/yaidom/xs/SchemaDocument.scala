@@ -17,14 +17,15 @@
 package eu.cdevreeze.yaidom.xs
 
 import java.net.URI
-import scala.collection.immutable
+
+import eu.cdevreeze.yaidom.bridge.DocawareBridgeElem
 
 /**
  * Immutable XML Schema Document.
  *
  * @author Chris de Vreeze
  */
-final class SchemaDocument(val bridgeElem: BridgeElem) extends Immutable {
+final class SchemaDocument(val bridgeElem: DocawareBridgeElem) extends Immutable {
 
   final val uri: URI = bridgeElem.baseUri
 

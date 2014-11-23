@@ -16,24 +16,31 @@
 
 package eu.cdevreeze.yaidom.xs.integrationtest
 
-import java.io._
-import java.net.{ URI, URL }
-import javax.xml.parsers.SAXParserFactory
-import org.xml.sax.{ EntityResolver, InputSource }
+import java.io.File
+import java.io.FileInputStream
+import java.io.StringReader
+import java.net.URI
+
+import scala.Vector
 import scala.collection.immutable
-import org.scalatest.{ FeatureSpec, GivenWhenThen }
+
+import org.scalatest.FeatureSpec
+import org.scalatest.GivenWhenThen
+import org.xml.sax.EntityResolver
+import org.xml.sax.InputSource
+
+import eu.cdevreeze.yaidom.bridge.DefaultDocawareBridgeElem
+import eu.cdevreeze.yaidom.core.EName
+import eu.cdevreeze.yaidom.docaware
+import eu.cdevreeze.yaidom.parse.DefaultElemProducingSaxHandler
 import eu.cdevreeze.yaidom.parse.DocumentParser
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
-import eu.cdevreeze.yaidom.parse.DefaultElemProducingSaxHandler
-import eu.cdevreeze.yaidom.xs.SchemaDocument
-import eu.cdevreeze.yaidom.xs.SchemaDocumentSet
-import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.xs.GlobalElementDeclaration
 import eu.cdevreeze.yaidom.xs.Import
-import eu.cdevreeze.yaidom.xs.TargetNamespaceEName
-import eu.cdevreeze.yaidom.docaware
-import eu.cdevreeze.yaidom.xs.BridgeElemTakingDocawareElem
 import eu.cdevreeze.yaidom.xs.SchemaDocument
+import eu.cdevreeze.yaidom.xs.SchemaDocumentSet
+import eu.cdevreeze.yaidom.xs.TargetNamespaceEName
+import javax.xml.parsers.SAXParserFactory
 
 class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
@@ -93,7 +100,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       docs filter { doc =>
         doc.document.uriOption.getOrElse("").toString.endsWith(".xsd")
       } map { doc =>
-        val bridgeElem = BridgeElemTakingDocawareElem.wrap(doc.documentElement)
+        val bridgeElem = DefaultDocawareBridgeElem.wrap(doc.documentElement)
         val schemaDoc = new SchemaDocument(bridgeElem)
         (doc.uriOption.getOrElse(sys.error("Missing URI")) -> schemaDoc)
       }
