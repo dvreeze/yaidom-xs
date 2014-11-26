@@ -14,22 +14,21 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs.console
+package eu.cdevreeze.yaidom.xs.testprogram
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
+
 import scala.Vector
-import scala.util.Try
 import scala.reflect.classTag
-import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
-import eu.cdevreeze.yaidom.simple.Document
-import eu.cdevreeze.yaidom.docaware
-import eu.cdevreeze.yaidom.resolved
-import eu.cdevreeze.yaidom.core.QName
-import eu.cdevreeze.yaidom.xs.XsSchemaEName
-import eu.cdevreeze.yaidom.xs.SchemaDocument
+import scala.util.Try
+
 import eu.cdevreeze.yaidom.bridge.DefaultDocawareBridgeElem
+import eu.cdevreeze.yaidom.docaware
+import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
 import eu.cdevreeze.yaidom.xs.NamedTypeDefinition
+import eu.cdevreeze.yaidom.xs.SchemaDocument
+import eu.cdevreeze.yaidom.xs.XsSchemaEName
 
 /**
  * Tries to load many schema documents, and query them.
@@ -58,28 +57,33 @@ object TryToQueryManyDocuments {
       if (currIdx % 1000 == 0 && currIdx > 0) println(s"Parsed ${currIdx} documents")
 
       val docOption = Try(docParser.parse(f).withUriOption(Some(f.toURI))).toOption
-      val schemaDocOption = docOption filter (doc => doc.documentElement.resolvedName == XsSchemaEName)
-      schemaDocOption map { doc =>
-        new SchemaDocument(DefaultDocawareBridgeElem.wrap(docaware.Elem(doc.uriOption.get, doc.documentElement)))
-      }
+      docOption
     }).seq.toVector
 
-    println(s"Parsed ${docs.size} schema files")
-    println("Starting querying ...")
+    println(s"Parsed ${docs.size} XML files. Now instantiating schema documents from them ...")
+
+    val schemaDocs = docs collect {
+      case doc if doc.documentElement.resolvedName == XsSchemaEName =>
+        new SchemaDocument(DefaultDocawareBridgeElem.wrap(docaware.Elem(doc.uriOption.get, doc.documentElement)))
+    }
+
+    println(s"Instantiated ${schemaDocs.size} schema documents.")
+
+    println("Starting querying (schemas) ...")
     println()
 
-    docs.foreach(performQueries)
+    schemaDocs.foreach(performSchemaQueries)
 
-    println("Querying again ...")
+    println("Querying again (schemas) ...")
     println()
 
-    docs.foreach(performQueries)
+    schemaDocs.foreach(performSchemaQueries)
 
     println("Ready!")
   }
 
   private def acceptFile(f: File): Boolean =
-    f.isFile && Set(".xsd", ".xml").exists(s => f.getName.endsWith(s))
+    f.isFile && Set(".xsd").exists(s => f.getName.endsWith(s))
 
   private def findFiles(dir: File, p: File => Boolean): Vector[File] = {
     require(dir.isDirectory)
@@ -89,7 +93,7 @@ object TryToQueryManyDocuments {
     files.flatMap(f => if (f.isFile) Vector(f).filter(p) else findFiles(f, p))
   }
 
-  private def performQueries(doc: SchemaDocument): Unit = {
+  private def performSchemaQueries(doc: SchemaDocument): Unit = {
     val globalElemDecls = doc.schema.findAllGlobalElementDeclarations
 
     val namedTypeDefs = doc.schema.findAllChildElemsOfType(classTag[NamedTypeDefinition])
