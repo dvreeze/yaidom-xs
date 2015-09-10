@@ -177,20 +177,6 @@ final class DomElem(
     Scope.from(resultMap - "xml")
   }
 
-  override def findChildElemByPathEntry(entry: Path.Entry): Option[DomElem] = {
-    // Scope only computed once, for acceptable performance
-    val sc = scope
-
-    val filteredChildren = children.toStream filter {
-      case e: DomElem if e.resolvedName == entry.elementName => true
-      case _ => false
-    }
-
-    val childOption = filteredChildren.drop(entry.index).headOption collect { case e: DomElem => e }
-    // assert(childOption.forall(_.resolvedName == entry.elementName))
-    childOption
-  }
-
   override def toNodeOption: Option[simple.Node] = Some(toElem)
 
   def toElem: simple.Elem = {

@@ -23,8 +23,8 @@ import scala.Vector
 import scala.reflect.classTag
 import scala.util.Try
 
-import eu.cdevreeze.yaidom.bridge.DefaultDocawareBridgeElem
-import eu.cdevreeze.yaidom.docaware
+import eu.cdevreeze.yaidom.bridge.DefaultIndexedBridgeElem
+import eu.cdevreeze.yaidom.indexed
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
 import eu.cdevreeze.yaidom.xs.NamedTypeDefinition
 import eu.cdevreeze.yaidom.xs.SchemaDocument
@@ -64,7 +64,7 @@ object TryToQueryManyDocuments {
 
     val schemaDocs = docs collect {
       case doc if doc.documentElement.resolvedName == XsSchemaEName =>
-        new SchemaDocument(DefaultDocawareBridgeElem.wrap(docaware.Elem(doc.uriOption.get, doc.documentElement)))
+        new SchemaDocument(DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)))
     }
 
     println(s"Instantiated ${schemaDocs.size} schema documents.")

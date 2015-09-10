@@ -24,14 +24,14 @@ import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.Path
 import eu.cdevreeze.yaidom.core.QName
 import eu.cdevreeze.yaidom.core.Scope
-import eu.cdevreeze.yaidom.bridge.DocawareBridgeElem
+import eu.cdevreeze.yaidom.bridge.IndexedBridgeElem
 
 /**
  * Overridable bridge element taking a `saxon.DomElem`. This is a value class instance, to prevent object creation.
  *
  * @author Chris de Vreeze
  */
-class BridgeElemTakingSaxonElem(val backingElem: DomElem) extends AnyVal with DocawareBridgeElem {
+class BridgeElemTakingSaxonElem(val backingElem: DomElem) extends AnyVal with IndexedBridgeElem {
 
   final type BackingElem = DomElem
 

@@ -29,9 +29,9 @@ import org.scalatest.GivenWhenThen
 import org.xml.sax.EntityResolver
 import org.xml.sax.InputSource
 
-import eu.cdevreeze.yaidom.bridge.DefaultDocawareBridgeElem
+import eu.cdevreeze.yaidom.bridge.DefaultIndexedBridgeElem
 import eu.cdevreeze.yaidom.core.EName
-import eu.cdevreeze.yaidom.docaware
+import eu.cdevreeze.yaidom.indexed
 import eu.cdevreeze.yaidom.parse.DefaultElemProducingSaxHandler
 import eu.cdevreeze.yaidom.parse.DocumentParser
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
@@ -77,7 +77,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
     Vector(root)
   }
 
-  val docs: immutable.IndexedSeq[docaware.Document] = {
+  val docs: immutable.IndexedSeq[indexed.Document] = {
     def findFiles(root: File): Vector[File] = {
       require(root.isDirectory)
       root.listFiles.toVector flatMap { f => if (f.isDirectory) findFiles(f) else if (f.isFile) Vector(f) else Vector() }
@@ -89,7 +89,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
     val docs = files map { f =>
       val doc = docParser.parse(new FileInputStream(f))
-      docaware.Document(f.toURI, doc)
+      indexed.Document(f.toURI, doc)
     }
 
     docs
@@ -100,14 +100,14 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       docs filter { doc =>
         doc.document.uriOption.getOrElse("").toString.endsWith(".xsd")
       } map { doc =>
-        val bridgeElem = DefaultDocawareBridgeElem.wrap(doc.documentElement)
+        val bridgeElem = DefaultIndexedBridgeElem.wrap(doc.documentElement)
         val schemaDoc = new SchemaDocument(bridgeElem)
         (doc.uriOption.getOrElse(sys.error("Missing URI")) -> schemaDoc)
       }
     result.toMap
   }
 
-  val linkbaseDocs: Map[URI, docaware.Document] = {
+  val linkbaseDocs: Map[URI, indexed.Document] = {
     val result =
       docs filter { doc =>
         doc.documentElement.resolvedName == EName(nsLink, "linkbase")
