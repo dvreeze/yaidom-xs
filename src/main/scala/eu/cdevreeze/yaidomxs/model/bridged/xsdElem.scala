@@ -25,7 +25,7 @@ import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.Path
 import eu.cdevreeze.yaidom.core.QName
 import eu.cdevreeze.yaidom.core.Scope
-import eu.cdevreeze.yaidom.queryapi.IsNavigable
+import eu.cdevreeze.yaidom.queryapi.Nodes
 import eu.cdevreeze.yaidom.queryapi.ScopedElemLike
 import eu.cdevreeze.yaidom.queryapi.SubtypeAwareElemLike
 import eu.cdevreeze.yaidom.bridge.IndexedBridgeElem
@@ -66,7 +66,7 @@ import XsdElem.IsReference
  */
 sealed class XsdElem private[bridged] (
   val bridgeElem: IndexedBridgeElem,
-  val childElems: immutable.IndexedSeq[XsdElem]) extends ScopedElemLike[XsdElem] with SubtypeAwareElemLike[XsdElem] with model.XsdElem {
+  val childElems: immutable.IndexedSeq[XsdElem]) extends Nodes.Elem with ScopedElemLike[XsdElem] with SubtypeAwareElemLike[XsdElem] with model.XsdElem {
 
   require(childElems.map(_.bridgeElem.backingElem) == bridgeElem.findAllChildElems.map(_.backingElem))
 

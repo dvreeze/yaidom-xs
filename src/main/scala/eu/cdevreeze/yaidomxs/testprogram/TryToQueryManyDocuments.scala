@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs.testprogram
+package eu.cdevreeze.yaidomxs.testprogram
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
@@ -26,9 +26,10 @@ import scala.util.Try
 import eu.cdevreeze.yaidom.bridge.DefaultIndexedBridgeElem
 import eu.cdevreeze.yaidom.indexed
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
-import eu.cdevreeze.yaidom.xs.NamedTypeDefinition
-import eu.cdevreeze.yaidom.xs.SchemaDocument
-import eu.cdevreeze.yaidom.xs.XsSchemaEName
+import eu.cdevreeze.yaidomxs.model
+import eu.cdevreeze.yaidomxs.model.bridged.NamedTypeDefinition
+import eu.cdevreeze.yaidomxs.model.bridged.SchemaRootElem
+import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
 
 /**
  * Tries to load many schema documents, and query them.
@@ -63,8 +64,10 @@ object TryToQueryManyDocuments {
     println(s"Parsed ${docs.size} XML files. Now instantiating schema documents from them ...")
 
     val schemaDocs = docs collect {
-      case doc if doc.documentElement.resolvedName == XsSchemaEName =>
-        new SchemaDocument(DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)))
+      case doc if doc.documentElement.resolvedName == model.XsSchemaEName =>
+        XsdDocument(
+          SchemaRootElem(
+            DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement))))
     }
 
     println(s"Instantiated ${schemaDocs.size} schema documents.")
@@ -93,12 +96,12 @@ object TryToQueryManyDocuments {
     files.flatMap(f => if (f.isFile) Vector(f).filter(p) else findFiles(f, p))
   }
 
-  private def performSchemaQueries(doc: SchemaDocument): Unit = {
-    val globalElemDecls = doc.schema.findAllGlobalElementDeclarations
+  private def performSchemaQueries(doc: XsdDocument): Unit = {
+    val globalElemDecls = doc.schemaRootElem.findAllGlobalElementDeclarations
 
-    val namedTypeDefs = doc.schema.findAllChildElemsOfType(classTag[NamedTypeDefinition])
+    val namedTypeDefs = doc.schemaRootElem.findAllChildElemsOfType(classTag[NamedTypeDefinition])
 
-    val enames = doc.schema.findAllElemsOrSelf.map(_.resolvedName).toSet
+    val enames = doc.schemaRootElem.findAllElemsOrSelf.map(_.resolvedName).toSet
 
     println(s"Schema document ${doc.uri} has ${globalElemDecls.size} global element declarations")
     println(s"Schema document ${doc.uri} has ${namedTypeDefs.size} named type definitions")

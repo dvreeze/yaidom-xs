@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs
+package eu.cdevreeze.yaidomxs
 
 import scala.Vector
 import scala.reflect.classTag
@@ -29,6 +29,15 @@ import eu.cdevreeze.yaidom.queryapi.ElemApi.anyElem
 import eu.cdevreeze.yaidom.queryapi.HasENameApi.ToHasElemApi
 import eu.cdevreeze.yaidom.resolved
 import eu.cdevreeze.yaidom.simple.NodeBuilder
+import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
+import eu.cdevreeze.yaidomxs.model.bridged.ElementDeclaration
+import eu.cdevreeze.yaidomxs.model.bridged.ElementDeclarationOrReference
+import eu.cdevreeze.yaidomxs.model.bridged.AttributeDeclaration
+import eu.cdevreeze.yaidomxs.model.bridged.AttributeDeclarationOrReference
+import eu.cdevreeze.yaidomxs.model.bridged.AttributeGroupDefinition
+import eu.cdevreeze.yaidomxs.model.bridged.ComplexTypeDefinition
+import eu.cdevreeze.yaidomxs.model.bridged.GlobalElementDeclaration
+import eu.cdevreeze.yaidomxs.model.bridged.GlobalAttributeDeclaration
 
 /**
  * XML Schema creation test case.
@@ -37,20 +46,20 @@ import eu.cdevreeze.yaidom.simple.NodeBuilder
  */
 abstract class AbstractCreateSchemaTest extends Suite {
 
-  protected def getSchemaDocument(fileName: String): SchemaDocument
+  protected def getSchemaDocument(fileName: String): XsdDocument
 
   @Test def testCreateValidSchema(): Unit = {
     val schemaDoc = getSchemaDocument("shiporder.xsd")
-    val schema = schemaDoc.schema
+    val schema = schemaDoc.schemaRootElem
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
 
-    val globalElemDecls2 = schema \\! EName(XsNamespace, "element")
-    val elemDecls2 = schema \\ EName(XsNamespace, "element")
+    val globalElemDecls2 = schema \\! EName(model.XsNamespace, "element")
+    val elemDecls2 = schema \\ EName(model.XsNamespace, "element")
 
-    val globalElemDecls3 = schema \\! EName(XsNamespace, "element")
-    val elemDecls3 = schema \\ EName(XsNamespace, "element")
+    val globalElemDecls3 = schema \\! EName(model.XsNamespace, "element")
+    val elemDecls3 = schema \\ EName(model.XsNamespace, "element")
 
     val globalAttrDecls = schema.findAllGlobalAttributeDeclarations
     val attrDecls = schema.findAllElemsOfType(classTag[AttributeDeclarationOrReference])
@@ -115,7 +124,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testCreateValidSchemaOfXmlSchema(): Unit = {
     val schemaDoc = getSchemaDocument("XMLSchema.xsd")
-    val schema = schemaDoc.schema
+    val schema = schemaDoc.schemaRootElem
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
@@ -163,7 +172,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
     val expectedElemBuilder =
       elem(
         qname = QName("xs:complexContent"),
-        namespaces = Declarations.from("xs" -> XsNamespace),
+        namespaces = Declarations.from("xs" -> model.XsNamespace),
         children =
           Vector(
             elem(
@@ -196,7 +205,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testCreateValidLargeSchema(): Unit = {
     val schemaDoc = getSchemaDocument("ifrs-gp-2006-08-15.xsd")
-    val schema = schemaDoc.schema
+    val schema = schemaDoc.schemaRootElem
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
@@ -245,7 +254,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testTargetNamespace(): Unit = {
     val schemaDoc = getSchemaDocument("shiporder.xsd")
-    val schema = schemaDoc.schema
+    val schema = schemaDoc.schemaRootElem
 
     val expectedTns = "http://shiporder"
 
@@ -259,14 +268,14 @@ abstract class AbstractCreateSchemaTest extends Suite {
     assert(shipOrderElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     assertResult(Some(expectedTns)) {
-      shipOrderElemDeclOption.get.bridgeElem.rootElem \@ TargetNamespaceEName
+      shipOrderElemDeclOption.get.bridgeElem.rootElem \@ model.TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "shiporder")) {
       shipOrderElemDeclOption.get.targetEName
     }
     assertResult(None) {
       shipOrderElemDeclOption.get.bridgeElem.path findAncestorPath {
-        e => e.elementNameOption == Some(XsComplexTypeEName)
+        e => e.elementNameOption == Some(model.XsComplexTypeEName)
       }
     }
 
@@ -278,14 +287,14 @@ abstract class AbstractCreateSchemaTest extends Suite {
     assert(!nameElemDeclOption.get.isInstanceOf[GlobalElementDeclaration])
 
     assertResult(Some(expectedTns)) {
-      nameElemDeclOption.get.bridgeElem.rootElem \@ TargetNamespaceEName
+      nameElemDeclOption.get.bridgeElem.rootElem \@ model.TargetNamespaceEName
     }
     assertResult(EName(expectedTns, "name")) {
       nameElemDeclOption.get.targetEName
     }
     assertResult(Some(5)) {
       nameElemDeclOption.get.bridgeElem.path findAncestorPath {
-        e => e.elementNameOption == Some(XsComplexTypeEName)
+        e => e.elementNameOption == Some(model.XsComplexTypeEName)
       } map { _.entries.size }
     }
 
@@ -299,7 +308,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
     assertResult(Some(2)) {
       orderidAttrDeclOption.get.bridgeElem.path findAncestorPath {
-        e => e.elementNameOption == Some(XsComplexTypeEName)
+        e => e.elementNameOption == Some(model.XsComplexTypeEName)
       } map { _.entries.size }
     }
   }

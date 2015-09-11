@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs
+package eu.cdevreeze.yaidomxs.model.bridged
 
 import java.net.URI
 
@@ -26,23 +26,23 @@ import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.QName
 
 /**
- * Immutable collection of XML Schema Documents that belong together. Typically, a `SchemaDocumentSet` is a collection
- * of `SchemaDocument` instances that is closed under imports and includes.
+ * Immutable collection of XML Schema Documents that belong together. Typically, an `XsdDocumentSet` is a collection
+ * of `XsdDocument` instances that is closed under imports and includes.
  *
  * This class contains methods for obtaining type definitions, substitution group heads, etc. Such methods often require
  * the traversal of multiple schema documents, and are therefore part of this class.
  *
  * Per component type (element declaration, attribute declaration, type definition etc.) their ENames (in combination with scope)
- * must be unique in the SchemaDocumentSet. This is indeed required for "schemas" (as combination of schema documents).
+ * must be unique in the XsdDocumentSet. This is indeed required for "schemas" (as combination of schema documents).
  *
  * TODO Make this a trait, and make different subclasses/traits for "raw" schema document sets, schema document sets that
  * cache all found substitution groups, etc.
  *
  * @author Chris de Vreeze
  */
-final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDocument]) extends Immutable {
+final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument]) {
 
-  val schemaDocumentsByUri: Map[URI, SchemaDocument] = {
+  val schemaDocumentsByUri: Map[URI, XsdDocument] = {
     val result = schemaDocuments map { doc => (doc.uri -> doc) }
     result.toMap
   }
@@ -53,25 +53,25 @@ final class SchemaDocumentSet(val schemaDocuments: immutable.IndexedSeq[SchemaDo
    * Returns all element declarations in this SchemaDocumentSet.
    */
   final def findAllElementDeclarationOrReferences: immutable.IndexedSeq[ElementDeclarationOrReference] =
-    schemaDocuments flatMap { e => e.schema.findAllElemsOfType(classTag[ElementDeclarationOrReference]) }
+    schemaDocuments flatMap { e => e.schemaRootElem.findAllElemsOfType(classTag[ElementDeclarationOrReference]) }
 
   /**
    * Returns all global element declarations in this SchemaDocumentSet.
    */
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
-    schemaDocuments flatMap { e => e.schema.findAllGlobalElementDeclarations }
+    schemaDocuments flatMap { e => e.schemaRootElem.findAllGlobalElementDeclarations }
 
   /**
    * Returns all element declarations in this SchemaDocumentSet obeying the given predicate.
    */
   final def filterElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
-    schemaDocuments flatMap { e => e.schema.filterElemsOfType(classTag[ElementDeclarationOrReference])(p) }
+    schemaDocuments flatMap { e => e.schemaRootElem.filterElemsOfType(classTag[ElementDeclarationOrReference])(p) }
 
   /**
    * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
    */
   final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
-    schemaDocuments flatMap { e => e.schema filterGlobalElementDeclarations p }
+    schemaDocuments flatMap { e => e.schemaRootElem filterGlobalElementDeclarations p }
 
   /**
    * Finds the global element declaration with the given EName, if any, wrapped in an Option.

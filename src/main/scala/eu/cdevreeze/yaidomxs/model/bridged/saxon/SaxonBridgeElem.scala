@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs.saxon
+package eu.cdevreeze.yaidomxs.model.bridged.saxon
 
 import java.net.URI
 
@@ -27,20 +27,20 @@ import eu.cdevreeze.yaidom.core.Scope
 import eu.cdevreeze.yaidom.bridge.IndexedBridgeElem
 
 /**
- * Overridable bridge element taking a `saxon.DomElem`. This is a value class instance, to prevent object creation.
+ * Overridable bridge element taking a `SaxonElem`.
  *
  * @author Chris de Vreeze
  */
-class BridgeElemTakingSaxonElem(val backingElem: DomElem) extends AnyVal with IndexedBridgeElem {
+class SaxonBridgeElem(val backingElem: SaxonElem) extends AnyVal with IndexedBridgeElem {
 
-  final type BackingElem = DomElem
+  final type BackingElem = SaxonElem
 
-  final type SelfType = BridgeElemTakingSaxonElem
+  final type SelfType = SaxonBridgeElem
 
-  final type UnwrappedBackingElem = DomElem
+  final type UnwrappedBackingElem = SaxonElem
 
   final def findAllChildElems: immutable.IndexedSeq[SelfType] =
-    backingElem.findAllChildElems.map(e => new BridgeElemTakingSaxonElem(e))
+    backingElem.findAllChildElems.map(e => new SaxonBridgeElem(e))
 
   final def resolvedName: EName = backingElem.resolvedName
 
@@ -55,7 +55,7 @@ class BridgeElemTakingSaxonElem(val backingElem: DomElem) extends AnyVal with In
   final def text: String = backingElem.text
 
   final def findChildElemByPathEntry(entry: Path.Entry): Option[SelfType] =
-    backingElem.findChildElemByPathEntry(entry).map(e => new BridgeElemTakingSaxonElem(e))
+    backingElem.findChildElemByPathEntry(entry).map(e => new SaxonBridgeElem(e))
 
   final def toElem: eu.cdevreeze.yaidom.simple.Elem = backingElem.toElem
 
@@ -74,7 +74,7 @@ class BridgeElemTakingSaxonElem(val backingElem: DomElem) extends AnyVal with In
     Option(backingElem.wrappedNode.getBaseURI).map(s => new URI(s)).getOrElse(sys.error(s"Missing base URI"))
 }
 
-object BridgeElemTakingSaxonElem {
+object SaxonBridgeElem {
 
-  def wrap(elem: DomElem): BridgeElemTakingSaxonElem = new BridgeElemTakingSaxonElem(elem)
+  def wrap(elem: SaxonElem): SaxonBridgeElem = new SaxonBridgeElem(elem)
 }

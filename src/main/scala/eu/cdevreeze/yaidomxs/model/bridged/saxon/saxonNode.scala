@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs.saxon
+package eu.cdevreeze.yaidomxs.model.bridged.saxon
 
 import java.net.URI
 
@@ -22,7 +22,7 @@ import scala.Vector
 import scala.collection.immutable
 import scala.collection.mutable
 
-import eu.cdevreeze.yaidom.XmlStringUtils
+import eu.cdevreeze.yaidomxs.XmlStringUtils
 import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.ENameProvider
 import eu.cdevreeze.yaidom.core.QName
@@ -33,13 +33,14 @@ import eu.cdevreeze.yaidom.queryapi.DocumentApi
 import eu.cdevreeze.yaidom.queryapi.HasParent
 import eu.cdevreeze.yaidom.queryapi.IsNavigable
 import eu.cdevreeze.yaidom.queryapi.ScopedElemLike
+import eu.cdevreeze.yaidom.resolved.ResolvedNodes
 import eu.cdevreeze.yaidom.simple
 import net.sf.saxon.`type`.Type
 import net.sf.saxon.om.AxisInfo
 import net.sf.saxon.om.DocumentInfo
 import net.sf.saxon.om.NodeInfo
 
-abstract class DomNode(val wrappedNode: NodeInfo) {
+abstract class SaxonNode(val wrappedNode: NodeInfo) extends ResolvedNodes.Node {
 
   import ENameProvider.globalENameProvider._
   import QNameProvider.globalQNameProvider._
@@ -61,84 +62,57 @@ abstract class DomNode(val wrappedNode: NodeInfo) {
   def toNodeOption: Option[simple.Node] = None
 
   override def equals(other: Any): Boolean = other match {
-    case n: DomNode => wrappedNode == n.wrappedNode
-    case _ => false
+    case n: SaxonNode => wrappedNode == n.wrappedNode
+    case _            => false
   }
 
   override def hashCode: Int = wrappedNode.hashCode
 }
 
-abstract class DomParentNode(override val wrappedNode: NodeInfo) extends DomNode(wrappedNode) {
-
-  final def children: immutable.IndexedSeq[DomNode] = {
-    if (!wrappedNode.hasChildNodes) Vector()
-    else {
-      val it = wrappedNode.iterateAxis(AxisInfo.CHILD)
-      val buf = mutable.ArrayBuffer[NodeInfo]()
-
-      while (it.next() ne null) {
-        buf += it.current()
-      }
-
-      buf.toVector.flatMap(nodeInfo => DomNode.wrapNodeOption(nodeInfo))
-    }
-  }
-}
-
-final class DomDocument(
-  override val wrappedNode: DocumentInfo) extends DomParentNode(wrappedNode) with DocumentApi[DomElem] {
-
-  require(wrappedNode ne null)
-  require(wrappedNode.getNodeKind == Type.DOCUMENT)
-
-  def documentElement: DomElem =
-    (children collectFirst { case e: DomElem => e }).getOrElse(sys.error(s"Missing document element"))
-
-  def uriOption: Option[URI] = {
-    // There must be a better way
-    None
-  }
-}
-
-final class DomElem(
-  override val wrappedNode: NodeInfo) extends DomParentNode(wrappedNode) with ScopedElemLike[DomElem] with IsNavigable[DomElem] with HasParent[DomElem] { self =>
+final class SaxonElem(
+  override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) with ResolvedNodes.Elem with ScopedElemLike[SaxonElem] with HasParent[SaxonElem] { self =>
 
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.ELEMENT)
 
-  override def findAllChildElems: immutable.IndexedSeq[DomElem] = children collect { case e: DomElem => e }
+  final def children: immutable.IndexedSeq[SaxonNode] = {
+    if (!wrappedNode.hasChildNodes) Vector()
+    else {
+      val it = wrappedNode.iterateAxis(AxisInfo.CHILD)
+
+      val nodes = Stream.continually(it.next).takeWhile(_ ne null).toVector
+
+      nodes.flatMap(nodeInfo => SaxonNode.wrapNodeOption(nodeInfo))
+    }
+  }
+
+  override def findAllChildElems: immutable.IndexedSeq[SaxonElem] = children collect { case e: SaxonElem => e }
 
   override def resolvedName: EName = nodeInfo2EName(wrappedNode)
 
   override def resolvedAttributes: immutable.IndexedSeq[(EName, String)] = {
     val it = wrappedNode.iterateAxis(AxisInfo.ATTRIBUTE)
-    val buf = mutable.ArrayBuffer[NodeInfo]()
 
-    while (it.next() ne null) {
-      buf += it.current()
-    }
+    val nodes = Stream.continually(it.next).takeWhile(_ ne null).toVector
 
-    buf.toVector map { nodeInfo => nodeInfo2EName(nodeInfo) -> nodeInfo.getStringValue }
+    nodes map { nodeInfo => nodeInfo2EName(nodeInfo) -> nodeInfo.getStringValue }
   }
 
   override def qname: QName = nodeInfo2QName(wrappedNode)
 
   override def attributes: immutable.IndexedSeq[(QName, String)] = {
     val it = wrappedNode.iterateAxis(AxisInfo.ATTRIBUTE)
-    val buf = mutable.ArrayBuffer[NodeInfo]()
 
-    while (it.next() ne null) {
-      buf += it.current()
-    }
+    val nodes = Stream.continually(it.next).takeWhile(_ ne null).toVector
 
-    buf.toVector map { nodeInfo => nodeInfo2QName(nodeInfo) -> nodeInfo.getStringValue }
+    nodes map { nodeInfo => nodeInfo2QName(nodeInfo) -> nodeInfo.getStringValue }
   }
 
   /** Returns the text children */
-  def textChildren: immutable.IndexedSeq[DomText] = children collect { case t: DomText => t }
+  def textChildren: immutable.IndexedSeq[SaxonText] = children collect { case t: SaxonText => t }
 
   /** Returns the comment children */
-  def commentChildren: immutable.IndexedSeq[DomComment] = children collect { case c: DomComment => c }
+  def commentChildren: immutable.IndexedSeq[SaxonComment] = children collect { case c: SaxonComment => c }
 
   /**
    * Returns the concatenation of the texts of text children, including whitespace and CData. Non-text children are ignored.
@@ -149,23 +123,20 @@ final class DomElem(
     textStrings.mkString
   }
 
-  override def parentOption: Option[DomElem] = {
+  override def parentOption: Option[SaxonElem] = {
     val parentNodeOption = Option(wrappedNode.getParent)
     val parentElemOption = parentNodeOption collect { case e: NodeInfo if e.getNodeKind == Type.ELEMENT => e }
-    parentElemOption map { e => DomNode.wrapElement(e) }
+    parentElemOption map { e => SaxonNode.wrapElement(e) }
   }
 
   override def scope: Scope = {
     val it = wrappedNode.iterateAxis(AxisInfo.NAMESPACE)
-    val buf = mutable.ArrayBuffer[NodeInfo]()
 
-    while (it.next() ne null) {
-      buf += it.current()
-    }
+    val nodes = Stream.continually(it.next).takeWhile(_ ne null).toVector
 
     val resultMap = {
       val result =
-        buf.toVector map { nodeInfo =>
+        nodes map { nodeInfo =>
           // Not very transparent: prefix is "display name" and namespace URI is "string value"
           val prefix = nodeInfo.getDisplayName
           val nsUri = nodeInfo.getStringValue
@@ -188,7 +159,7 @@ final class DomElem(
   def path: Path = {
     if (parentOption.isEmpty) Path.Root
     else {
-      val prevSiblingElems = previousSiblings collect { case e: DomElem => e }
+      val prevSiblingElems = previousSiblings collect { case e: SaxonElem => e }
       val cnt = prevSiblingElems.filter(e => e.resolvedName == this.resolvedName).size
       val entry = Path.Entry(this.resolvedName, cnt)
 
@@ -197,19 +168,16 @@ final class DomElem(
     }
   }
 
-  private def previousSiblings: immutable.IndexedSeq[DomNode] = {
+  private def previousSiblings: immutable.IndexedSeq[SaxonNode] = {
     val it = wrappedNode.iterateAxis(AxisInfo.PRECEDING_SIBLING)
-    val buf = mutable.ArrayBuffer[NodeInfo]()
 
-    while (it.next() ne null) {
-      buf += it.current()
-    }
+    val nodes = Stream.continually(it.next).takeWhile(_ ne null).toVector
 
-    buf.toVector.flatMap(nodeInfo => DomNode.wrapNodeOption(nodeInfo))
+    nodes.flatMap(nodeInfo => SaxonNode.wrapNodeOption(nodeInfo))
   }
 }
 
-final class DomText(override val wrappedNode: NodeInfo) extends DomNode(wrappedNode) {
+final class SaxonText(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.TEXT || wrappedNode.getNodeKind == Type.WHITESPACE_TEXT)
 
@@ -222,7 +190,7 @@ final class DomText(override val wrappedNode: NodeInfo) extends DomNode(wrappedN
   override def toNodeOption: Option[simple.Node] = Some(simple.Text(text, false))
 }
 
-final class DomProcessingInstruction(override val wrappedNode: NodeInfo) extends DomNode(wrappedNode) {
+final class SaxonProcessingInstruction(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.PROCESSING_INSTRUCTION)
 
@@ -230,7 +198,7 @@ final class DomProcessingInstruction(override val wrappedNode: NodeInfo) extends
   override def toNodeOption: Option[simple.Node] = None
 }
 
-final class DomComment(override val wrappedNode: NodeInfo) extends DomNode(wrappedNode) {
+final class SaxonComment(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.COMMENT)
 
@@ -239,20 +207,18 @@ final class DomComment(override val wrappedNode: NodeInfo) extends DomNode(wrapp
   override def toNodeOption: Option[simple.Node] = Some(simple.Comment(text))
 }
 
-object DomNode {
+object SaxonNode {
 
-  def wrapNodeOption(node: NodeInfo): Option[DomNode] = {
+  def wrapNodeOption(node: NodeInfo): Option[SaxonNode] = {
     node.getNodeKind match {
-      case Type.ELEMENT => Some(new DomElem(node))
-      case Type.TEXT => Some(new DomText(node))
-      case Type.WHITESPACE_TEXT => Some(new DomText(node))
-      case Type.PROCESSING_INSTRUCTION => Some(new DomProcessingInstruction(node))
-      case Type.COMMENT => Some(new DomComment(node))
-      case _ => None
+      case Type.ELEMENT                => Some(new SaxonElem(node))
+      case Type.TEXT                   => Some(new SaxonText(node))
+      case Type.WHITESPACE_TEXT        => Some(new SaxonText(node))
+      case Type.PROCESSING_INSTRUCTION => Some(new SaxonProcessingInstruction(node))
+      case Type.COMMENT                => Some(new SaxonComment(node))
+      case _                           => None
     }
   }
 
-  def wrapDocument(doc: DocumentInfo): DomDocument = new DomDocument(doc)
-
-  def wrapElement(elm: NodeInfo): DomElem = new DomElem(elm)
+  def wrapElement(elm: NodeInfo): SaxonElem = new SaxonElem(elm)
 }

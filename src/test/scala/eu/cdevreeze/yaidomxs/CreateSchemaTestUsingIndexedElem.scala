@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidom.xs
+package eu.cdevreeze.yaidomxs
 
 import java.io.File
 import org.junit.runner.RunWith
@@ -27,6 +27,9 @@ import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
 import eu.cdevreeze.yaidom.simple.Document
 import javax.xml.parsers.SAXParserFactory
 import eu.cdevreeze.yaidom.bridge.DefaultIndexedBridgeElem
+import eu.cdevreeze.yaidom.indexed
+import eu.cdevreeze.yaidomxs.model.bridged.SchemaRootElem
+import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
 
 /**
  * XML Schema creation test case using indexed elements.
@@ -36,7 +39,7 @@ import eu.cdevreeze.yaidom.bridge.DefaultIndexedBridgeElem
 @RunWith(classOf[JUnitRunner])
 class CreateSchemaTestUsingIndexedElem extends AbstractCreateSchemaTest {
 
-  protected def getSchemaDocument(fileName: String): SchemaDocument = {
+  protected def getSchemaDocument(fileName: String): XsdDocument = {
     val spf = SAXParserFactory.newInstance
     spf.setFeature("http://xml.org/sax/features/namespaces", true)
     spf.setFeature("http://xml.org/sax/features/namespace-prefixes", true)
@@ -50,9 +53,10 @@ class CreateSchemaTestUsingIndexedElem extends AbstractCreateSchemaTest {
 
     val doc: Document = docParser.parse(f)
 
-    val schemaDoc: SchemaDocument =
-      new SchemaDocument(
-        DefaultIndexedBridgeElem.wrap(indexed.Elem(uri, doc.documentElement)))
+    val schemaDoc: XsdDocument =
+      XsdDocument(
+        SchemaRootElem(
+          DefaultIndexedBridgeElem.wrap(indexed.Elem(uri, doc.documentElement))))
 
     schemaDoc
   }

@@ -19,7 +19,7 @@ libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom" % "1.4.2"
 
 libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom-xlink" % "1.4.2"
 
-libraryDependencies += "net.sf.saxon" % "Saxon-HE" % "9.5.1-8"
+libraryDependencies += "net.sf.saxon" % "Saxon-HE" % "9.6.0-6"
 
 libraryDependencies += "junit" % "junit" % "4.11" % "test"
 
