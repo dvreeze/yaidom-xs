@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidomxs
+package eu.cdevreeze.yaidomxs.integrationtest
 
 import java.io.File
 import org.junit.runner.RunWith

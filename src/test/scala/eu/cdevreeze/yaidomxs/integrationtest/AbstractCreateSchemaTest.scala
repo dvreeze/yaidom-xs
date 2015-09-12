@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidomxs
+package eu.cdevreeze.yaidomxs.integrationtest
 
 import scala.Vector
 import scala.reflect.classTag
@@ -29,6 +29,7 @@ import eu.cdevreeze.yaidom.queryapi.ElemApi.anyElem
 import eu.cdevreeze.yaidom.queryapi.HasENameApi.ToHasElemApi
 import eu.cdevreeze.yaidom.resolved
 import eu.cdevreeze.yaidom.simple.NodeBuilder
+import eu.cdevreeze.yaidomxs.model
 import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
 import eu.cdevreeze.yaidomxs.model.bridged.ElementDeclaration
 import eu.cdevreeze.yaidomxs.model.bridged.ElementDeclarationOrReference
