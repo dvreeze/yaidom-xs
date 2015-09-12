@@ -24,6 +24,7 @@ import scala.reflect.classTag
 
 import eu.cdevreeze.yaidom.core.EName
 import eu.cdevreeze.yaidom.core.QName
+import eu.cdevreeze.yaidomxs.model.SchemaApi
 
 /**
  * Immutable collection of XML Schema Documents that belong together. Typically, an `XsdDocumentSet` is a collection
@@ -40,14 +41,78 @@ import eu.cdevreeze.yaidom.core.QName
  *
  * @author Chris de Vreeze
  */
-final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument]) {
+final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument]) extends SchemaApi {
+
+  type GlobalElemDecl = GlobalElementDeclaration
+  type GlobalAttrDecl = GlobalAttributeDeclaration
+  type NamedTypeDef = NamedTypeDefinition
+
+  private val allGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] = {
+    (schemaDocuments flatMap { doc =>
+      doc.schemaRootElem.findAllChildElemsOfType(classTag[GlobalElementDeclaration]).map(e => (e.targetEName -> e))
+    }).toMap
+  }
+
+  private val allGlobalAttributeDeclarationsMappedByEName: Map[EName, GlobalAttributeDeclaration] = {
+    (schemaDocuments flatMap { doc =>
+      doc.schemaRootElem.findAllChildElemsOfType(classTag[GlobalAttributeDeclaration]).map(e => (e.targetEName -> e))
+    }).toMap
+  }
+
+  private val allNamedTypeDefinitionsMappedByEName: Map[EName, NamedTypeDefinition] = {
+    (schemaDocuments flatMap { doc =>
+      doc.schemaRootElem.findAllChildElemsOfType(classTag[NamedTypeDefinition]).map(e => (e.targetEName -> e))
+    }).toMap
+  }
 
   val schemaDocumentsByUri: Map[URI, XsdDocument] = {
     val result = schemaDocuments map { doc => (doc.uri -> doc) }
     result.toMap
   }
 
-  // TODO Query methods for types of element declarations, substitution groups of element declarations, etc.
+  // TODO Query methods for element declarations, substitution groups of element declarations, etc.
+
+  final def findAllGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] =
+    allGlobalElementDeclarationsMappedByEName
+
+  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[GlobalElementDeclaration]))
+
+  final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.filterChildElemsOfType(classTag[GlobalElementDeclaration])(p))
+
+  final def findAllGlobalAttributeDeclarationsMappedByEName: Map[EName, GlobalAttributeDeclaration] =
+    allGlobalAttributeDeclarationsMappedByEName
+
+  final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[GlobalAttributeDeclaration]))
+
+  final def filterGlobalAttributeDeclarations(p: GlobalAttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.filterChildElemsOfType(classTag[GlobalAttributeDeclaration])(p))
+
+  final def findAllNamedTypeDefinitionsMappedByEName: Map[EName, NamedTypeDefinition] =
+    allNamedTypeDefinitionsMappedByEName
+
+  final def findAllNamedTypeDefinitions: immutable.IndexedSeq[NamedTypeDefinition] = {
+    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[NamedTypeDefinition]))
+  }
+
+  final def filterNamedTypeDefinitions(p: NamedTypeDefinition => Boolean): immutable.IndexedSeq[NamedTypeDefinition] = {
+    schemaDocuments.flatMap(d => d.schemaRootElem.filterChildElemsOfType(classTag[NamedTypeDefinition])(p))
+  }
+
+  final def findAllDirectSubstitutables(p: EName => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] = {
+    filterGlobalElementDeclarations(e => e.substitutionGroupOption.isDefined && p(e.substitutionGroupOption.get))
+  }
+
+  final def findAllImports: immutable.IndexedSeq[Import] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[Import]))
+
+  final def findAllIncludes: immutable.IndexedSeq[Include] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[Include]))
+
+  final def findAllRedefines: immutable.IndexedSeq[Redefine] =
+    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[Redefine]))
 
   /**
    * Returns all element declarations in this SchemaDocumentSet.
@@ -56,22 +121,10 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
     schemaDocuments flatMap { e => e.schemaRootElem.findAllElemsOfType(classTag[ElementDeclarationOrReference]) }
 
   /**
-   * Returns all global element declarations in this SchemaDocumentSet.
-   */
-  final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
-    schemaDocuments flatMap { e => e.schemaRootElem.findAllGlobalElementDeclarations }
-
-  /**
    * Returns all element declarations in this SchemaDocumentSet obeying the given predicate.
    */
   final def filterElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
     schemaDocuments flatMap { e => e.schemaRootElem.filterElemsOfType(classTag[ElementDeclarationOrReference])(p) }
-
-  /**
-   * Returns all global element declarations in this SchemaDocumentSet obeying the given predicate.
-   */
-  final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
-    schemaDocuments flatMap { e => e.schemaRootElem filterGlobalElementDeclarations p }
 
   /**
    * Finds the global element declaration with the given EName, if any, wrapped in an Option.
@@ -80,7 +133,7 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
    * taken into account.
    */
   final def findGlobalElementDeclarationByEName(ename: EName): Option[GlobalElementDeclaration] =
-    filterGlobalElementDeclarations(_.targetEName == ename).headOption
+    allGlobalElementDeclarationsMappedByEName.get(ename)
 
   /**
    * Returns the substitution group "ancestry". The result always starts with the passed substitution group EName.
@@ -110,15 +163,5 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
 
     assert(result.headOption == Some(substGroup))
     result
-  }
-
-  /**
-   * Returns all global element declarations that have a substitution group matching the given predicate on the
-   * substitution group.
-   *
-   * This is an expensive method.
-   */
-  final def findAllDirectSubstitutables(p: EName => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] = {
-    filterGlobalElementDeclarations { elemDecl => elemDecl.substitutionGroupOption.isDefined && p(elemDecl.substitutionGroupOption.get) }
   }
 }

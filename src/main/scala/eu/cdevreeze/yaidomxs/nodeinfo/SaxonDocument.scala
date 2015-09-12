@@ -28,6 +28,11 @@ import net.sf.saxon.om.AxisInfo
 import net.sf.saxon.om.DocumentInfo
 import net.sf.saxon.om.NodeInfo
 
+/**
+ * Saxon (aidom) wrapper document.
+ *
+ * @author Chris de Vreeze
+ */
 final class SaxonDocument(val wrappedNode: DocumentInfo) extends DocumentApi[SaxonElem] {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.DOCUMENT)

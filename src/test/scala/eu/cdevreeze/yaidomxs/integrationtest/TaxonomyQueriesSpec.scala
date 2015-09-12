@@ -43,6 +43,11 @@ import eu.cdevreeze.yaidomxs.model.bridged.XsdDocumentSet
 import eu.cdevreeze.yaidomxs.model.TargetNamespaceEName
 import javax.xml.parsers.SAXParserFactory
 
+/**
+ * Taxonomy queries test case.
+ *
+ * @author Chris de Vreeze
+ */
 class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
   val nsXLink = "http://www.w3.org/1999/xlink"

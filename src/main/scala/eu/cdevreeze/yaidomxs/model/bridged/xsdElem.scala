@@ -151,85 +151,45 @@ final class SchemaRootElem private[bridged] (
 
   final def targetNamespaceOption: Option[String] = attributeOption(model.TargetNamespaceEName)
 
-  /**
-   * Returns all global element declarations mapped by EName.
-   */
   final def findAllGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] =
     allGlobalElementDeclarationsMappedByEName
 
-  /**
-   * Returns all global element declarations.
-   */
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
     findAllChildElemsOfType(classTag[GlobalElementDeclaration])
 
-  /**
-   * Returns all global element declarations obeying the given predicate.
-   */
   final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
     filterChildElemsOfType(classTag[GlobalElementDeclaration])(p)
 
-  /**
-   * Returns all global attribute declarations mapped by EName.
-   */
   final def findAllGlobalAttributeDeclarationsMappedByEName: Map[EName, GlobalAttributeDeclaration] =
     allGlobalAttributeDeclarationsMappedByEName
 
-  /**
-   * Returns all global attribute declarations.
-   */
   final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
     findAllChildElemsOfType(classTag[GlobalAttributeDeclaration])
 
-  /**
-   * Returns all global attribute declarations obeying the given predicate.
-   */
   final def filterGlobalAttributeDeclarations(p: GlobalAttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
     filterChildElemsOfType(classTag[GlobalAttributeDeclaration])(p)
 
-  /**
-   * Returns all named type definitions mapped by EName.
-   */
   final def findAllNamedTypeDefinitionsMappedByEName: Map[EName, NamedTypeDefinition] =
     allNamedTypeDefinitionsMappedByEName
 
-  /**
-   * Returns all named type definitions.
-   */
   final def findAllNamedTypeDefinitions: immutable.IndexedSeq[NamedTypeDefinition] = {
     findAllChildElemsOfType(classTag[NamedTypeDefinition])
   }
 
-  /**
-   * Returns all named type definitions obeying the given predicate.
-   */
   final def filterNamedTypeDefinitions(p: NamedTypeDefinition => Boolean): immutable.IndexedSeq[NamedTypeDefinition] = {
     filterChildElemsOfType(classTag[NamedTypeDefinition])(p)
   }
 
-  /**
-   * Returns all global element declarations that have a substitution group matching the given predicate on the
-   * substitution group.
-   */
   final def findAllDirectSubstitutables(p: EName => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] = {
     filterGlobalElementDeclarations { e => e.substitutionGroupOption.isDefined && p(e.substitutionGroupOption.get) }
   }
 
-  /**
-   * Returns all imports.
-   */
   final def findAllImports: immutable.IndexedSeq[Import] =
     findAllChildElemsOfType(classTag[Import])
 
-  /**
-   * Returns all includes.
-   */
   final def findAllIncludes: immutable.IndexedSeq[Include] =
     findAllChildElemsOfType(classTag[Include])
 
-  /**
-   * Returns all redefines.
-   */
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
     findAllChildElemsOfType(classTag[Redefine])
 }

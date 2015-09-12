@@ -40,6 +40,11 @@ import net.sf.saxon.om.AxisInfo
 import net.sf.saxon.om.DocumentInfo
 import net.sf.saxon.om.NodeInfo
 
+/**
+ * Saxon (aidom) wrapper node hierarchy.
+ *
+ * @author Chris de Vreeze
+ */
 abstract class SaxonNode(val wrappedNode: NodeInfo) extends ResolvedNodes.Node {
 
   import ENameProvider.globalENameProvider._
