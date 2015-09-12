@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package eu.cdevreeze.yaidomxs.model.bridged.saxon
+package eu.cdevreeze.yaidomxs.nodeinfo
 
 import java.net.URI
 

@@ -21,8 +21,8 @@ import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import net.sf.saxon.om.DocumentInfo
 import net.sf.saxon.s9api.Processor
-import eu.cdevreeze.yaidomxs.model.bridged.saxon.SaxonBridgeElem
-import eu.cdevreeze.yaidomxs.model.bridged.saxon.SaxonDocument
+import eu.cdevreeze.yaidomxs.nodeinfo.SaxonBridgeElem
+import eu.cdevreeze.yaidomxs.nodeinfo.SaxonDocument
 import eu.cdevreeze.yaidomxs.model.bridged.SchemaRootElem
 import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
 
