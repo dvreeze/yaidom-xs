@@ -9,9 +9,7 @@ organization := "eu.cdevreeze.yaidom"
 
 version := "0.1.2-SNAPSHOT"
 
-scalaVersion := "2.11.4"
-
-// crossScalaVersions := Seq("2.11.4")
+scalaVersion := "2.11.7"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature")
 
@@ -21,13 +19,9 @@ libraryDependencies += "eu.cdevreeze.yaidom" %% "yaidom-xlink" % "1.4.2"
 
 libraryDependencies += "net.sf.saxon" % "Saxon-HE" % "9.6.0-6"
 
-libraryDependencies += "junit" % "junit" % "4.11" % "test"
+libraryDependencies += "junit" % "junit" % "4.12" % "test"
 
-libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.1.3" % "test"
-
-libraryDependencies += "org.apache.ws.xmlschema" % "xmlschema-core" % "2.0.3"
-
-libraryDependencies += "com.sun.xsom" % "xsom" % "20110809"
+libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.5" % "test"
 
 publishMavenStyle := true
 
