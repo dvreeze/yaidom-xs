@@ -58,6 +58,10 @@ import XsdElem.IsReference
  * would probably need to make some assumptions about the (type of the) backing element. Fortunately, this class
  * hierarchy uses rather generic bridge elements, despite the lack of type parameters.
  *
+ * Chameleon schemas are supported by the ability to pass an external target namespace. Such a chameleon schema document
+ * instance (with the target namespace of the includer) is identified by the combination of external target namespace
+ * and document URI.
+ *
  * TODO Mind xsi:nil.
  *
  * TODO Do not assume that xs:schema is at the root of the document, because a schema document can be embedded.
@@ -66,7 +70,8 @@ import XsdElem.IsReference
  */
 sealed class XsdElem private[bridged] (
   val bridgeElem: IndexedBridgeElem,
-  val childElems: immutable.IndexedSeq[XsdElem]) extends Nodes.Elem with ScopedElemLike[XsdElem] with SubtypeAwareElemLike[XsdElem] with model.XsdElem {
+  val childElems: immutable.IndexedSeq[XsdElem],
+  val externalTnsOption: Option[String]) extends Nodes.Elem with ScopedElemLike[XsdElem] with SubtypeAwareElemLike[XsdElem] with model.XsdElem {
 
   require(childElems.map(_.bridgeElem.backingElem) == bridgeElem.findAllChildElems.map(_.backingElem))
 
@@ -132,10 +137,15 @@ sealed class XsdElem private[bridged] (
  */
 final class SchemaRootElem private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.SchemaRootElem {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.SchemaRootElem {
 
   assert(resolvedName == model.XsSchemaEName, "The element must be a 'schema' element")
   assert(bridgeElem.path.isRoot, "The element must be the root of the element tree")
+
+  require(
+    externalTnsOption.isEmpty || internalTargetNamespaceOption.isEmpty,
+    s"Only chameleon schema documents can get another target namespace")
 
   private val allGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] = {
     findAllChildElemsOfType(classTag[GlobalElementDeclaration]).map(e => (e.targetEName -> e)).toMap
@@ -149,7 +159,11 @@ final class SchemaRootElem private[bridged] (
     findAllChildElemsOfType(classTag[NamedTypeDefinition]).map(e => (e.targetEName -> e)).toMap
   }
 
-  final def targetNamespaceOption: Option[String] = attributeOption(model.TargetNamespaceEName)
+  final def internalTargetNamespaceOption: Option[String] =
+    attributeOption(model.TargetNamespaceEName)
+
+  final def targetNamespaceOption: Option[String] =
+    internalTargetNamespaceOption.orElse(externalTnsOption)
 
   final def findAllGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] =
     allGlobalElementDeclarationsMappedByEName
@@ -219,7 +233,8 @@ trait Particle extends XsdElem with model.Particle {
  */
 abstract class ElementDeclarationOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.ElementDeclarationOrReference {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.ElementDeclarationOrReference {
 
   assert(resolvedName == model.XsElementEName, "The element must be an 'element' element")
 }
@@ -229,7 +244,8 @@ abstract class ElementDeclarationOrReference private[bridged] (
  */
 abstract class ElementDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(bridgeElem, childElems) with HasName with model.ElementDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ElementDeclarationOrReference(bridgeElem, childElems, externalTnsOption) with HasName with model.ElementDeclaration {
 
   assert(attributeOption(model.RefEName).isEmpty, "Must not be a reference")
   assert(attributeOption(model.NameEName).isDefined, "Must have a name")
@@ -262,11 +278,14 @@ abstract class ElementDeclaration private[bridged] (
  */
 final class GlobalElementDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(bridgeElem, childElems) with CanBeAbstract with model.GlobalElementDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ElementDeclaration(bridgeElem, childElems, externalTnsOption) with CanBeAbstract with model.GlobalElementDeclaration {
 
-  assert(bridgeElem.path.entries.size == 1, "Must be global")
+  assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def targetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+
+  def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 
   /**
    * Returns the value of the 'substitutionGroup' attribute as expanded name, if any, wrapped in an Option.
@@ -285,12 +304,13 @@ final class GlobalElementDeclaration private[bridged] (
  */
 final class LocalElementDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclaration(bridgeElem, childElems) with Particle with model.LocalElementDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ElementDeclaration(bridgeElem, childElems, externalTnsOption) with Particle with model.LocalElementDeclaration {
 
-  assert(bridgeElem.path.entries.size >= 2, "Must be local")
+  assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must be local")
 
   final def targetNamespaceOption: Option[String] = {
-    val tnsOption = bridgeElem.rootElem \@ model.TargetNamespaceEName
+    val tnsOption = (bridgeElem.rootElem \@ model.TargetNamespaceEName).orElse(externalTnsOption)
     if (isQualified) tnsOption else None
   }
 
@@ -320,11 +340,12 @@ final class LocalElementDeclaration private[bridged] (
  */
 final class ElementReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ElementDeclarationOrReference(bridgeElem, childElems)
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ElementDeclarationOrReference(bridgeElem, childElems, externalTnsOption)
   with Particle with IsReference with model.ElementReference {
 
   assert(attributeOption(model.RefEName).isDefined, "Must be a reference")
-  assert(bridgeElem.path.entries.size >= 2, "Must not be global")
+  assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must not be global")
 }
 
 /**
@@ -332,7 +353,8 @@ final class ElementReference private[bridged] (
  */
 abstract class AttributeDeclarationOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.AttributeDeclarationOrReference {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.AttributeDeclarationOrReference {
 
   assert(resolvedName == model.XsAttributeEName, "The element must be an 'attribute' element")
 }
@@ -342,7 +364,8 @@ abstract class AttributeDeclarationOrReference private[bridged] (
  */
 abstract class AttributeDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(bridgeElem, childElems) with HasName with model.AttributeDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends AttributeDeclarationOrReference(bridgeElem, childElems, externalTnsOption) with HasName with model.AttributeDeclaration {
 
   assert(attributeOption(model.RefEName).isEmpty, "Must not be a reference")
   assert(attributeOption(model.NameEName).isDefined, "Must have a name")
@@ -364,11 +387,14 @@ abstract class AttributeDeclaration private[bridged] (
  */
 final class GlobalAttributeDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(bridgeElem, childElems) with model.GlobalAttributeDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends AttributeDeclaration(bridgeElem, childElems, externalTnsOption) with model.GlobalAttributeDeclaration {
 
-  assert(bridgeElem.path.entries.size == 1, "Must be global")
+  assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def targetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+
+  def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
 
 /**
@@ -376,12 +402,13 @@ final class GlobalAttributeDeclaration private[bridged] (
  */
 final class LocalAttributeDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclaration(bridgeElem, childElems) with model.LocalAttributeDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends AttributeDeclaration(bridgeElem, childElems, externalTnsOption) with model.LocalAttributeDeclaration {
 
-  assert(bridgeElem.path.entries.size >= 2, "Must be local")
+  assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must be local")
 
   final def targetNamespaceOption: Option[String] = {
-    val tnsOption = bridgeElem.rootElem \@ model.TargetNamespaceEName
+    val tnsOption = (bridgeElem.rootElem \@ model.TargetNamespaceEName).orElse(externalTnsOption)
     if (isQualified) tnsOption else None
   }
 
@@ -411,10 +438,11 @@ final class LocalAttributeDeclaration private[bridged] (
  */
 final class AttributeReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeDeclarationOrReference(bridgeElem, childElems) with IsReference with model.AttributeReference {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends AttributeDeclarationOrReference(bridgeElem, childElems, externalTnsOption) with IsReference with model.AttributeReference {
 
   assert(attributeOption(model.RefEName).isDefined, "Must be a reference")
-  assert(bridgeElem.path.entries.size >= 2, "Must not be global")
+  assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must not be global")
 }
 
 /**
@@ -422,7 +450,8 @@ final class AttributeReference private[bridged] (
  */
 abstract class TypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.TypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.TypeDefinition {
 }
 
 trait NamedTypeDefinition extends TypeDefinition with HasName with model.NamedTypeDefinition
@@ -434,7 +463,8 @@ trait AnonymousTypeDefinition extends TypeDefinition with model.AnonymousTypeDef
  */
 abstract class SimpleTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(bridgeElem, childElems) with model.SimpleTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends TypeDefinition(bridgeElem, childElems, externalTnsOption) with model.SimpleTypeDefinition {
 
   assert(resolvedName == model.XsSimpleTypeEName, "The element must be an 'simpleType' element")
 }
@@ -444,11 +474,14 @@ abstract class SimpleTypeDefinition private[bridged] (
  */
 final class NamedSimpleTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(bridgeElem, childElems) with NamedTypeDefinition with model.NamedSimpleTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends SimpleTypeDefinition(bridgeElem, childElems, externalTnsOption) with NamedTypeDefinition with model.NamedSimpleTypeDefinition {
 
-  assert(bridgeElem.path.entries.size == 1, "Must be global")
+  assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def targetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+
+  def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
 
 /**
@@ -456,9 +489,10 @@ final class NamedSimpleTypeDefinition private[bridged] (
  */
 final class AnonymousSimpleTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends SimpleTypeDefinition(bridgeElem, childElems) with AnonymousTypeDefinition with model.AnonymousSimpleTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends SimpleTypeDefinition(bridgeElem, childElems, externalTnsOption) with AnonymousTypeDefinition with model.AnonymousSimpleTypeDefinition {
 
-  assert(bridgeElem.path.entries.size >= 2, "Must not be global")
+  assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must not be global")
 }
 
 /**
@@ -466,7 +500,8 @@ final class AnonymousSimpleTypeDefinition private[bridged] (
  */
 abstract class ComplexTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends TypeDefinition(bridgeElem, childElems) with model.ComplexTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends TypeDefinition(bridgeElem, childElems, externalTnsOption) with model.ComplexTypeDefinition {
 
   assert(resolvedName == model.XsComplexTypeEName, "The element must be an 'complexType' element")
 }
@@ -476,11 +511,14 @@ abstract class ComplexTypeDefinition private[bridged] (
  */
 final class NamedComplexTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(bridgeElem, childElems) with NamedTypeDefinition with model.NamedComplexTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ComplexTypeDefinition(bridgeElem, childElems, externalTnsOption) with NamedTypeDefinition with model.NamedComplexTypeDefinition {
 
-  assert(bridgeElem.path.entries.size == 1, "Must be global")
+  assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def targetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+
+  def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
 
 /**
@@ -488,9 +526,10 @@ final class NamedComplexTypeDefinition private[bridged] (
  */
 final class AnonymousComplexTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ComplexTypeDefinition(bridgeElem, childElems) with AnonymousTypeDefinition with model.AnonymousComplexTypeDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ComplexTypeDefinition(bridgeElem, childElems, externalTnsOption) with AnonymousTypeDefinition with model.AnonymousComplexTypeDefinition {
 
-  assert(bridgeElem.path.entries.size >= 2, "Must not be global")
+  assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must not be global")
 }
 
 /**
@@ -498,7 +537,8 @@ final class AnonymousComplexTypeDefinition private[bridged] (
  */
 abstract class AttributeGroupDefinitionOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.AttributeGroupDefinitionOrReference {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.AttributeGroupDefinitionOrReference {
 
   assert(resolvedName == model.XsAttributeGroupEName, "The element must be an 'attributeGroup' element")
 }
@@ -508,12 +548,15 @@ abstract class AttributeGroupDefinitionOrReference private[bridged] (
  */
 final class AttributeGroupDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(bridgeElem, childElems) with HasName with model.AttributeGroupDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends AttributeGroupDefinitionOrReference(bridgeElem, childElems, externalTnsOption) with HasName with model.AttributeGroupDefinition {
 
   assert(attributeOption(model.RefEName).isEmpty, "Must not be a reference")
   assert(attributeOption(model.NameEName).isDefined, "Must have a name")
 
-  def targetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+
+  def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
 
 /**
@@ -521,7 +564,8 @@ final class AttributeGroupDefinition private[bridged] (
  */
 final class AttributeGroupReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends AttributeGroupDefinitionOrReference(bridgeElem, childElems) with IsReference with model.AttributeGroupReference {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends AttributeGroupDefinitionOrReference(bridgeElem, childElems, externalTnsOption) with IsReference with model.AttributeGroupReference {
 
   assert(attributeOption(model.RefEName).isDefined, "Must be a reference")
   assert(attributeOption(model.NameEName).isEmpty, "Must not have a name")
@@ -532,7 +576,8 @@ final class AttributeGroupReference private[bridged] (
  */
 abstract class IdentityConstraintDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.IdentityConstraintDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.IdentityConstraintDefinition {
 
   assert(
     Set(model.XsKeyEName, model.XsKeyrefEName, model.XsUniqueEName).contains(resolvedName),
@@ -544,7 +589,8 @@ abstract class IdentityConstraintDefinition private[bridged] (
  */
 final class KeyConstraint private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(bridgeElem, childElems) with model.KeyConstraint {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends IdentityConstraintDefinition(bridgeElem, childElems, externalTnsOption) with model.KeyConstraint {
 
   assert(resolvedName == model.XsKeyEName, "The element must be a 'key' element")
 }
@@ -554,7 +600,8 @@ final class KeyConstraint private[bridged] (
  */
 final class KeyrefConstraint private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(bridgeElem, childElems) with model.KeyrefConstraint {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends IdentityConstraintDefinition(bridgeElem, childElems, externalTnsOption) with model.KeyrefConstraint {
 
   assert(resolvedName == model.XsKeyrefEName, "The element must be a 'keyref' element")
 }
@@ -564,7 +611,8 @@ final class KeyrefConstraint private[bridged] (
  */
 final class UniqueConstraint private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends IdentityConstraintDefinition(bridgeElem, childElems) with model.UniqueConstraint {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends IdentityConstraintDefinition(bridgeElem, childElems, externalTnsOption) with model.UniqueConstraint {
 
   assert(resolvedName == model.XsUniqueEName, "The element must be a 'unique' element")
 }
@@ -574,7 +622,8 @@ final class UniqueConstraint private[bridged] (
  */
 abstract class ModelGroupDefinitionOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.ModelGroupDefinitionOrReference {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.ModelGroupDefinitionOrReference {
 
   assert(resolvedName == model.XsGroupEName, "The element must be a 'group' element")
 }
@@ -584,7 +633,8 @@ abstract class ModelGroupDefinitionOrReference private[bridged] (
  */
 final class ModelGroupDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(bridgeElem, childElems) with model.ModelGroupDefinition {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ModelGroupDefinitionOrReference(bridgeElem, childElems, externalTnsOption) with model.ModelGroupDefinition {
 
   assert(attributeOption(model.RefEName).isEmpty, "The element must have no 'ref' attribute")
 }
@@ -594,7 +644,8 @@ final class ModelGroupDefinition private[bridged] (
  */
 final class ModelGroupReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroupDefinitionOrReference(bridgeElem, childElems)
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ModelGroupDefinitionOrReference(bridgeElem, childElems, externalTnsOption)
   with Particle with IsReference with model.ModelGroupReference {
 
   assert(attributeOption(model.RefEName).isDefined, "The element must have a 'ref' attribute")
@@ -605,7 +656,8 @@ final class ModelGroupReference private[bridged] (
  */
 final class NotationDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.NotationDeclaration {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.NotationDeclaration {
 
   assert(resolvedName == model.XsNotationEName, "The element must be a 'notation' element")
 }
@@ -615,7 +667,8 @@ final class NotationDeclaration private[bridged] (
  */
 abstract class ModelGroup private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with Particle with model.ModelGroup {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with Particle with model.ModelGroup {
 
   assert(
     Set(model.XsAllEName, model.XsSequenceEName, model.XsChoiceEName).contains(bridgeElem.resolvedName),
@@ -639,7 +692,8 @@ abstract class ModelGroup private[bridged] (
  */
 final class AllGroup private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(bridgeElem, childElems) with model.AllGroup {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ModelGroup(bridgeElem, childElems, externalTnsOption) with model.AllGroup {
 
   assert(resolvedName == model.XsAllEName, "The element must be an 'all' element")
 }
@@ -649,7 +703,8 @@ final class AllGroup private[bridged] (
  */
 final class ChoiceGroup private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(bridgeElem, childElems) with model.ChoiceGroup {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ModelGroup(bridgeElem, childElems, externalTnsOption) with model.ChoiceGroup {
 
   assert(resolvedName == model.XsChoiceEName, "The element must be a 'choice' element")
 }
@@ -659,7 +714,8 @@ final class ChoiceGroup private[bridged] (
  */
 final class SequenceGroup private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends ModelGroup(bridgeElem, childElems) with model.SequenceGroup {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends ModelGroup(bridgeElem, childElems, externalTnsOption) with model.SequenceGroup {
 
   assert(resolvedName == model.XsSequenceEName, "The element must be a 'sequence' element")
 }
@@ -669,7 +725,8 @@ final class SequenceGroup private[bridged] (
  */
 final class AnyWildcard private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with Particle with model.AnyWildcard {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with Particle with model.AnyWildcard {
 
   assert(resolvedName == model.XsAnyEName, "The element must be an 'any' element")
 }
@@ -679,7 +736,8 @@ final class AnyWildcard private[bridged] (
  */
 final class AnyAttributeWildcard private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.AnyAttributeWildcard {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.AnyAttributeWildcard {
 
   assert(resolvedName == model.XsAnyAttributeEName, "The element must be an 'anyAttribute' element")
 }
@@ -689,7 +747,8 @@ final class AnyAttributeWildcard private[bridged] (
  */
 final class Annotation private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Annotation {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Annotation {
 
   assert(resolvedName == model.XsAnnotationEName, "The element must be an 'annotation' element")
 }
@@ -701,7 +760,8 @@ final class Annotation private[bridged] (
  */
 final class Import private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Import {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Import {
 
   assert(resolvedName == model.XsImportEName, "The element must be an 'import' element")
 }
@@ -711,7 +771,8 @@ final class Import private[bridged] (
  */
 final class Include private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Include {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Include {
 
   assert(resolvedName == model.XsIncludeEName, "The element must be an 'include' element")
 }
@@ -721,7 +782,8 @@ final class Include private[bridged] (
  */
 final class Redefine private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Redefine {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Redefine {
 
   assert(resolvedName == model.XsRedefineEName, "The element must be a 'redefine' element")
 }
@@ -733,7 +795,8 @@ final class Redefine private[bridged] (
  */
 final class ComplexContent private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.ComplexContent {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.ComplexContent {
 
   assert(resolvedName == model.XsComplexContentEName, "The element must be a 'complexContent' element")
 }
@@ -743,7 +806,8 @@ final class ComplexContent private[bridged] (
  */
 final class SimpleContent private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.SimpleContent {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.SimpleContent {
 
   assert(resolvedName == model.XsSimpleContentEName, "The element must be a 'simpleContent' element")
 }
@@ -753,7 +817,8 @@ final class SimpleContent private[bridged] (
  */
 final class Extension private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Extension {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Extension {
 
   assert(resolvedName == model.XsExtensionEName, "The element must be an 'extension' element")
 }
@@ -763,7 +828,8 @@ final class Extension private[bridged] (
  */
 final class Restriction private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Restriction {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Restriction {
 
   assert(resolvedName == model.XsRestrictionEName, "The element must be a 'restriction' element")
 }
@@ -773,7 +839,8 @@ final class Restriction private[bridged] (
  */
 final class Field private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Field {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Field {
 
   assert(resolvedName == model.XsFieldEName, "The element must be a 'field' element")
 }
@@ -783,7 +850,8 @@ final class Field private[bridged] (
  */
 final class Selector private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Selector {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Selector {
 
   assert(resolvedName == model.XsSelectorEName, "The element must be a 'selector' element")
 }
@@ -793,7 +861,8 @@ final class Selector private[bridged] (
  */
 final class Appinfo private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Appinfo {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Appinfo {
 
   assert(resolvedName == model.XsAppinfoEName, "The element must be an 'appinfo' element")
 }
@@ -803,7 +872,8 @@ final class Appinfo private[bridged] (
  */
 final class Documentation private[bridged] (
   bridgeElem: IndexedBridgeElem,
-  childElems: immutable.IndexedSeq[XsdElem]) extends XsdElem(bridgeElem, childElems) with model.Documentation {
+  childElems: immutable.IndexedSeq[XsdElem],
+  externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.Documentation {
 
   assert(resolvedName == model.XsDocumentationEName, "The element must be a 'documentation' element")
 }
@@ -817,11 +887,11 @@ object SchemaRootElem {
    *
    * This is an expensive method, but once a `SchemaRootElem` has been created, querying through the `ElemLike` API is very fast.
    */
-  def apply(elem: IndexedBridgeElem): SchemaRootElem = {
+  def apply(elem: IndexedBridgeElem, externalTnsOption: Option[String]): SchemaRootElem = {
     require(elem.path.isRoot)
 
-    val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e))
-    new SchemaRootElem(elem, childElems)
+    val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e, externalTnsOption))
+    new SchemaRootElem(elem, childElems, externalTnsOption)
   }
 }
 
@@ -847,6 +917,8 @@ object XsdElem {
   }
 
   trait HasName extends model.XsdElem.HasName { self: XsdElem =>
+
+    def externalTnsOption: Option[String]
 
     def targetNamespaceOption: Option[String]
 
@@ -877,7 +949,7 @@ object XsdElem {
    * Recursive public factory method for XsdElem instances. Indeed, construction of an XsdElem is expensive,
    * but after construction querying is very fast, due to the stored child XsdElems.
    */
-  def apply(elem: IndexedBridgeElem): XsdElem = {
+  def apply(elem: IndexedBridgeElem, externalTnsOption: Option[String]): XsdElem = {
     // TODO Better error messages, and more checks, so that constructors only need assertions and no require statements
     // TODO Turn this into a validating factory method that accumulates validation errors
 
@@ -889,110 +961,133 @@ object XsdElem {
     //   "This element must either be a 'schema' element, or not be the root of the element tree")
 
     // Recursive calls
-    val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e))
+    val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e, externalTnsOption))
 
     assert(
       childElems.map(_.bridgeElem) == elem.findAllChildElems,
       "Corrupt element!")
 
-    def attributeOption(e: IndexedBridgeElem, ename: EName): Option[String] =
-      e.resolvedAttributes.toMap.filterKeys(Set(ename)).map(_._2).headOption
+    // Pattern match with common patterns first (the @switch optimization is not possible)
 
     elem.resolvedName match {
       case model.XsSchemaEName =>
-        new SchemaRootElem(elem, childElems)
-      case model.XsElementEName if elem.path.entries.size == 1 =>
-        require(attributeOption(elem, model.NameEName).isDefined)
-        new GlobalElementDeclaration(elem, childElems)
-      case model.XsElementEName if attributeOption(elem, model.RefEName).isDefined =>
-        require(attributeOption(elem, model.NameEName).isEmpty)
-        new ElementReference(elem, childElems)
-      case model.XsElementEName if attributeOption(elem, model.NameEName).isDefined =>
-        require(attributeOption(elem, model.RefEName).isEmpty)
-        new LocalElementDeclaration(elem, childElems)
+        new SchemaRootElem(elem, childElems, externalTnsOption)
       case model.XsElementEName =>
-        sys.error(s"Not an element declaration or reference")
-      case model.XsAttributeEName if elem.path.entries.size == 1 =>
-        require(attributeOption(elem, model.NameEName).isDefined)
-        new GlobalAttributeDeclaration(elem, childElems)
-      case model.XsAttributeEName if attributeOption(elem, model.RefEName).isDefined =>
-        require(attributeOption(elem, model.NameEName).isEmpty)
-        new AttributeReference(elem, childElems)
-      case model.XsAttributeEName if attributeOption(elem, model.NameEName).isDefined =>
-        require(attributeOption(elem, model.RefEName).isEmpty)
-        new LocalAttributeDeclaration(elem, childElems)
+        if (isSchemaRootChild(elem)) {
+          require(attributeOption(elem, model.NameEName).isDefined)
+          new GlobalElementDeclaration(elem, childElems, externalTnsOption)
+        } else if (attributeOption(elem, model.RefEName).isDefined) {
+          require(attributeOption(elem, model.NameEName).isEmpty)
+          new ElementReference(elem, childElems, externalTnsOption)
+        } else if (attributeOption(elem, model.NameEName).isDefined) {
+          require(attributeOption(elem, model.RefEName).isEmpty)
+          new LocalElementDeclaration(elem, childElems, externalTnsOption)
+        } else {
+          sys.error(s"Not an element declaration or reference")
+        }
       case model.XsAttributeEName =>
-        sys.error(s"Not an attribute declaration or reference")
-      case model.XsSimpleTypeEName if elem.path.entries.size == 1 =>
-        require(attributeOption(elem, model.NameEName).isDefined)
-        new NamedSimpleTypeDefinition(elem, childElems)
+        if (isSchemaRootChild(elem)) {
+          require(attributeOption(elem, model.NameEName).isDefined)
+          new GlobalAttributeDeclaration(elem, childElems, externalTnsOption)
+        } else if (attributeOption(elem, model.RefEName).isDefined) {
+          require(attributeOption(elem, model.NameEName).isEmpty)
+          new AttributeReference(elem, childElems, externalTnsOption)
+        } else if (attributeOption(elem, model.NameEName).isDefined) {
+          require(attributeOption(elem, model.RefEName).isEmpty)
+          new LocalAttributeDeclaration(elem, childElems, externalTnsOption)
+        } else {
+          sys.error(s"Not an attribute declaration or reference")
+        }
       case model.XsSimpleTypeEName =>
-        require(attributeOption(elem, model.NameEName).isEmpty)
-        new AnonymousSimpleTypeDefinition(elem, childElems)
-      case model.XsComplexTypeEName if elem.path.entries.size == 1 =>
-        require(attributeOption(elem, model.NameEName).isDefined)
-        new NamedComplexTypeDefinition(elem, childElems)
+        if (isSchemaRootChild(elem)) {
+          require(attributeOption(elem, model.NameEName).isDefined)
+          new NamedSimpleTypeDefinition(elem, childElems, externalTnsOption)
+        } else {
+          require(attributeOption(elem, model.NameEName).isEmpty)
+          new AnonymousSimpleTypeDefinition(elem, childElems, externalTnsOption)
+        }
       case model.XsComplexTypeEName =>
-        require(attributeOption(elem, model.NameEName).isEmpty)
-        new AnonymousComplexTypeDefinition(elem, childElems)
-      case model.XsAttributeGroupEName if attributeOption(elem, model.RefEName).isDefined =>
-        require(attributeOption(elem, model.NameEName).isEmpty)
-        new AttributeGroupReference(elem, childElems)
-      case model.XsAttributeGroupEName if attributeOption(elem, model.NameEName).isDefined =>
-        require(attributeOption(elem, model.RefEName).isEmpty)
-        new AttributeGroupDefinition(elem, childElems)
+        if (isSchemaRootChild(elem)) {
+          require(attributeOption(elem, model.NameEName).isDefined)
+          new NamedComplexTypeDefinition(elem, childElems, externalTnsOption)
+        } else {
+          require(attributeOption(elem, model.NameEName).isEmpty)
+          new AnonymousComplexTypeDefinition(elem, childElems, externalTnsOption)
+        }
       case model.XsAttributeGroupEName =>
-        sys.error(s"Not an attribute group definition or reference")
-      case model.XsKeyEName =>
-        new KeyConstraint(elem, childElems)
-      case model.XsKeyrefEName =>
-        new KeyrefConstraint(elem, childElems)
-      case model.XsUniqueEName =>
-        new UniqueConstraint(elem, childElems)
-      case model.XsGroupEName if attributeOption(elem, model.RefEName).isDefined =>
-        new ModelGroupReference(elem, childElems)
+        if (attributeOption(elem, model.RefEName).isDefined) {
+          require(attributeOption(elem, model.NameEName).isEmpty)
+          new AttributeGroupReference(elem, childElems, externalTnsOption)
+        } else if (attributeOption(elem, model.NameEName).isDefined) {
+          require(attributeOption(elem, model.RefEName).isEmpty)
+          new AttributeGroupDefinition(elem, childElems, externalTnsOption)
+        } else {
+          sys.error(s"Not an attribute group definition or reference")
+        }
       case model.XsGroupEName =>
-        new ModelGroupDefinition(elem, childElems)
+        if (attributeOption(elem, model.RefEName).isDefined) {
+          new ModelGroupReference(elem, childElems, externalTnsOption)
+        } else {
+          new ModelGroupDefinition(elem, childElems, externalTnsOption)
+        }
       case model.XsAllEName =>
-        new AllGroup(elem, childElems)
+        new AllGroup(elem, childElems, externalTnsOption)
       case model.XsSequenceEName =>
-        new SequenceGroup(elem, childElems)
+        new SequenceGroup(elem, childElems, externalTnsOption)
       case model.XsChoiceEName =>
-        new ChoiceGroup(elem, childElems)
-      case model.XsNotationEName =>
-        new NotationDeclaration(elem, childElems)
+        new ChoiceGroup(elem, childElems, externalTnsOption)
       case model.XsAnnotationEName =>
-        new Annotation(elem, childElems)
-      case model.XsAnyEName =>
-        new AnyWildcard(elem, childElems)
-      case model.XsAnyAttributeEName =>
-        new AnyAttributeWildcard(elem, childElems)
+        new Annotation(elem, childElems, externalTnsOption)
       case model.XsImportEName =>
-        new Import(elem, childElems)
+        new Import(elem, childElems, externalTnsOption)
       case model.XsIncludeEName =>
-        new Include(elem, childElems)
-      case model.XsRedefineEName =>
-        new Redefine(elem, childElems)
+        new Include(elem, childElems, externalTnsOption)
       case model.XsComplexContentEName =>
-        new ComplexContent(elem, childElems)
+        new ComplexContent(elem, childElems, externalTnsOption)
       case model.XsSimpleContentEName =>
-        new SimpleContent(elem, childElems)
+        new SimpleContent(elem, childElems, externalTnsOption)
       case model.XsAppinfoEName =>
-        new Appinfo(elem, childElems)
+        new Appinfo(elem, childElems, externalTnsOption)
       case model.XsDocumentationEName =>
-        new Documentation(elem, childElems)
+        new Documentation(elem, childElems, externalTnsOption)
       case model.XsExtensionEName =>
-        new Extension(elem, childElems)
+        new Extension(elem, childElems, externalTnsOption)
       case model.XsRestrictionEName =>
-        new Restriction(elem, childElems)
+        new Restriction(elem, childElems, externalTnsOption)
+      case model.XsKeyEName =>
+        new KeyConstraint(elem, childElems, externalTnsOption)
+      case model.XsKeyrefEName =>
+        new KeyrefConstraint(elem, childElems, externalTnsOption)
+      case model.XsUniqueEName =>
+        new UniqueConstraint(elem, childElems, externalTnsOption)
+      case model.XsNotationEName =>
+        new NotationDeclaration(elem, childElems, externalTnsOption)
+      case model.XsAnyEName =>
+        new AnyWildcard(elem, childElems, externalTnsOption)
+      case model.XsAnyAttributeEName =>
+        new AnyAttributeWildcard(elem, childElems, externalTnsOption)
+      case model.XsRedefineEName =>
+        new Redefine(elem, childElems, externalTnsOption)
       case model.XsFieldEName =>
-        new Field(elem, childElems)
+        new Field(elem, childElems, externalTnsOption)
       case model.XsSelectorEName =>
-        new Selector(elem, childElems)
+        new Selector(elem, childElems, externalTnsOption)
       case _ =>
-        new XsdElem(elem, childElems)
+        new XsdElem(elem, childElems, externalTnsOption)
     }
   }
+
+  def isSchemaRootChild(e: IndexedBridgeElem): Boolean = {
+    val p = e.path
+
+    // Short-circuit for efficiency
+    p.entries.size == 1 || {
+      (p.entries.size >= 2) && (p.parentPath.lastEntry.elementName == model.XsSchemaEName)
+    }
+  }
+
+  private def attributeOption(e: IndexedBridgeElem, ename: EName): Option[String] =
+    e.resolvedAttributes.toMap.filterKeys(Set(ename)).map(_._2).headOption
 }
 
 object Particle {

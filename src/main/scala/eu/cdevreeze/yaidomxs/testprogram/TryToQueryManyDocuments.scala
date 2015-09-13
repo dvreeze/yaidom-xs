@@ -67,7 +67,7 @@ object TryToQueryManyDocuments {
       case doc if doc.documentElement.resolvedName == model.XsSchemaEName =>
         XsdDocument(
           SchemaRootElem(
-            DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement))))
+            DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)), None))
     }
 
     println(s"Instantiated ${schemaDocs.size} schema documents.")

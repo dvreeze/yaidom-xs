@@ -107,7 +107,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
         doc.document.uriOption.getOrElse("").toString.endsWith(".xsd")
       } map { doc =>
         val bridgeElem = DefaultIndexedBridgeElem.wrap(doc.documentElement)
-        val schemaDoc = XsdDocument(SchemaRootElem(bridgeElem))
+        val schemaDoc = XsdDocument(SchemaRootElem(bridgeElem, None))
         (doc.uriOption.getOrElse(sys.error("Missing URI")) -> schemaDoc)
       }
     result.toMap

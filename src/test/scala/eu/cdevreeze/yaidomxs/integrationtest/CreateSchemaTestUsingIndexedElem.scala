@@ -56,7 +56,7 @@ class CreateSchemaTestUsingIndexedElem extends AbstractCreateSchemaTest {
     val schemaDoc: XsdDocument =
       XsdDocument(
         SchemaRootElem(
-          DefaultIndexedBridgeElem.wrap(indexed.Elem(uri, doc.documentElement))))
+          DefaultIndexedBridgeElem.wrap(indexed.Elem(uri, doc.documentElement)), None))
 
     schemaDoc
   }

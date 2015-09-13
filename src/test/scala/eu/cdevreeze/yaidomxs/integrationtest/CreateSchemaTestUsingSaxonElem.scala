@@ -48,7 +48,7 @@ class CreateSchemaTestUsingSaxonElem extends AbstractCreateSchemaTest {
     val schemaDoc: XsdDocument =
       XsdDocument(
         SchemaRootElem(
-          SaxonBridgeElem.wrap(new SaxonDocument(node.getUnderlyingNode.asInstanceOf[DocumentInfo]).documentElement)))
+          SaxonBridgeElem.wrap(new SaxonDocument(node.getUnderlyingNode.asInstanceOf[DocumentInfo]).documentElement), None))
 
     schemaDoc
   }
