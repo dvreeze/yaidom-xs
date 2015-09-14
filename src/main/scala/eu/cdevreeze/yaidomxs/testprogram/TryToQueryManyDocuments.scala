@@ -63,11 +63,14 @@ object TryToQueryManyDocuments {
 
     println(s"Parsed ${docs.size} XML files. Now instantiating schema documents from them ...")
 
-    val schemaDocs = docs collect {
-      case doc if doc.documentElement.resolvedName == model.XsSchemaEName =>
-        XsdDocument(
-          SchemaRootElem(
-            DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)), None))
+    val schemaDocs = docs flatMap { doc =>
+      val tryDoc =
+        Try(
+          XsdDocument(
+            SchemaRootElem(
+              DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)), None)))
+      if (tryDoc.isFailure) println(s"Could not instantiate schema document ${doc.uriOption.getOrElse("")}")
+      tryDoc.toOption
     }
 
     println(s"Instantiated ${schemaDocs.size} schema documents.")
@@ -90,10 +93,14 @@ object TryToQueryManyDocuments {
 
   private def findFiles(dir: File, p: File => Boolean): Vector[File] = {
     require(dir.isDirectory)
-    val files = dir.listFiles.toVector
+    val files = Try(dir.listFiles.toVector).toOption.getOrElse(Vector())
 
     // Recursive calls
-    files.flatMap(f => if (f.isFile) Vector(f).filter(p) else findFiles(f, p))
+    files flatMap { f =>
+      if (f.isFile) Vector(f).filter(p)
+      else if (f.isDirectory) findFiles(f, p)
+      else Vector()
+    }
   }
 
   private def performSchemaQueries(doc: XsdDocument): Unit = {
