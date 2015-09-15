@@ -62,7 +62,9 @@ object TryToQueryManyDocumentsUsingSaxon {
       val currIdx = idx.getAndIncrement()
       if (currIdx % 1000 == 0 && currIdx > 0) println(s"Parsed ${currIdx} documents")
 
-      val docOption = Try(docBuilder.build(f)).toOption
+      val tryDoc = Try(docBuilder.build(f))
+      if (tryDoc.isFailure) println(s"Could not parse document ${f.toURI}")
+      val docOption = tryDoc.toOption
       docOption.foreach(d => d.getUnderlyingNode.setSystemId(f.toURI.toString))
       docOption
     }).seq.toVector

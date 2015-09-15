@@ -57,7 +57,9 @@ object TryToQueryManyDocuments {
       val currIdx = idx.getAndIncrement()
       if (currIdx % 1000 == 0 && currIdx > 0) println(s"Parsed ${currIdx} documents")
 
-      val docOption = Try(docParser.parse(f).withUriOption(Some(f.toURI))).toOption
+      val tryDoc = Try(docParser.parse(f).withUriOption(Some(f.toURI)))
+      if (tryDoc.isFailure) println(s"Could not parse document ${f.toURI}")
+      val docOption = tryDoc.toOption
       docOption
     }).seq.toVector
 
