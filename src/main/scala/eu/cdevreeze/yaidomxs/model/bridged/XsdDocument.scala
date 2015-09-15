@@ -20,13 +20,19 @@ import java.net.URI
 
 import scala.Vector
 import scala.collection.immutable
+import scala.reflect.classTag
 
 import eu.cdevreeze.yaidom.bridge.IndexedBridgeElem
 import eu.cdevreeze.yaidom.queryapi.DocumentApi
 import eu.cdevreeze.yaidom.queryapi.Nodes
 
 /**
- * Immutable XML Schema Document, containing an xs:schema root element.
+ * Immutable XML Schema Document, containing one or more xs:schema elements.
+ * Typically, there is one xs:schema root element, but it is also possible that
+ * the XML document embeds multiple schema roots.
+ *
+ * Note that an XML document containing multiple embedded xs:schema elements
+ * is not a "schema document" according to the XML Schema specification.
  *
  * @author Chris de Vreeze
  */
@@ -37,15 +43,14 @@ final class XsdDocument(
     s"Expected precisely one root element")
   require(children.collectFirst({ case e: Nodes.Elem => e }).get.isInstanceOf[XsdElem],
     s"Expected XsdElem root element")
-  require(children.collectFirst({ case e: Nodes.Elem => e }).get.isInstanceOf[SchemaRootElem],
-    s"Expected SchemaRootElem root element")
 
-  final val schemaRootElem: SchemaRootElem =
-    children.collectFirst({ case e: Nodes.Elem => e }).get.asInstanceOf[SchemaRootElem]
+  final val documentElement: XsdElem =
+    children.collectFirst({ case e: Nodes.Elem => e }).get.asInstanceOf[XsdElem]
 
-  final def documentElement: XsdElem = schemaRootElem
+  final val schemaRootElems: immutable.IndexedSeq[SchemaRootElem] =
+    documentElement.findTopmostElemsOrSelfOfType(classTag[SchemaRootElem])(_ => true)
 
-  final def bridgeElem: IndexedBridgeElem = schemaRootElem.bridgeElem
+  final def bridgeElem: IndexedBridgeElem = documentElement.bridgeElem
 
   final def uriOption: Option[URI] = Some(bridgeElem.baseUri)
 
@@ -58,5 +63,5 @@ object XsdDocument {
 
   def apply(children: immutable.IndexedSeq[Nodes.CanBeDocumentChild]): XsdDocument = new XsdDocument(children)
 
-  def apply(docElem: SchemaRootElem): XsdDocument = new XsdDocument(Vector(docElem))
+  def apply(docElem: XsdElem): XsdDocument = new XsdDocument(Vector(docElem))
 }

@@ -17,7 +17,9 @@
 package eu.cdevreeze.yaidomxs.model
 
 /**
- * This package offers the XML Schema document content API, backed by indexed bridge elements.
+ * This package offers the XML Schema document content API, backed by indexed bridge elements. Due to the polymorphic
+ * nature of indexed bridge elements, this schema content implementation can be used with multiple backing element
+ * implementations.
  *
  * @author Chris de Vreeze
  */

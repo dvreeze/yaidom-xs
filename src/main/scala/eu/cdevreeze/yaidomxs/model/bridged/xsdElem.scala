@@ -51,10 +51,11 @@ import XsdElem.IsReference
  * state, to make `ElemLike` API querying very fast, with little object creation overhead.
  *
  * Note that this class hierarchy directly implements the purely abstract traits of the model. There is no partial
- * implementation, inherited by these concrete model classes. That would have been impractical for various reasons.
- * First of all, the yaidom query API traits only make sense here and not in a partial implementation, unless we
- * accept the use of generics almost everywhere. Second, creation of the model can easily differ. Do we build the entire
- * model recursively up-front, for querying speed, but sacrificing some creation overhead? Third, a partial implementation
+ * implementation, inherited by these concrete model classes. That would likely have been impractical for various reasons.
+ * First of all, a partial implementation would probably need to use generics throughout the trait hierarchy, unless
+ * we avoided the yaidom query API traits. Yet the SubtypeAwareElemApi trait would be very helpful in such a partial
+ * implementation. Secondly, there are many ways to create the objects of an XML Schema model. Do we build the entire
+ * model recursively up-front, for querying speed, but sacrificing some creation overhead? Thirdly, a partial implementation
  * would probably need to make some assumptions about the (type of the) backing element. Fortunately, this class
  * hierarchy uses rather generic bridge elements, despite the lack of type parameters.
  *
@@ -64,7 +65,7 @@ import XsdElem.IsReference
  *
  * TODO Mind xsi:nil.
  *
- * TODO Do not assume that xs:schema is at the root of the document, because a schema document can be embedded.
+ * It is not assumed that xs:schema is at the root of the document, because a schema document can be embedded.
  *
  * @author Chris de Vreeze
  */
@@ -74,11 +75,6 @@ sealed class XsdElem private[bridged] (
   val externalTnsOption: Option[String]) extends Nodes.Elem with ScopedElemLike[XsdElem] with SubtypeAwareElemLike[XsdElem] with model.XsdElem {
 
   require(childElems.map(_.bridgeElem.backingElem) == bridgeElem.findAllChildElems.map(_.backingElem))
-
-  // assert(bridgeElem.rootElem.resolvedName == XsSchemaEName, "The root of the element tree must be a 'schema' element")
-  // assert(
-  //   (resolvedName == XsSchemaEName) || (!bridgeElem.path.isRoot),
-  //   "This element must either be a 'schema' element, or not be the root of the element tree")
 
   final override type XSE = XsdElem
   final override type GED = GlobalElementDeclaration
@@ -134,6 +130,9 @@ sealed class XsdElem private[bridged] (
  *
  * This is what the XML Schema specification calls a schema document, or the document element thereof.
  * In the abstract schema model of the specification, a schema is represented by one or more of these "schema documents".
+ *
+ * There are hardly any checks on the validity of the schema root element and its content. This is just a type-safe DOM view
+ * of an XML tree that is meant to be XML Schema content, whether it is correct XML Schema content or not.
  */
 final class SchemaRootElem private[bridged] (
   bridgeElem: IndexedBridgeElem,
@@ -141,7 +140,6 @@ final class SchemaRootElem private[bridged] (
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.SchemaRootElem {
 
   assert(resolvedName == model.XsSchemaEName, "The element must be a 'schema' element")
-  assert(bridgeElem.path.isRoot, "The element must be the root of the element tree")
 
   require(
     externalTnsOption.isEmpty || internalTargetNamespaceOption.isEmpty,
@@ -283,7 +281,7 @@ final class GlobalElementDeclaration private[bridged] (
 
   assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.TargetNamespaceEName)
 
   def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 
@@ -310,15 +308,15 @@ final class LocalElementDeclaration private[bridged] (
   assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must be local")
 
   final def targetNamespaceOption: Option[String] = {
-    val tnsOption = (bridgeElem.rootElem \@ model.TargetNamespaceEName).orElse(externalTnsOption)
+    val tnsOption = (XsdElem.getSchemaRoot(bridgeElem) \@ model.TargetNamespaceEName).orElse(externalTnsOption)
     if (isQualified) tnsOption else None
   }
 
   private def isQualified: Boolean = isQualified(bridgeElem.path)
 
   private def isQualified(path: Path): Boolean = {
-    if (path.isRoot) {
-      bridgeElem.rootElem.attributeOption(model.ElementFormDefaultEName) map {
+    if (path.isRoot || path.lastEntry.elementName == model.XsSchemaEName) {
+      XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.ElementFormDefaultEName) map {
         case "qualified"   => true
         case "unqualified" => false
       } getOrElse false
@@ -392,7 +390,7 @@ final class GlobalAttributeDeclaration private[bridged] (
 
   assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.TargetNamespaceEName)
 
   def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
@@ -408,15 +406,15 @@ final class LocalAttributeDeclaration private[bridged] (
   assert(!XsdElem.isSchemaRootChild(bridgeElem), "Must be local")
 
   final def targetNamespaceOption: Option[String] = {
-    val tnsOption = (bridgeElem.rootElem \@ model.TargetNamespaceEName).orElse(externalTnsOption)
+    val tnsOption = (XsdElem.getSchemaRoot(bridgeElem) \@ model.TargetNamespaceEName).orElse(externalTnsOption)
     if (isQualified) tnsOption else None
   }
 
   private def isQualified: Boolean = isQualified(bridgeElem.path)
 
   private def isQualified(path: Path): Boolean = {
-    if (path.isRoot) {
-      bridgeElem.rootElem.attributeOption(model.AttributeFormDefaultEName) map {
+    if (path.isRoot || path.lastEntry.elementName == model.XsSchemaEName) {
+      XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.AttributeFormDefaultEName) map {
         case "qualified"   => true
         case "unqualified" => false
       } getOrElse false
@@ -479,7 +477,7 @@ final class NamedSimpleTypeDefinition private[bridged] (
 
   assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.TargetNamespaceEName)
 
   def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
@@ -516,7 +514,7 @@ final class NamedComplexTypeDefinition private[bridged] (
 
   assert(XsdElem.isSchemaRootChild(bridgeElem), "Must be global")
 
-  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.TargetNamespaceEName)
 
   def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
@@ -554,7 +552,7 @@ final class AttributeGroupDefinition private[bridged] (
   assert(attributeOption(model.RefEName).isEmpty, "Must not be a reference")
   assert(attributeOption(model.NameEName).isDefined, "Must have a name")
 
-  def internalTargetNamespaceOption: Option[String] = bridgeElem.rootElem.attributeOption(model.TargetNamespaceEName)
+  def internalTargetNamespaceOption: Option[String] = XsdElem.getSchemaRoot(bridgeElem).attributeOption(model.TargetNamespaceEName)
 
   def targetNamespaceOption: Option[String] = internalTargetNamespaceOption.orElse(externalTnsOption)
 }
@@ -888,7 +886,7 @@ object SchemaRootElem {
    * This is an expensive method, but once a `SchemaRootElem` has been created, querying through the `ElemLike` API is very fast.
    */
   def apply(elem: IndexedBridgeElem, externalTnsOption: Option[String]): SchemaRootElem = {
-    require(elem.path.isRoot)
+    require(elem.resolvedName == model.XsSchemaEName)
 
     val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e, externalTnsOption))
     new SchemaRootElem(elem, childElems, externalTnsOption)
@@ -951,14 +949,7 @@ object XsdElem {
    */
   def apply(elem: IndexedBridgeElem, externalTnsOption: Option[String]): XsdElem = {
     // TODO Better error messages, and more checks, so that constructors only need assertions and no require statements
-    // TODO Turn this into a validating factory method that accumulates validation errors
-
-    // require(
-    //   elem.rootElem.resolvedName == XsSchemaEName,
-    //   "The root of the element tree must be a 'schema' element")
-    // require(
-    //   (elem.resolvedName == XsSchemaEName) || (!elem.path.isRoot),
-    //   "This element must either be a 'schema' element, or not be the root of the element tree")
+    // TODO Consider turning this into a validating factory method that accumulates validation errors
 
     // Recursive calls
     val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e, externalTnsOption))
@@ -1083,6 +1074,18 @@ object XsdElem {
     // Short-circuit for efficiency
     p.entries.size == 1 || {
       (p.entries.size >= 2) && (p.parentPath.lastEntry.elementName == model.XsSchemaEName)
+    }
+  }
+
+  def getSchemaRoot(e: IndexedBridgeElem): e.UnwrappedBackingElem = {
+    val rootElem = e.rootElem
+
+    if (rootElem.resolvedName == model.XsSchemaEName) rootElem
+    else {
+      val schemaRootPath =
+        e.path.findAncestorPath(_.lastEntryOption.map(_.elementName).getOrElse(model.XsSchemaEName) == model.XsSchemaEName).getOrElse(
+          sys.error(s"Missing schema root element"))
+      rootElem.getElemOrSelfByPath(schemaRootPath)
     }
   }
 

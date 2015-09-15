@@ -28,7 +28,7 @@ import eu.cdevreeze.yaidom.indexed
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
 import eu.cdevreeze.yaidomxs.model
 import eu.cdevreeze.yaidomxs.model.bridged.NamedTypeDefinition
-import eu.cdevreeze.yaidomxs.model.bridged.SchemaRootElem
+import eu.cdevreeze.yaidomxs.model.bridged.XsdElem
 import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
 
 /**
@@ -67,7 +67,7 @@ object TryToQueryManyDocuments {
       val tryDoc =
         Try(
           XsdDocument(
-            SchemaRootElem(
+            XsdElem(
               DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)), None)))
       if (tryDoc.isFailure) println(s"Could not instantiate schema document ${doc.uriOption.getOrElse("")}")
       tryDoc.toOption
@@ -104,11 +104,11 @@ object TryToQueryManyDocuments {
   }
 
   private def performSchemaQueries(doc: XsdDocument): Unit = {
-    val globalElemDecls = doc.schemaRootElem.findAllGlobalElementDeclarations
+    val globalElemDecls = doc.schemaRootElems.flatMap(_.findAllGlobalElementDeclarations)
 
-    val namedTypeDefs = doc.schemaRootElem.findAllChildElemsOfType(classTag[NamedTypeDefinition])
+    val namedTypeDefs = doc.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[NamedTypeDefinition]))
 
-    val enames = doc.schemaRootElem.findAllElemsOrSelf.map(_.resolvedName).toSet
+    val enames = doc.schemaRootElems.flatMap(_.findAllElemsOrSelf.map(_.resolvedName)).toSet
 
     println(s"Schema document ${doc.uri} has ${globalElemDecls.size} global element declarations")
     println(s"Schema document ${doc.uri} has ${namedTypeDefs.size} named type definitions")

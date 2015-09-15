@@ -25,6 +25,8 @@ import eu.cdevreeze.yaidom.core.EName
  *
  * Terminology is taken as much as possible from the book Definitive XML Schema, 2nd Edition (by Priscilla Walmsley).
  *
+ * This abstract model makes no promises about the extent to which these schema elements are valid according to XML Schema.
+ *
  * @author Chris de Vreeze
  */
 trait XsdElem {

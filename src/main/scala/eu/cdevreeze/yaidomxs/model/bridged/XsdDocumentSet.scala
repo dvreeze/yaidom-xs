@@ -49,19 +49,19 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
 
   private val allGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] = {
     (schemaDocuments flatMap { doc =>
-      doc.schemaRootElem.findAllChildElemsOfType(classTag[GlobalElementDeclaration]).map(e => (e.targetEName -> e))
+      doc.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[GlobalElementDeclaration]).map(e => (e.targetEName -> e)))
     }).toMap
   }
 
   private val allGlobalAttributeDeclarationsMappedByEName: Map[EName, GlobalAttributeDeclaration] = {
     (schemaDocuments flatMap { doc =>
-      doc.schemaRootElem.findAllChildElemsOfType(classTag[GlobalAttributeDeclaration]).map(e => (e.targetEName -> e))
+      doc.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[GlobalAttributeDeclaration]).map(e => (e.targetEName -> e)))
     }).toMap
   }
 
   private val allNamedTypeDefinitionsMappedByEName: Map[EName, NamedTypeDefinition] = {
     (schemaDocuments flatMap { doc =>
-      doc.schemaRootElem.findAllChildElemsOfType(classTag[NamedTypeDefinition]).map(e => (e.targetEName -> e))
+      doc.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[NamedTypeDefinition]).map(e => (e.targetEName -> e)))
     }).toMap
   }
 
@@ -76,29 +76,29 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
     allGlobalElementDeclarationsMappedByEName
 
   final def findAllGlobalElementDeclarations: immutable.IndexedSeq[GlobalElementDeclaration] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[GlobalElementDeclaration]))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[GlobalElementDeclaration])))
 
   final def filterGlobalElementDeclarations(p: GlobalElementDeclaration => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.filterChildElemsOfType(classTag[GlobalElementDeclaration])(p))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.filterChildElemsOfType(classTag[GlobalElementDeclaration])(p)))
 
   final def findAllGlobalAttributeDeclarationsMappedByEName: Map[EName, GlobalAttributeDeclaration] =
     allGlobalAttributeDeclarationsMappedByEName
 
   final def findAllGlobalAttributeDeclarations: immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[GlobalAttributeDeclaration]))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[GlobalAttributeDeclaration])))
 
   final def filterGlobalAttributeDeclarations(p: GlobalAttributeDeclaration => Boolean): immutable.IndexedSeq[GlobalAttributeDeclaration] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.filterChildElemsOfType(classTag[GlobalAttributeDeclaration])(p))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.filterChildElemsOfType(classTag[GlobalAttributeDeclaration])(p)))
 
   final def findAllNamedTypeDefinitionsMappedByEName: Map[EName, NamedTypeDefinition] =
     allNamedTypeDefinitionsMappedByEName
 
   final def findAllNamedTypeDefinitions: immutable.IndexedSeq[NamedTypeDefinition] = {
-    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[NamedTypeDefinition]))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[NamedTypeDefinition])))
   }
 
   final def filterNamedTypeDefinitions(p: NamedTypeDefinition => Boolean): immutable.IndexedSeq[NamedTypeDefinition] = {
-    schemaDocuments.flatMap(d => d.schemaRootElem.filterChildElemsOfType(classTag[NamedTypeDefinition])(p))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.filterChildElemsOfType(classTag[NamedTypeDefinition])(p)))
   }
 
   final def findAllDirectSubstitutables(p: EName => Boolean): immutable.IndexedSeq[GlobalElementDeclaration] = {
@@ -106,25 +106,25 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
   }
 
   final def findAllImports: immutable.IndexedSeq[Import] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[Import]))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[Import])))
 
   final def findAllIncludes: immutable.IndexedSeq[Include] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[Include]))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[Include])))
 
   final def findAllRedefines: immutable.IndexedSeq[Redefine] =
-    schemaDocuments.flatMap(d => d.schemaRootElem.findAllChildElemsOfType(classTag[Redefine]))
+    schemaDocuments.flatMap(d => d.schemaRootElems.flatMap(_.findAllChildElemsOfType(classTag[Redefine])))
 
   /**
    * Returns all element declarations in this SchemaDocumentSet.
    */
   final def findAllElementDeclarationOrReferences: immutable.IndexedSeq[ElementDeclarationOrReference] =
-    schemaDocuments flatMap { e => e.schemaRootElem.findAllElemsOfType(classTag[ElementDeclarationOrReference]) }
+    schemaDocuments flatMap { e => e.schemaRootElems.flatMap(_.findAllElemsOfType(classTag[ElementDeclarationOrReference])) }
 
   /**
    * Returns all element declarations in this SchemaDocumentSet obeying the given predicate.
    */
   final def filterElementDeclarationOrReferences(p: ElementDeclarationOrReference => Boolean): immutable.IndexedSeq[ElementDeclarationOrReference] =
-    schemaDocuments flatMap { e => e.schemaRootElem.filterElemsOfType(classTag[ElementDeclarationOrReference])(p) }
+    schemaDocuments flatMap { e => e.schemaRootElems.flatMap(_.filterElemsOfType(classTag[ElementDeclarationOrReference])(p)) }
 
   /**
    * Finds the global element declaration with the given EName, if any, wrapped in an Option.

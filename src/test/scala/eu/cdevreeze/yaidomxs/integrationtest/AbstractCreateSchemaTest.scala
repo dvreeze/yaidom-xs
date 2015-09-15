@@ -51,7 +51,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testCreateValidSchema(): Unit = {
     val schemaDoc = getSchemaDocument("shiporder.xsd")
-    val schema = schemaDoc.schemaRootElem
+    val schema = schemaDoc.schemaRootElems.head
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
@@ -125,7 +125,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testCreateValidSchemaOfXmlSchema(): Unit = {
     val schemaDoc = getSchemaDocument("XMLSchema.xsd")
-    val schema = schemaDoc.schemaRootElem
+    val schema = schemaDoc.schemaRootElems.head
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
@@ -206,7 +206,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testCreateValidLargeSchema(): Unit = {
     val schemaDoc = getSchemaDocument("ifrs-gp-2006-08-15.xsd")
-    val schema = schemaDoc.schemaRootElem
+    val schema = schemaDoc.schemaRootElems.head
 
     val globalElemDecls = schema.findAllGlobalElementDeclarations
     val elemDecls = schema.findAllElemsOfType(classTag[ElementDeclarationOrReference])
@@ -255,7 +255,7 @@ abstract class AbstractCreateSchemaTest extends Suite {
 
   @Test def testTargetNamespace(): Unit = {
     val schemaDoc = getSchemaDocument("shiporder.xsd")
-    val schema = schemaDoc.schemaRootElem
+    val schema = schemaDoc.schemaRootElems.head
 
     val expectedTns = "http://shiporder"
 

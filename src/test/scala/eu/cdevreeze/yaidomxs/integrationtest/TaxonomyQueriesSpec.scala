@@ -163,7 +163,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.uri.toString.endsWith("kvk-tuples.xsd")).get
 
-      val elemDecl = schemaDoc.schemaRootElem.findAllGlobalElementDeclarations.find(e =>
+      val elemDecl = schemaDoc.schemaRootElems.head.findAllGlobalElementDeclarations.find(e =>
         (e \@ EName("id")) == Some("kvk-t_ContactForDocumentPresentation")).get
 
       When("asking for its substitution group")
@@ -181,7 +181,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val schemaDoc = schemaDocs.values.find(doc =>
         doc.uri.toString.endsWith("kvk-tuples.xsd")).get
 
-      val elemDecls = schemaDoc.schemaRootElem.findAllGlobalElementDeclarations
+      val elemDecls = schemaDoc.schemaRootElems.head.findAllGlobalElementDeclarations
 
       When("asking for their substitution groups")
       val substGroups = elemDecls flatMap { _.substitutionGroupOption }
@@ -234,7 +234,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
         doc.uri.toString.endsWith("xbrl-syntax-extension.xsd")).get
 
       When("asking for its abstract global element declarations")
-      val elemDecls = schemaDoc.schemaRootElem filterGlobalElementDeclarations { e => e.isAbstract }
+      val elemDecls = schemaDoc.schemaRootElems.head filterGlobalElementDeclarations { e => e.isAbstract }
 
       Then("all these element declarations are in the xbrli:item or xbrli:tuple substitution group")
       val expectedSubstGroupOptions = Set(Some(EName(nsXbrli, "item")), Some(EName(nsXbrli, "tuple")))
@@ -289,10 +289,10 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
       val conceptSubstGroups =
         Set(EName(nsXbrli, "tuple"), EName(nsSbr, "presentationTuple"), EName(nsSbr, "specificationTuple"))
 
-      val topLevelConcepts = schemaDoc.schemaRootElem.findAllDirectSubstitutables(conceptSubstGroups)
+      val topLevelConcepts = schemaDoc.schemaRootElems.head.findAllDirectSubstitutables(conceptSubstGroups)
 
       Then("all global element declarations are found")
-      assertResult(schemaDoc.schemaRootElem.findAllGlobalElementDeclarations) {
+      assertResult(schemaDoc.schemaRootElems.head.findAllGlobalElementDeclarations) {
         topLevelConcepts
       }
     }
@@ -308,7 +308,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       val xbrliItemEName = EName(nsXbrli, "item")
       val itemDecls =
-        schemaDoc.schemaRootElem filterGlobalElementDeclarations { e => e.substitutionGroupOption == Some(xbrliItemEName) }
+        schemaDoc.schemaRootElems.head filterGlobalElementDeclarations { e => e.substitutionGroupOption == Some(xbrliItemEName) }
 
       When("asking for their type attributes")
       val itemTypes = itemDecls flatMap { e => e.typeAttributeOption }
@@ -339,7 +339,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
 
       Given("all XML elements in schema documents that have an ID")
       val allElemsWithUri =
-        schemaDocSet.schemaDocuments flatMap { doc => doc.schemaRootElem.findAllElemsOrSelf } filter { e => e.uriOption.isDefined }
+        schemaDocSet.schemaDocuments flatMap { doc => doc.schemaRootElems.head.findAllElemsOrSelf } filter { e => e.uriOption.isDefined }
 
       When("asking for their URIs (with IDs as fragments)")
       val elemUris = allElemsWithUri map { e => e.uriOption.get }
@@ -379,7 +379,7 @@ class TaxonomyQueriesSpec extends FeatureSpec with GivenWhenThen {
         schemaDocSet.schemaDocuments filter { doc =>
           doc.uri.toString.contains("/www.nltaxonomie.nl/")
         } flatMap { doc =>
-          doc.schemaRootElem.findAllImports filter { importElem =>
+          doc.schemaRootElems.head.findAllImports filter { importElem =>
             val schemaLocation = (importElem \@ EName("schemaLocation")).getOrElse(sys.error("Missing schemaLocation"))
 
             doc.uri.resolve(new URI(schemaLocation)).toString.contains("/www.nltaxonomie.nl/")

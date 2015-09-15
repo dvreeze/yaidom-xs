@@ -32,6 +32,7 @@ import eu.cdevreeze.yaidom.core.Scope
 import eu.cdevreeze.yaidom.queryapi.DocumentApi
 import eu.cdevreeze.yaidom.queryapi.HasParent
 import eu.cdevreeze.yaidom.queryapi.IsNavigable
+import eu.cdevreeze.yaidom.queryapi.Nodes
 import eu.cdevreeze.yaidom.queryapi.ScopedElemLike
 import eu.cdevreeze.yaidom.resolved.ResolvedNodes
 import eu.cdevreeze.yaidom.simple
@@ -182,7 +183,7 @@ final class SaxonElem(
   }
 }
 
-final class SaxonText(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) {
+final class SaxonText(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) with ResolvedNodes.Text {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.TEXT || wrappedNode.getNodeKind == Type.WHITESPACE_TEXT)
 
@@ -195,15 +196,19 @@ final class SaxonText(override val wrappedNode: NodeInfo) extends SaxonNode(wrap
   override def toNodeOption: Option[simple.Node] = Some(simple.Text(text, false))
 }
 
-final class SaxonProcessingInstruction(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) {
+final class SaxonProcessingInstruction(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) with Nodes.ProcessingInstruction {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.PROCESSING_INSTRUCTION)
 
   // TODO
   override def toNodeOption: Option[simple.Node] = None
+
+  def target: String = wrappedNode.getDisplayName
+
+  def data: String = wrappedNode.getStringValue
 }
 
-final class SaxonComment(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) {
+final class SaxonComment(override val wrappedNode: NodeInfo) extends SaxonNode(wrappedNode) with Nodes.Comment {
   require(wrappedNode ne null)
   require(wrappedNode.getNodeKind == Type.COMMENT)
 
