@@ -74,7 +74,9 @@ sealed class XsdElem private[bridged] (
   val childElems: immutable.IndexedSeq[XsdElem],
   val externalTnsOption: Option[String]) extends Nodes.Elem with ScopedElemLike[XsdElem] with SubtypeAwareElemLike[XsdElem] with model.XsdElem {
 
-  require(childElems.map(_.bridgeElem.backingElem) == bridgeElem.findAllChildElems.map(_.backingElem))
+  assert(
+    childElems.map(_.bridgeElem.backingElem) == bridgeElem.findAllChildElems.map(_.backingElem),
+    s"Corrupt element!")
 
   final override type XSE = XsdElem
   final override type GED = GlobalElementDeclaration
@@ -211,7 +213,7 @@ final class SchemaRootElem private[bridged] (
 /**
  * Particle, having a min and max occurs (possibly default).
  */
-trait Particle extends XsdElem with model.Particle {
+sealed trait Particle extends XsdElem with model.Particle {
 
   final def minOccurs: Int = minOccursAttrOption map (_.toInt) getOrElse 1
 
@@ -229,7 +231,7 @@ trait Particle extends XsdElem with model.Particle {
 /**
  * Element declaration or element reference. That is, the "xs:element" XML element.
  */
-abstract class ElementDeclarationOrReference private[bridged] (
+sealed abstract class ElementDeclarationOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.ElementDeclarationOrReference {
@@ -240,7 +242,7 @@ abstract class ElementDeclarationOrReference private[bridged] (
 /**
  * Element declaration. An element declaration is either a global or local element declaration.
  */
-abstract class ElementDeclaration private[bridged] (
+sealed abstract class ElementDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends ElementDeclarationOrReference(bridgeElem, childElems, externalTnsOption) with HasName with model.ElementDeclaration {
@@ -349,7 +351,7 @@ final class ElementReference private[bridged] (
 /**
  * Attribute declaration or attribute reference. That is, the "xs:attribute" XML element.
  */
-abstract class AttributeDeclarationOrReference private[bridged] (
+sealed abstract class AttributeDeclarationOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.AttributeDeclarationOrReference {
@@ -360,7 +362,7 @@ abstract class AttributeDeclarationOrReference private[bridged] (
 /**
  * Attribute declaration. An attribute declaration is either a global or local attribute declaration.
  */
-abstract class AttributeDeclaration private[bridged] (
+sealed abstract class AttributeDeclaration private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends AttributeDeclarationOrReference(bridgeElem, childElems, externalTnsOption) with HasName with model.AttributeDeclaration {
@@ -446,20 +448,20 @@ final class AttributeReference private[bridged] (
 /**
  * Schema type definition, which is either a simple type or a complex type.
  */
-abstract class TypeDefinition private[bridged] (
+sealed abstract class TypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.TypeDefinition {
 }
 
-trait NamedTypeDefinition extends TypeDefinition with HasName with model.NamedTypeDefinition
+sealed trait NamedTypeDefinition extends TypeDefinition with HasName with model.NamedTypeDefinition
 
-trait AnonymousTypeDefinition extends TypeDefinition with model.AnonymousTypeDefinition
+sealed trait AnonymousTypeDefinition extends TypeDefinition with model.AnonymousTypeDefinition
 
 /**
  * Simple type definition. That is, the "xs:simpleType" XML element.
  */
-abstract class SimpleTypeDefinition private[bridged] (
+sealed abstract class SimpleTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends TypeDefinition(bridgeElem, childElems, externalTnsOption) with model.SimpleTypeDefinition {
@@ -496,7 +498,7 @@ final class AnonymousSimpleTypeDefinition private[bridged] (
 /**
  * Complex type definition. That is, the "xs:complexType" XML element.
  */
-abstract class ComplexTypeDefinition private[bridged] (
+sealed abstract class ComplexTypeDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends TypeDefinition(bridgeElem, childElems, externalTnsOption) with model.ComplexTypeDefinition {
@@ -533,7 +535,7 @@ final class AnonymousComplexTypeDefinition private[bridged] (
 /**
  * Attribute group definition or reference. That is, the "xs:attributeGroup" XML element.
  */
-abstract class AttributeGroupDefinitionOrReference private[bridged] (
+sealed abstract class AttributeGroupDefinitionOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.AttributeGroupDefinitionOrReference {
@@ -572,7 +574,7 @@ final class AttributeGroupReference private[bridged] (
 /**
  * Identity constraint definition. That is, the "xs:key", "xs:keyref" or "xs:unique" XML element.
  */
-abstract class IdentityConstraintDefinition private[bridged] (
+sealed abstract class IdentityConstraintDefinition private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.IdentityConstraintDefinition {
@@ -618,7 +620,7 @@ final class UniqueConstraint private[bridged] (
 /**
  * Model group definition. That is, the "xs:group" XML element introducing a named model group.
  */
-abstract class ModelGroupDefinitionOrReference private[bridged] (
+sealed abstract class ModelGroupDefinitionOrReference private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with model.ModelGroupDefinitionOrReference {
@@ -663,7 +665,7 @@ final class NotationDeclaration private[bridged] (
 /**
  * Model group. That is, the "xs:all", "xs:sequence" or "xs:choice" XML element.
  */
-abstract class ModelGroup private[bridged] (
+sealed abstract class ModelGroup private[bridged] (
   bridgeElem: IndexedBridgeElem,
   childElems: immutable.IndexedSeq[XsdElem],
   externalTnsOption: Option[String]) extends XsdElem(bridgeElem, childElems, externalTnsOption) with Particle with model.ModelGroup {
@@ -671,13 +673,9 @@ abstract class ModelGroup private[bridged] (
   assert(
     Set(model.XsAllEName, model.XsSequenceEName, model.XsChoiceEName).contains(bridgeElem.resolvedName),
     "The element must be an 'all', 'sequence' or 'choice' element")
-  // TODO Check in apply method, and replace require by assert here
-  require(
-    !inNamedGroup || (minOccursAttrOption.isEmpty && maxOccursAttrOption.isEmpty),
-    "If in a named group, there must be no @minOccurs and @maxOccurs")
 
   final def inNamedGroup: Boolean = {
-    assert(bridgeElem.path.parentPathOption.isDefined)
+    require(bridgeElem.path.parentPathOption.isDefined)
     val parentPath = bridgeElem.path.parentPath
 
     val parent = bridgeElem.rootElem.getElemOrSelfByPath(parentPath)
@@ -886,7 +884,7 @@ object SchemaRootElem {
    * This is an expensive method, but once a `SchemaRootElem` has been created, querying through the `ElemLike` API is very fast.
    */
   def apply(elem: IndexedBridgeElem, externalTnsOption: Option[String]): SchemaRootElem = {
-    require(elem.resolvedName == model.XsSchemaEName)
+    require(elem.resolvedName == model.XsSchemaEName, s"Expected ${model.XsSchemaEName} but got ${elem.resolvedName}")
 
     val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e, externalTnsOption))
     new SchemaRootElem(elem, childElems, externalTnsOption)
@@ -946,17 +944,12 @@ object XsdElem {
   /**
    * Recursive public factory method for XsdElem instances. Indeed, construction of an XsdElem is expensive,
    * but after construction querying is very fast, due to the stored child XsdElems.
+   *
+   * Almost no validations are performed, because this XML Schema model is very lenient.
    */
   def apply(elem: IndexedBridgeElem, externalTnsOption: Option[String]): XsdElem = {
-    // TODO Better error messages, and more checks, so that constructors only need assertions and no require statements
-    // TODO Consider turning this into a validating factory method that accumulates validation errors
-
     // Recursive calls
     val childElems = elem.findAllChildElems.map(e => XsdElem.apply(e, externalTnsOption))
-
-    assert(
-      childElems.map(_.bridgeElem) == elem.findAllChildElems,
-      "Corrupt element!")
 
     // Pattern match with common patterns first (the @switch optimization is not possible)
 

@@ -77,7 +77,9 @@ object TryToQueryManyDocumentsUsingSaxon {
           XsdDocument(
             XsdElem(
               SaxonBridgeElem.wrap(new SaxonDocument(doc.getUnderlyingNode.asInstanceOf[DocumentInfo]).documentElement), None)))
-      if (tryDoc.isFailure) println(s"Could not instantiate schema document ${doc.getUnderlyingNode.getSystemId}")
+      if (tryDoc.isFailure) {
+        println(s"Could not instantiate schema document ${doc.getUnderlyingNode.getSystemId}. Reason: ${tryDoc.toString}")
+      }
       tryDoc.toOption
     }
 

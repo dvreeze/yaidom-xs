@@ -87,7 +87,9 @@ object TryToQueryManyDocuments {
           XsdDocument(
             XsdElem(
               DefaultIndexedBridgeElem.wrap(indexed.Elem(doc.uriOption.get, doc.documentElement)), None)))
-      if (tryDoc.isFailure) println(s"Could not instantiate schema document ${doc.uriOption.getOrElse("")}")
+      if (tryDoc.isFailure) {
+        println(s"Could not instantiate schema document ${doc.uriOption.getOrElse("")}. Reason: ${tryDoc.toString}")
+      }
       tryDoc.toOption
     }
 
