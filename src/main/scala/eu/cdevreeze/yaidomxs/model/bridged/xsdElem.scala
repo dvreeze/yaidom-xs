@@ -675,7 +675,7 @@ sealed abstract class ModelGroup private[bridged] (
     "The element must be an 'all', 'sequence' or 'choice' element")
 
   final def inNamedGroup: Boolean = {
-    require(bridgeElem.path.parentPathOption.isDefined)
+    require(bridgeElem.path.parentPathOption.isDefined, s"Expected parent path of the model group")
     val parentPath = bridgeElem.path.parentPath
 
     val parent = bridgeElem.rootElem.getElemOrSelfByPath(parentPath)
@@ -958,52 +958,52 @@ object XsdElem {
         new SchemaRootElem(elem, childElems, externalTnsOption)
       case model.XsElementEName =>
         if (isSchemaRootChild(elem)) {
-          require(attributeOption(elem, model.NameEName).isDefined)
+          require(attributeOption(elem, model.NameEName).isDefined, s"No @name found in ${elem.resolvedName}")
           new GlobalElementDeclaration(elem, childElems, externalTnsOption)
         } else if (attributeOption(elem, model.RefEName).isDefined) {
-          require(attributeOption(elem, model.NameEName).isEmpty)
+          require(attributeOption(elem, model.NameEName).isEmpty, s"No @name allowed in ${elem.resolvedName}")
           new ElementReference(elem, childElems, externalTnsOption)
         } else if (attributeOption(elem, model.NameEName).isDefined) {
-          require(attributeOption(elem, model.RefEName).isEmpty)
+          require(attributeOption(elem, model.RefEName).isEmpty, s"No @ref allowed in ${elem.resolvedName}")
           new LocalElementDeclaration(elem, childElems, externalTnsOption)
         } else {
           sys.error(s"Not an element declaration or reference")
         }
       case model.XsAttributeEName =>
         if (isSchemaRootChild(elem)) {
-          require(attributeOption(elem, model.NameEName).isDefined)
+          require(attributeOption(elem, model.NameEName).isDefined, s"No @name found in ${elem.resolvedName}")
           new GlobalAttributeDeclaration(elem, childElems, externalTnsOption)
         } else if (attributeOption(elem, model.RefEName).isDefined) {
-          require(attributeOption(elem, model.NameEName).isEmpty)
+          require(attributeOption(elem, model.NameEName).isEmpty, s"No @name allowed in ${elem.resolvedName}")
           new AttributeReference(elem, childElems, externalTnsOption)
         } else if (attributeOption(elem, model.NameEName).isDefined) {
-          require(attributeOption(elem, model.RefEName).isEmpty)
+          require(attributeOption(elem, model.RefEName).isEmpty, s"No @ref allowed in ${elem.resolvedName}")
           new LocalAttributeDeclaration(elem, childElems, externalTnsOption)
         } else {
           sys.error(s"Not an attribute declaration or reference")
         }
       case model.XsSimpleTypeEName =>
         if (isSchemaRootChild(elem)) {
-          require(attributeOption(elem, model.NameEName).isDefined)
+          require(attributeOption(elem, model.NameEName).isDefined, s"No @name found in ${elem.resolvedName}")
           new NamedSimpleTypeDefinition(elem, childElems, externalTnsOption)
         } else {
-          require(attributeOption(elem, model.NameEName).isEmpty)
+          require(attributeOption(elem, model.NameEName).isEmpty, s"No @name allowed in ${elem.resolvedName}")
           new AnonymousSimpleTypeDefinition(elem, childElems, externalTnsOption)
         }
       case model.XsComplexTypeEName =>
         if (isSchemaRootChild(elem)) {
-          require(attributeOption(elem, model.NameEName).isDefined)
+          require(attributeOption(elem, model.NameEName).isDefined, s"No @name found in ${elem.resolvedName}")
           new NamedComplexTypeDefinition(elem, childElems, externalTnsOption)
         } else {
-          require(attributeOption(elem, model.NameEName).isEmpty)
+          require(attributeOption(elem, model.NameEName).isEmpty, s"No @name allowed in ${elem.resolvedName}")
           new AnonymousComplexTypeDefinition(elem, childElems, externalTnsOption)
         }
       case model.XsAttributeGroupEName =>
         if (attributeOption(elem, model.RefEName).isDefined) {
-          require(attributeOption(elem, model.NameEName).isEmpty)
+          require(attributeOption(elem, model.NameEName).isEmpty, s"No @name allowed in ${elem.resolvedName}")
           new AttributeGroupReference(elem, childElems, externalTnsOption)
         } else if (attributeOption(elem, model.NameEName).isDefined) {
-          require(attributeOption(elem, model.RefEName).isEmpty)
+          require(attributeOption(elem, model.RefEName).isEmpty, s"No @ref allowed in ${elem.resolvedName}")
           new AttributeGroupDefinition(elem, childElems, externalTnsOption)
         } else {
           sys.error(s"Not an attribute group definition or reference")
