@@ -23,13 +23,19 @@ import scala.Vector
 import scala.reflect.classTag
 import scala.util.Try
 
+import org.xml.sax.EntityResolver
+import org.xml.sax.InputSource
+
 import eu.cdevreeze.yaidom.bridge.DefaultIndexedBridgeElem
 import eu.cdevreeze.yaidom.indexed
+import eu.cdevreeze.yaidom.parse.DefaultElemProducingSaxHandler
 import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax
+import eu.cdevreeze.yaidom.parse.DocumentParserUsingSax.RichSAXParserFactory
 import eu.cdevreeze.yaidomxs.model
 import eu.cdevreeze.yaidomxs.model.bridged.NamedTypeDefinition
-import eu.cdevreeze.yaidomxs.model.bridged.XsdElem
 import eu.cdevreeze.yaidomxs.model.bridged.XsdDocument
+import eu.cdevreeze.yaidomxs.model.bridged.XsdElem
+import javax.xml.parsers.SAXParserFactory
 
 /**
  * Tries to load many schema documents, and query them.
@@ -44,7 +50,17 @@ object TryToQueryManyDocuments {
 
     require(rootDir.isDirectory)
 
-    val docParser = DocumentParserUsingSax.newInstance()
+    val docParser: DocumentParserUsingSax = {
+      val spf = SAXParserFactory.newInstance().makeNamespaceAndPrefixAware
+
+      trait MyEntityResolver extends EntityResolver {
+        override def resolveEntity(publicId: String, systemId: String): InputSource = {
+          new InputSource(new java.io.StringReader(""))
+        }
+      }
+
+      DocumentParserUsingSax.newInstance(spf, () => new DefaultElemProducingSaxHandler with MyEntityResolver)
+    }
 
     val files = findFiles(rootDir, acceptFile)
 

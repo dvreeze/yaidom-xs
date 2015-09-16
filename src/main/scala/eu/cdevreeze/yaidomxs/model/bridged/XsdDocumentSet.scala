@@ -36,9 +36,6 @@ import eu.cdevreeze.yaidomxs.model.SchemaApi
  * Per component type (element declaration, attribute declaration, type definition etc.) their ENames (in combination with scope)
  * must be unique in the XsdDocumentSet. This is indeed required for "schemas" (as combination of schema documents).
  *
- * TODO Make this a trait, and make different subclasses/traits for "raw" schema document sets, schema document sets that
- * cache all found substitution groups, etc.
- *
  * @author Chris de Vreeze
  */
 final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument]) extends SchemaApi {
@@ -69,8 +66,6 @@ final class XsdDocumentSet(val schemaDocuments: immutable.IndexedSeq[XsdDocument
     val result = schemaDocuments map { doc => (doc.uri -> doc) }
     result.toMap
   }
-
-  // TODO Query methods for element declarations, substitution groups of element declarations, etc.
 
   final def findAllGlobalElementDeclarationsMappedByEName: Map[EName, GlobalElementDeclaration] =
     allGlobalElementDeclarationsMappedByEName

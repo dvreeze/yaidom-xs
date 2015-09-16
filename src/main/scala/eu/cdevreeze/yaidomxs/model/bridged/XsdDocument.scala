@@ -50,6 +50,8 @@ final class XsdDocument(
   final val schemaRootElems: immutable.IndexedSeq[SchemaRootElem] =
     documentElement.findTopmostElemsOrSelfOfType(classTag[SchemaRootElem])(_ => true)
 
+  require(schemaRootElems.size >= 1, s"No schema root element found in ${documentElement.bridgeElem.docUri}")
+
   final def bridgeElem: IndexedBridgeElem = documentElement.bridgeElem
 
   final def uriOption: Option[URI] = Some(bridgeElem.baseUri)
