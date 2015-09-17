@@ -42,7 +42,7 @@ import net.sf.saxon.om.DocumentInfo
 import net.sf.saxon.om.NodeInfo
 
 /**
- * Saxon (aidom) wrapper node hierarchy.
+ * Saxon (yaidom) wrapper node hierarchy.
  *
  * @author Chris de Vreeze
  */
