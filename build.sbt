@@ -7,7 +7,7 @@ name := "yaidom-xs"
 
 organization := "eu.cdevreeze.yaidom"
 
-version := "0.2-SNAPSHOT"
+version := "0.2"
 
 scalaVersion := "2.11.7"
 
