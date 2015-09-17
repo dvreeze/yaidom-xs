@@ -24,6 +24,7 @@ as follows (in an SBT or Maven build):
       <version>0.2</version>
     </dependency>
 
-Note that yaidom-xs itself depends only on yaidom and yaidom-xlink, and their dependencies.
+Note that yaidom-xs itself depends only on yaidom and yaidom-xlink, and their dependencies. Version 0.2 depends on
+yaidom 1.4.2 and yaidom-xlink-1.4.2.
 
 Yaidom-xs requires Java version 1.6 or later.
